@@ -5,12 +5,18 @@
 
 #include <KokkosComm/config.hpp>
 #include "concepts.hpp"
+#include "reduction_op.hpp"
 
 namespace KokkosComm {
 
 #if defined(KOKKOSCOMM_ENABLE_MPI)
-struct Mpi;
+class Mpi;
 using DefaultCommunicationSpace  = Mpi;
+using FallbackCommunicationSpace = Mpi;
+#elif defined(KOKKOSCOMM_ENABLE_NCCL)
+class Mpi;
+class Nccl;
+using DefaultCommunicationSpace  = Nccl;
 using FallbackCommunicationSpace = Mpi;
 #else
 #error at least one transport must be defined
@@ -34,4 +40,19 @@ template <KokkosView SendView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultE
 struct Send;
 
 }  // namespace Impl
+
+// Collectives are currently experimental functions
+namespace Experimental::Impl {
+
+template <KokkosView SendView, KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
+          CommunicationSpace CommSpace = DefaultCommunicationSpace>
+struct AllGather;
+
+template <KokkosView SendView, KokkosView RecvView, ReductionOperator RedOp,
+          KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
+          CommunicationSpace CommSpace   = DefaultCommunicationSpace>
+struct Reduce;
+
+}  // namespace Experimental::Impl
+
 }  // namespace KokkosComm
