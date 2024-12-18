@@ -5,11 +5,13 @@
 
 #include <sstream>
 
-#include <mpi.h>
 #include <gtest/gtest.h>
-#include <Kokkos_Core.hpp>
 
 #include <KokkosComm/config.hpp>
+#include <Kokkos_Core.hpp>
+
+#if defined(KOKKOSCOMM_ENABLE_MPI)
+#include "KokkosComm/mpi/impl/include_mpi.hpp"
 
 class MpiEnvironment : public ::testing::Environment {
  public:
@@ -62,8 +64,10 @@ class MpiListener : public testing::EmptyTestEventListener {
   }
 #endif
 };
+#endif  // KOKKOSCOMM_ENABLE_MPI
 
 int main(int argc, char *argv[]) {
+#if defined(KOKKOSCOMM_ENABLE_MPI)
   int provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
   if (provided != MPI_THREAD_MULTIPLE) {
@@ -74,27 +78,31 @@ int main(int argc, char *argv[]) {
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   if (0 == rank) {
     std::cerr << argv[0] << " (KokkosComm " << KOKKOSCOMM_VERSION_MAJOR << "." << KOKKOSCOMM_VERSION_MINOR << "."
-              << KOKKOSCOMM_VERSION_PATCH << ") with " << size << " ranks\n";
+              << KOKKOSCOMM_VERSION_PATCH << ")\n";
   }
+#endif
 
   Kokkos::initialize();
 
-  // Initialize google test
+  // Intialize google test
   ::testing::InitGoogleTest(&argc, argv);
 
+#if defined(KOKKOSCOMM_ENABLE_MPI)
   ::testing::AddGlobalTestEnvironment(new MpiEnvironment());
-
   auto &test_listeners = ::testing::UnitTest::GetInstance()->listeners();
   if (0 != rank) delete test_listeners.Release(test_listeners.default_result_printer());
-
   test_listeners.Append(new MpiListener);
+#endif
 
   // run tests
   auto exit_code = RUN_ALL_TESTS();
 
   // Finalize MPI before exiting
   Kokkos::finalize();
+
+#if defined(KOKKOSCOMM_ENABLE_MPI)
   MPI_Finalize();
+#endif
 
   return exit_code;
 }
