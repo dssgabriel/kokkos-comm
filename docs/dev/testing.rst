@@ -25,9 +25,14 @@ Complete workflow
 
 .. tip::
 
-    For faster incremental builds, it is advised to use Ninja as your CMake generator using ``-G Ninja`` when configuring the project.
+    For faster incremental builds, it is advised to use Ninja as your CMake generator. You can do so by passing ``-G Ninja`` when configuring the project.
 
-    You can also have multiple build types configured simultaneously by using ``-G 'Ninja Multi-Config'`` and passing ``--config <BUILD_TYPE>`` when building the project.
+    You can also have multiple build types configured simultaneously by using ``-G 'Ninja Multi-Config'`` and passing ``--config <BUILD_TYPE>`` when building the project:
+
+    .. code-block:: console
+
+        $ cmake -B <BUILD_DIR> -G 'Ninja Multi-Config' -DKokkos_ROOT=<KOKKOS_INSTALL_DIR> -DKokkosComm_ENABLE_TESTS=ON
+        $ cmake --build <BUILD_DIR> --config <BUILD_TYPE>
 
 
 .. code-block:: console
