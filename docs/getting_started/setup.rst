@@ -73,6 +73,8 @@ Test
     $ cmake --build <BUILD_DIR>
     $ ctest --test-dir <BUILD_DIR>/unit_tests
 
+For a detailed guide on testing KokkosComm, please refer to the `Testing section <../dev/testing.html>`_.
+
 Install
 -------
 
