@@ -109,7 +109,8 @@ Complete workflow
             -B "$KOKKOSCOMM_PERF_TESTS_BUILD_DIR" \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DKokkos_ROOT="$KOKKOS_INSTALL_DIR" \
-            -DKokkosComm_ROOT="$KOKKOSCOMM_INSTALL_DIR"
+            -DKokkosComm_ROOT="$KOKKOSCOMM_INSTALL_DIR" \
+            -DKOKKOSCOMM_ENABLE_MPI=ON # not defined if not built alongside KokkosComm
 
     $ # Build KokkosComm performance tests
     $ cmake --build "$KOKKOSCOMM_PERF_TESTS_BUILD_DIR" --parallel $(nproc) --verbose
