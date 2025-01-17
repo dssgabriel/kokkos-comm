@@ -2,7 +2,7 @@
 Setup
 *****
 
-This page is intended as a guide to jump start new KokkosCom users.
+This page is intended as a guide to jump start new KokkosComm users.
 
 
 System requirements
