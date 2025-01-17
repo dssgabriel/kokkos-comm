@@ -20,12 +20,19 @@ Testing the install
 
 5. Run the tests on that build.
 
-
 Complete workflow
 -----------------
 
+.. tip::
+
+    For faster incremental builds, it is advised to use Ninja as your CMake generator using ``-G Ninja`` when configuring the project.
+
+    You can also have multiple build types configured simultaneously by using ``-G 'Ninja Multi-Config'`` and passing ``--config <BUILD_TYPE>`` when building the project.
+
+
 .. code-block:: console
 
+    $ # Catch failing commands
     $ set -eou pipefail
 
     $ # Clone KokkosComm
@@ -33,17 +40,17 @@ Complete workflow
     $ cd kokkos-comm
 
     $ # Set the required path variables
-    $ export KOKKOS_SRC_DIR=$PWD/kokkos
-    $ export KOKKOS_BUILD_DIR=$PWD/kokkos-build
-    $ export KOKKOS_INSTALL_DIR=$PWD/kokkos-install
-    $ export KOKKOSCOMM_SRC_DIR=$PWD
-    $ export KOKKOSCOMM_BUILD_DIR=build
-    $ export KOKKOSCOMM_INSTALL_DIR=$PWD/install
-    $ export KOKKOSCOMM_UNIT_TESTS_BUILD_DIR=build-unit-tests
-    $ export KOKKOSCOMM_PERF_TESTS_BUILD_DIR=build-perf-tests
+    $ export KOKKOS_SRC_DIR="$PWD/kokkos"
+    $ export KOKKOS_BUILD_DIR="$PWD/kokkos-build"
+    $ export KOKKOS_INSTALL_DIR="$PWD/kokkos-install"
+    $ export KOKKOSCOMM_SRC_DIR="$PWD"
+    $ export KOKKOSCOMM_BUILD_DIR="$PWD/build"
+    $ export KOKKOSCOMM_INSTALL_DIR="$PWD/install"
+    $ export KOKKOSCOMM_UNIT_TESTS_BUILD_DIR="$PWD/build-unit-tests"
+    $ export KOKKOSCOMM_PERF_TESTS_BUILD_DIR="$PWD/build-perf-tests"
 
     $ # Clone Kokkos
-    $ git clone https://github.com/kokkos/kokkos.git --branch master --depth 1 "$KOKKOS_SRC_DIR" || true
+    $ git clone https://github.com/kokkos/kokkos.git --branch master --depth 1 "$KOKKOS_SRC_DIR"
 
     $ # Configure Kokkos
     $ cmake -S "$KOKKOS_SRC_DIR" \
@@ -78,7 +85,7 @@ Complete workflow
     $ rm --recursive --force "$KOKKOSCOMM_BUILD_DIR"
 
     $ # Configure KokkosComm unit tests
-    $ rm --recursive --force "$KOKKOSCOMM_UNIT_TESTS_BUILD_DIR"
+    $ [ -d "$KOKKOSCOMM_UNIT_TESTS_BUILD_DIR" ] && rm --recursive --force "$KOKKOSCOMM_UNIT_TESTS_BUILD_DIR"
     $ cmake -S "$KOKKOSCOMM_SRC_DIR"/unit_tests \
             -B "$KOKKOSCOMM_UNIT_TESTS_BUILD_DIR" \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -92,7 +99,7 @@ Complete workflow
     $ ctest -V --test-dir "$KOKKOSCOMM_UNIT_TESTS_BUILD_DIR"
 
     $ # Configure KokkosComm performance tests
-    $ rm --recursive --force "$KOKKOSCOMM_PERF_TESTS_BUILD_DIR"
+    $ [ -d "$KOKKOSCOMM_PERF_TESTS_BUILD_DIR" ] && rm --recursive --force "$KOKKOSCOMM_PERF_TESTS_BUILD_DIR"
     $ cmake -S "$KOKKOSCOMM_SRC_DIR"/perf_tests \
             -B "$KOKKOSCOMM_PERF_TESTS_BUILD_DIR" \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
