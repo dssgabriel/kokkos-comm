@@ -44,13 +44,13 @@ KokkosComm's source code is available on GitHub, which you can obtain using the 
 
 .. code-block:: console
 
-    $ git clone https://github.com/kokkos/kokkos.git
+    $ git clone https://github.com/kokkos/kokkos-comm.git
 
 Or using the GitHub CLI tool:
 
 .. code-block:: console
 
-    $ gh repo clone kokkos/kokkos
+    $ gh repo clone kokkos/kokkos-comm
 
 Build
 -----
