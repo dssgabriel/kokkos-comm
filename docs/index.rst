@@ -41,7 +41,7 @@ Documentation Content
 
 .. toctree::
    :maxdepth: 1
-   :caption: Developper Guide
+   :caption: Developer Guide
 
    CONTRIBUTING
    dev/impl_comm_space.rst
