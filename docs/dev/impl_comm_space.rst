@@ -35,7 +35,7 @@ Notice that ``Mpi`` has two static methods, but that these methods are not requi
 To let core API functions know that your communication space is something KokkosComm can use to dispatch messages, you also need to declare the ``Impl::is_communication_space`` specialization using the ``CommunicationSpace`` concept.
 
 
-Partial specialiazition of ``Handle``
+Partial specialization of ``Handle``
 =====================================
 
 .. attention:: Section in construction...
@@ -56,7 +56,7 @@ For example, for the MPI communication space handle, we define the following:
     } // end KokkosComm
 
 
-Partial specialiazition of ``Req``
+Partial specialization of ``Req``
 ===================================
 
 .. attention:: Section in construction...
@@ -76,7 +76,7 @@ For example, for the MPI communication space request, we define the following:
     } // end KokkosComm
 
 
-Partial specialiazition for each API struct
+Partial specialization for each API struct
 ===========================================
 
 The core API functions are actually implemented by partial specializations of structs. Conceptually, there is an internal interface that needs to be satisfied for each API:
