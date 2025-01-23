@@ -24,7 +24,7 @@ namespace KokkosComm {
     //      see: Req<CommSpace> ✧･ﾟ:✧･ﾟ 
     template <>
     class Channel<> {
-
+        
     }
     //  TODO: sendinit()
 
