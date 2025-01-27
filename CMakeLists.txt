@@ -29,6 +29,8 @@ project(
   HOMEPAGE_URL "https://kokkos.org/kokkos-comm/"
 )
 
+include(cmake/mpi-vendor.cmake)
+
 option(KokkosComm_ENABLE_PERFTESTS "Build KokkosComm perf tests" OFF)
 option(KokkosComm_ENABLE_TESTS "Build KokkosComm tests" OFF)
 option(KokkosComm_ENABLE_MPI "Build KokkosComm with MPI transport" ON)
@@ -42,6 +44,7 @@ find_package(Kokkos REQUIRED)
 if(KOKKOSCOMM_ENABLE_MPI)
   find_package(MPI REQUIRED)
 endif()
+kokkoscomm_set_mpi_vendor_variables()
 
 add_subdirectory(src)
 if(KOKKOSCOMM_ENABLE_TESTS)
