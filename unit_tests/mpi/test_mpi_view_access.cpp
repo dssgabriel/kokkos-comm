@@ -20,11 +20,26 @@
 
 #include "KokkosComm/KokkosComm.hpp"
 
+#if defined(KOKKOSCOMM_IMP_MPI_IS_OPENMPI) || defined(KOKKOSCOMM_IMP_MPI_IS_MPICH)
+#include <mpi-ext.h>
+#endif
+
 namespace {
 
 using namespace KokkosComm::mpi;
 
 namespace {
+
+void view_access_via_mpi_extension() {
+#if defined(KOKKOSCOMM_IMPL_MPI_IS_OPENMPI) && defined(KOKKOS_ENABLE_CUDA)
+  EXPECT_EQ(1, MPIX_Query_cuda_support());
+#elif defined(KOKKOSCOMM_IMPL_MPI_IS_MPICH) && defined(KOKKOS_ENABLE_CUDA)
+  EXPECT_EQ(1, MPIX_Query_cuda_support());
+#else
+  GTEST_SKIP() << "MPI extension not available";
+#endif
+}
+
 void doit() {
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -48,7 +63,7 @@ void doit() {
     MPI_Recv(a.data(), n, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
   }
 
-  auto a_h = Kokkos::create_mirror_view_and_copy(Kokkos::DefaultExecutionSpace{}, a);
+  auto a_h = Kokkos::create_mirror_view_and_copy(Kokkos::DefaultHostExecutionSpace{}, a);
   Kokkos::fence();
 
   for (int i = 0; i < n; ++i) {
@@ -59,6 +74,7 @@ void doit() {
 }
 }  // namespace
 
+TEST(MpiViewAccess, MpiExtension) { view_access_via_mpi_extension(); }
 TEST(MpiViewAccess, Basic) { doit(); }
 
 }  // namespace
