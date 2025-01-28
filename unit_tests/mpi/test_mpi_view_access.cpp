@@ -20,7 +20,7 @@
 
 #include "KokkosComm/KokkosComm.hpp"
 
-#if defined(KOKKOSCOMM_IMP_MPI_IS_OPENMPI) || defined(KOKKOSCOMM_IMP_MPI_IS_MPICH)
+#if defined(KOKKOSCOMM_IMPL_MPI_IS_OPENMPI) || defined(KOKKOSCOMM_IMPL_MPI_IS_MPICH)
 #include <mpi-ext.h>
 #endif
 
