@@ -20,7 +20,7 @@
 
 #include "KokkosComm/KokkosComm.hpp"
 
-#if defined(KOKKOSCOMM_IMPL_MPI_IS_OPENMPI) || defined(KOKKOSCOMM_IMPL_MPI_IS_MPICH)
+#if defined(KOKKOSCOMM_IMPL_MPIEXT_H)
 #include <mpi-ext.h>
 #endif
 
@@ -31,6 +31,7 @@ using namespace KokkosComm::mpi;
 namespace {
 
 void view_access_via_mpi_extension() {
+#ifdef KOKKOSCOMM_IMPL_MPIEXT_H
 #if defined(KOKKOSCOMM_IMPL_MPI_IS_OPENMPI) && defined(KOKKOS_ENABLE_CUDA)
   EXPECT_EQ(1, MPIX_Query_cuda_support());
 #elif defined(KOKKOSCOMM_IMPL_MPI_IS_MPICH) && defined(KOKKOS_ENABLE_CUDA)
@@ -38,6 +39,7 @@ void view_access_via_mpi_extension() {
 #else
   GTEST_SKIP() << "MPI extension not available";
 #endif
+#endif // KOKKOSCOMM_IMPL_MPI_EXT_H
 }
 
 void doit() {
