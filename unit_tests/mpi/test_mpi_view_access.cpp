@@ -39,7 +39,7 @@ void view_access_via_mpi_extension() {
 #else
   GTEST_SKIP() << "MPI extension not available";
 #endif
-#endif // KOKKOSCOMM_IMPL_MPI_EXT_H
+#endif  // KOKKOSCOMM_IMPL_MPI_EXT_H
 }
 
 void doit() {
