@@ -37,8 +37,10 @@ void view_access_via_mpi_extension() {
 #elif defined(KOKKOSCOMM_IMPL_MPI_IS_MPICH) && defined(KOKKOS_ENABLE_CUDA)
   EXPECT_EQ(1, MPIX_Query_cuda_support());
 #else
-  GTEST_SKIP() << "MPI extension not available";
+  GTEST_SKIP() << "Query CUDA support via MPI extension not available";
 #endif
+#else
+  GTEST_SKIP() << "mpi-ext.h not available";
 #endif  // KOKKOSCOMM_IMPL_MPI_EXT_H
 }
 
