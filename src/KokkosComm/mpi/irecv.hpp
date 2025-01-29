@@ -43,8 +43,7 @@ struct Recv<RecvView, ExecSpace, Mpi> {
       Args args = Packer::allocate_packed_for(space, "TODO", rv);
       space.fence("fence before irecv");
       MPI_Irecv(args.view.data(), args.count, args.datatype, src, POINTTOPOINT_TAG, h.mpi_comm(), &req.mpi_request());
-      req.extend_view_lifetime(rv);
-      // implicitly extends args.view lifetime since lambda holds a copy
+      // implicitly extends args.view and rv lifetime due to lambda capture
       req.call_after_mpi_wait([=]() { Packer::unpack_into(space, rv, args.view); });
     }
     return req;
