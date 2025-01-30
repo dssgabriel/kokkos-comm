@@ -16,16 +16,36 @@
 
 #pragma once
 
+#include <Kokkos_Core.hpp>
+
 #include "KokkosComm/fwd.hpp"
+//#include "commmode.hpp"
+//#include "impl/pack_traits.hpp"
+//#include "impl/include_mpi.hpp"
 
 namespace KokkosComm {
 
     //  TODO: add Channel<CommSpace> object
     //      see: Req<CommSpace> ✧･ﾟ:✧･ﾟ 
-    template <>
-    class Channel<> {
-        
-    }
+    template <class CommSpace>
+    class Channel {
+    public:
+      using comm_space = CommSpace;
+
+      //template <class CommSpace>
+      Channel(){}
+      
+      // MPI partitioned communication request object
+      // int state ; int size ; int side ; int sendparts ;
+      // int recvparts ; int readycount ; MPI_Request *request ;
+      
+    };
     //  TODO: sendinit()
+      template<class SendView>
+      void sendinit(SendView view) //, KokkosComm::Channel channel)
+    {
+      Kokkos::Tools::pushRegion("KokkosComm::Impl::send");
+      
+    }
 
 }  // namespace KokkosComm

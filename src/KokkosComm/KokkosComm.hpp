@@ -38,6 +38,7 @@
 #include "concepts.hpp"
 #include "point_to_point.hpp"
 #include "collective.hpp"
+#include "channel.hpp"
 
 #include <Kokkos_Core.hpp>
 
