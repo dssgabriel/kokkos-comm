@@ -36,8 +36,8 @@ struct Recv<RecvView, ExecSpace, Mpi> {
     Req<Mpi> req;
     if (KokkosComm::is_contiguous(rv)) {
       space.fence("fence before irecv");
-      MPI_Irecv(KokkosComm::data_handle(rv), 1, view_mpi_type(rv), src, POINTTOPOINT_TAG, h.mpi_comm(),
-                &req.mpi_request());  // TODO: probably best to just use the scalar type
+      MPI_Irecv(KokkosComm::data_handle(rv), KokkosComm::span(rv), mpi_type_v<typename RecvView::value_type>, src,
+                POINTTOPOINT_TAG, h.mpi_comm(), &req.mpi_request());
       req.extend_view_lifetime(rv);
     } else {
       Args args = Packer::allocate_packed_for(space, "TODO", rv);
