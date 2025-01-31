@@ -6,10 +6,10 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'Kokkos Comm'
-copyright = '2024 NTESS'
-author = 'Carl Pearson'
-release = '0.0.2'
+project = 'KokkosComm'
+copyright = '2025, National Technology & Engineering Solutions of Sandia, LLC (NTESS)'
+author = 'lots of people'
+# release = '0.2.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -19,8 +19,6 @@ extensions = []
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
-
-
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
-html_theme = 'sizzle'
+html_theme = 'furo'

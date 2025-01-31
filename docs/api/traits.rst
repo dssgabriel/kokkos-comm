@@ -1,56 +1,138 @@
+*******************
+Concepts and Traits
+*******************
+
+Concepts
+========
+
+.. cpp:namespace:: KokkosComm
+
+.. cpp:concept:: template <typename T> KokkosView
+
+    Specifies that a type ``T`` is a ``Kokkos::View`` object.
+
+
+.. cpp:concept:: template <typename T> KokkosExecutionSpace
+
+    Specifies that a type ``T`` is a ``Kokkos::ExecutionSpace``.
+
+
+.. cpp:concept:: template <typename T> CommunicationSpace
+
+    Specifies that a type ``T`` is a KokkosComm communication backend.
+
+
 Traits
 ======
 
-Basic Traits
-------------
+General traits
+--------------
 
-.. cpp:type:: template<typename View> \
-              KokkosComm::Traits
+.. cpp:namespace:: KokkosComm
 
-    A common interface to access Kokkos::View-like types.
+.. cpp:struct:: template<KokkosView View> Traits<View>
 
-    .. cpp:function:: static bool is_contiguous(const View &v)
+    A struct that can be specialized to implement custom behavior for a particular Kokkos view.
 
-        :param v: The View to query
-        :returns: true iff the data in the ``v`` is contiguous.
+    .. cpp:type:: non_const_packed_view_type = Kokkos::View<typename View::non_const_data_type, typename View::array_layout, typename View::memory_space>
 
-    .. cpp:function:: static auto data_handle(const View &v)
+    .. cpp:type:: packed_view_type = Kokkos::View<typename View::data_type, typename View::array_layout, typename View::memory_space>
 
-    .. cpp:function:: static size_t span(const View &v)
 
-        :returns: the number of bytes between the beginning of the first byte and the end of the last byte of data in ``v``.
+.. cpp:function:: template <KokkosView View> \
+                  static auto data_handle(const View &v) -> View::pointer_type
 
-        For example, if ``View`` was an std::vector<int16_t> of size 3, it would be 6.
-        If the ``View`` is non-contiguous, the result includes any "holes" in ``v``.
+    :tparam View: The type of the Kokkos view.
 
-    .. cpp:function:: static constexpr bool is_reference_counted()
+    :param v: The Kokkos view to query.
 
-        :returns: true iff the type is subject to reference counting (e.g., Kokkos::View)
+    :returns: The pointer to the underlying data allocation.
 
-        This is used to determine if asynchronous MPI operations may need to extend the lifetime of this type when it's used as an argument.
 
-    .. cpp:function:: static constexpr size_t rank()
+.. cpp:function:: template <KokkosView View> \
+                           static auto span(const View &v) -> size_t
 
-        :returns: the rank (number of dimensions) of the ``View`` type
+    :tparam View: The type of the Kokkos view.
+
+    :param v: The Kokkos view to query.
+
+    :returns: The number of bytes between the beginning of the first byte and the end of the last byte of data in ``v``.
+
+    For example, if ``View`` was an std::vector<int16_t> of size 3, it would be 6.
+    If the ``View`` is non-contiguous, the result includes any "holes" in ``v``.
+
+
+.. cpp:function:: template <KokkosView View> \
+                  static auto is_contiguous(const View &v) -> bool
+
+    Checks if a view is contiguous.
+
+    :tparam View: The type of the Kokkos view.
+
+    :param v: The Kokkos view to query.
+
+    :returns: True if, and only if, the data in ``v`` is contiguous.
+
+
+.. cpp:function:: template <KokkosView View> \
+                  static constexpr auto rank() -> size_t
+
+    :tparam View: The type of the Kokkos view.
+
+    :returns: The rank (number of dimensions) of the ``View`` type.
+
+
+.. cpp:function:: template <KokkosView View> \
+                  static constexpr auto extent(const View &v, const int i) -> size_t
+
+    :tparam View: The type of the Kokkos view.
+
+    :param v: The Kokkos view to query.
+    :param i: The index of the dimension. Must be smaller than the ``rank`` of the view.
+
+    :returns: The extent of the specified dimension.
+
+
+.. cpp:function:: template <KokkosView View> \
+                  static constexpr auto stride(const View &v, const int i) -> size_t
+
+    :tparam View: The type of the Kokkos view.
+
+    :param v: The Kokkos view to query.
+    :param i: The index of the dimension. Must be smaller than the ``rank`` of the view.
+
+    :returns: The stride of the specified dimension.
+
+
+.. cpp:function:: template <KokkosView View> \
+                  static constexpr auto is_reference_counted() -> bool
+
+    :tparam View: The type of the Kokkos view.
+
+    :returns: True if, and only if, the type is subject to reference counting (e.g., always true for ``Kokkos::View`` objects).
+
+    This is used to determine if asynchronous MPI operations may need to extend the lifetime of this type when it's used as an argument.
+
 
 Packing Traits
 --------------
 
-Strategies for handling non-contiguous views
+Strategies for handling non-contiguous views.
 
-.. cpp:type:: template<typename View> \
-              KokkosComm::PackTraits
+.. cpp:namespace:: KokkosComm
 
-    A common packing-related interface for Kokkos::View-like types.
+.. cpp:struct:: template<typename T> PackTraits<T>
 
-  .. cpp:type:: packer_type
+    A common packing-related struct that can be specialized to implement custom behavior for a particular Kokkos view.
 
-    The Packer to use for this ``View`` type.
+    .. cpp:type:: packer_type = Impl::Packer::DeepCopy<View>
 
-  .. cpp:function:: static bool needs_unpack(const View &v)
+    The packer to use for this ``View`` type.
 
-    :returns: true iff ``View`` ``v`` needs to be packed before being passed to MPI
+.. .. cpp:function:: static auto needs_unpack(const View &v) -> bool
 
-  .. cpp:function:: static bool needs_pack(const View &v)
+..     :returns: True if, and only if, the ``v`` needs to be unpacked before being passed to the communication backend.
 
-    :returns: true iff ``View`` ``v`` needs to be unpacked after being passed from MPI
+.. .. cpp:function:: static auto needs_pack(const View &v) -> bool
+
+..     :returns: True if, and only if, the ``v`` needs to be packed before being passed to the communication backend.

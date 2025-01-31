@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   if (0 == rank) {
     std::cerr << argv[0] << " (KokkosComm " << KOKKOSCOMM_VERSION_MAJOR << "." << KOKKOSCOMM_VERSION_MINOR << "."
-              << KOKKOSCOMM_VERSION_PATCH << ")\n";
+              << KOKKOSCOMM_VERSION_PATCH << ") with " << size << " ranks\n";
   }
 
   Kokkos::initialize();

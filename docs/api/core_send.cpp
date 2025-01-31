@@ -1,8 +1,8 @@
-#include <Kokkos_Comm.hpp>
+#include "KokkosComm/KokkosComm.hpp"
 
 // Define the execution space and transport
 using ExecSpace = Kokkos::DefaultExecutionSpace;
-using Transport = DefaultTransport;
+using CommSpace = DefaultCommunicationSpace;
 
 // Create a Kokkos view
 Kokkos::View<double*> data("data", 100);
@@ -12,11 +12,11 @@ Kokkos::parallel_for("fill_data", Kokkos::RangePolicy<ExecSpace>(0, 100), KOKKOS
   data(i) = static_cast<double>(i);
 });
 
-// Destination rank and message tag
+// Destination rank
 int dest = 1;
 
 // Create a handle
-KokkosComm::Handle<> handle; // Same as Handle<Execspace, Transport>
+KokkosComm::Handle<> handle; // Same as Handle<Execspace, CommSpace>
 
 // Initiate a non-blocking send with a handle
 auto req1 = send(handle, data, dest);
