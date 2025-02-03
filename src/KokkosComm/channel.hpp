@@ -25,27 +25,60 @@
 
 namespace KokkosComm {
 
-    //  TODO: add Channel<CommSpace> object
-    //      see: Req<CommSpace> ✧･ﾟ:✧･ﾟ 
-    template <class CommSpace>
-    class Channel {
-    public:
-      using comm_space = CommSpace;
-
-      //template <class CommSpace>
-      Channel(){}
-      
-      // MPI partitioned communication request object
-      // int state ; int size ; int side ; int sendparts ;
-      // int recvparts ; int readycount ; MPI_Request *request ;
-      
-    };
-    //  TODO: sendinit()
-      template<class SendView>
-      void sendinit(SendView view) //, KokkosComm::Channel channel)
-    {
-      Kokkos::Tools::pushRegion("KokkosComm::Impl::send");
-      
+  //  TODO: add Channel<CommSpace> object
+  //      see: Req<CommSpace> ✧･ﾟ:✧･ﾟ 
+  template <class CommSpace>
+  class Channel {
+  public:
+    using comm_space = CommSpace;
+    
+    Channel() : state_(0), send_parts_(0), recv_parts_(0), ready_count_(0) {
+      // Initialize MPI requests
+      requests_ = new MPI_Request[2]; // Example: 2 requests for send/recv
     }
+
+    ~Channel() {
+      delete[] requests_;
+    }
+    
+    template <class SendView>
+    void sendinit(SendView view) {
+      Kokkos::Tools::pushRegion("KokkosComm::Channel::sendinit");
+      // Initialize partitioned send
+      MPI_Send_init(view.data(), view.size(), MPI_BYTE, dest_rank_, tag_, comm_, &requests_[0]);
+      Kokkos::Tools::popRegion();
+    }
+    
+    template <class RecvView>
+    void recvinit(RecvView view) {
+      Kokkos::Tools::pushRegion("KokkosComm::Channel::recvinit");
+      // Initialize partitioned receive
+      MPI_Recv_init(view.data(), view.size(), MPI_BYTE, src_rank_, tag_, comm_, &requests_[1]);
+      Kokkos::Tools::popRegion();
+    }
+    
+    void start() {
+      Kokkos::Tools::pushRegion("KokkosComm::Channel::start");
+      MPI_Startall(2, requests_); // Start all requests
+      Kokkos::Tools::popRegion();
+    }
+
+    void wait() {
+      Kokkos::Tools::pushRegion("KokkosComm::Channel::wait");
+      MPI_Waitall(2, requests_, MPI_STATUSES_IGNORE); // Wait for all requests
+      Kokkos::Tools::popRegion();
+    }
+
+  private:
+    int state_; // Communication state
+    int send_parts_; // Number of send partitions
+    int recv_parts_; // Number of receive partitions
+    int ready_count_; // Number of ready partitions
+    MPI_Request* requests_; // MPI requests for send/recv
+    int dest_rank_; // Destination rank for send
+    int src_rank_; // Source rank for receive
+    int tag_; // MPI tag
+    MPI_Comm comm_; // MPI communicator
+  };
 
 }  // namespace KokkosComm
