@@ -25,8 +25,6 @@
 
 namespace KokkosComm {
 
-  //  TODO: add Channel<CommSpace> object
-  //      see: Req<CommSpace> ✧･ﾟ:✧･ﾟ 
   template <class CommSpace>
   class Channel {
   public:
@@ -44,7 +42,7 @@ namespace KokkosComm {
     template <class SendView>
     void sendinit(SendView view) {
       Kokkos::Tools::pushRegion("KokkosComm::Channel::sendinit");
-      // Initialize partitioned send
+      // Initialize persistent send
       MPI_Send_init(view.data(), view.size(), MPI_BYTE, dest_rank_, tag_, comm_, &requests_[0]);
       Kokkos::Tools::popRegion();
     }
@@ -52,7 +50,7 @@ namespace KokkosComm {
     template <class RecvView>
     void recvinit(RecvView view) {
       Kokkos::Tools::pushRegion("KokkosComm::Channel::recvinit");
-      // Initialize partitioned receive
+      // Initialize persistent receive
       MPI_Recv_init(view.data(), view.size(), MPI_BYTE, src_rank_, tag_, comm_, &requests_[1]);
       Kokkos::Tools::popRegion();
     }
@@ -70,15 +68,15 @@ namespace KokkosComm {
     }
 
   private:
-    int state_; // Communication state
-    int send_parts_; // Number of send partitions
-    int recv_parts_; // Number of receive partitions
-    int ready_count_; // Number of ready partitions
+    int state_;             // Communication state
+    int send_parts_;        // # of send partitions
+    int recv_parts_;        // # of receive partitions
+    int ready_count_;       // # of ready partitions
     MPI_Request* requests_; // MPI requests for send/recv
-    int dest_rank_; // Destination rank for send
-    int src_rank_; // Source rank for receive
-    int tag_; // MPI tag
-    MPI_Comm comm_; // MPI communicator
+    int dest_rank_;         // Destination rank for send
+    int src_rank_;          // Source rank for receive
+    int tag_;               // MPI tag
+    MPI_Comm comm_;         // MPI communicator
   };
 
 }  // namespace KokkosComm
