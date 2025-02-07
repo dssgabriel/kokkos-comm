@@ -30,7 +30,7 @@ class ChannelSendRecv : public testing::Test {
 };
 
 using ScalarTypes = ::testing::Types<int, int64_t, float, double, Kokkos::complex<float>, Kokkos::complex<double>>;
-TYPED_TEST_SUITE(MpiSendRecv, ScalarTypes);
+TYPED_TEST_SUITE(ChannelSendRecv, ScalarTypes);
 
 template <CommunicationMode SendMode, typename Scalar>
 void send_comm_mode_1d_contig() {
