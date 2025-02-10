@@ -40,7 +40,9 @@ void send_comm_mode_1d_contig() {
 
   // is SendMode the correct object? it works
   KokkosComm::Channel<SendMode> channel();
-  int errs;
+  
+  // do something with errs, 0 is placeholder
+  int errs=0;
   ASSERT_EQ(errs, 0);
 }
 
