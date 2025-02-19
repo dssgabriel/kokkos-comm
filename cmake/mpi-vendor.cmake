@@ -12,9 +12,9 @@ function(kokkoscomm_set_mpi_vendor_variables)
         # Get the directory of the MPI executable
         get_filename_component(MPIEXEC_DIR ${MPIEXEC_EXECUTABLE} DIRECTORY)
 
-        # Check for mpichversion
-        find_program(MPICHVERSION_EXECUTABLE mpichversion HINTS ${MPIEXEC_DIR})
-        find_program(OMPI_INFO_EXECUTABLE ompi_info HINTS ${MPIEXEC_DIR})
+        # Check for mpichversion and ompi_info
+        find_program(MPICHVERSION_EXECUTABLE mpichversion HINTS ${MPIEXEC_DIR} NO_DEFAULT_PATH)
+        find_program(OMPI_INFO_EXECUTABLE ompi_info HINTS ${MPIEXEC_DIR} NO_DEFAULT_PATH)
 
         if (MPICHVERSION_EXECUTABLE AND OPENMPI_INFO_EXECUTABLE)
             message(WARNING "Both MPICHVERSION_EXECUTABLE and OMPI_INFO_EXECUTABLE are set - unable to determine MPI vendor")
