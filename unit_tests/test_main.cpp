@@ -78,7 +78,7 @@ class MpiListener : public testing::EmptyTestEventListener {
 };
 
 int main(int argc, char *argv[]) {
-  // Intialize google test
+  // Initialize google test
   ::testing::InitGoogleTest(&argc, argv);
 
   int provided;
@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
 
   Kokkos::initialize();
 
-  // Intialize google test
+  // Initialize google test
   ::testing::InitGoogleTest(&argc, argv);
 
   ::testing::AddGlobalTestEnvironment(new MpiEnvironment());

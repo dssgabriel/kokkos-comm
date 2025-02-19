@@ -56,7 +56,7 @@ void recv(const ExecSpace &space, RecvView &rv, int src, int tag, MPI_Comm comm)
     Packer::unpack_into(space, rv, args.view);
   } else {
     using RecvScalar = typename RecvView::value_type;
-    space.fence();  // can't recv in space until any preceeding work is done
+    space.fence();  // can't recv in space until any preceding work is done
     recv(rv, src, tag, comm, MPI_STATUS_IGNORE);
   }
 
