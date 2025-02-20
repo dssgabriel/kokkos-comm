@@ -27,7 +27,7 @@ namespace KokkosComm::mpi {
 
 template <KokkosView RecvView>
 void recv(const RecvView &rv, int src, int tag, MPI_Comm comm, MPI_Status *status) {
-  Kokkos::Tools::pushRegion("KokkosComm::Impl::recv");
+  Kokkos::Tools::pushRegion("KokkosComm::mpi::recv");
   using KCT = KokkosComm::Traits<RecvView>;
 
   if (KokkosComm::is_contiguous(rv)) {
@@ -42,7 +42,7 @@ void recv(const RecvView &rv, int src, int tag, MPI_Comm comm, MPI_Status *statu
 
 template <KokkosExecutionSpace ExecSpace, KokkosView RecvView>
 void recv(const ExecSpace &space, RecvView &rv, int src, int tag, MPI_Comm comm) {
-  Kokkos::Tools::pushRegion("KokkosComm::Impl::recv");
+  Kokkos::Tools::pushRegion("KokkosComm::mpi::recv");
 
   using KCT    = KokkosComm::Traits<RecvView>;
   using KCPT   = KokkosComm::PackTraits<RecvView>;
@@ -51,13 +51,14 @@ void recv(const ExecSpace &space, RecvView &rv, int src, int tag, MPI_Comm comm)
 
   if (!KokkosComm::is_contiguous(rv)) {
     Args args = Packer::allocate_packed_for(space, "packed", rv);
-    space.fence();  // make sure allocation is complete before recv
+    space.fence("Fence after allocation before MPI_Recv");
     MPI_Recv(KokkosComm::data_handle(args.view), args.count, args.datatype, src, tag, comm, MPI_STATUS_IGNORE);
     Packer::unpack_into(space, rv, args.view);
   } else {
     using RecvScalar = typename RecvView::value_type;
-    space.fence();  // can't recv in space until any preceding work is done
-    recv(rv, src, tag, comm, MPI_STATUS_IGNORE);
+    space.fence("Fence before MPI_Recv");  // prevent work in `space` from writing to recv buffer
+    MPI_Recv(KokkosComm::data_handle(rv), KokkosComm::span(rv), KokkosComm::Impl::mpi_type_v<RecvScalar>, src, tag,
+             comm, MPI_STATUS_IGNORE);
   }
 
   Kokkos::Tools::popRegion();
