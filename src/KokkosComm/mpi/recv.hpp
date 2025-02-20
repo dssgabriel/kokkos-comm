@@ -51,12 +51,12 @@ void recv(const ExecSpace &space, RecvView &rv, int src, int tag, MPI_Comm comm)
 
   if (!KokkosComm::is_contiguous(rv)) {
     Args args = Packer::allocate_packed_for(space, "packed", rv);
-    space.fence();  // make sure allocation is complete before recv
+    space.fence("Fence after allocation before MPI_Recv");
     MPI_Recv(KokkosComm::data_handle(args.view), args.count, args.datatype, src, tag, comm, MPI_STATUS_IGNORE);
     Packer::unpack_into(space, rv, args.view);
   } else {
     using RecvScalar = typename RecvView::value_type;
-    space.fence();  // can't recv in space until any preceding work is done
+    space.fence("Fence before MPI_Recv");  // prevent work in `space` from writing to recv buffer
     recv(rv, src, tag, comm, MPI_STATUS_IGNORE);
   }
 
