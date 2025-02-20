@@ -27,7 +27,7 @@ namespace KokkosComm::mpi {
 
 template <KokkosView RecvView>
 void recv(const RecvView &rv, int src, int tag, MPI_Comm comm, MPI_Status *status) {
-  Kokkos::Tools::pushRegion("KokkosComm::Impl::recv");
+  Kokkos::Tools::pushRegion("KokkosComm::mpi::recv");
   using KCT = KokkosComm::Traits<RecvView>;
 
   if (KokkosComm::is_contiguous(rv)) {
@@ -42,7 +42,7 @@ void recv(const RecvView &rv, int src, int tag, MPI_Comm comm, MPI_Status *statu
 
 template <KokkosExecutionSpace ExecSpace, KokkosView RecvView>
 void recv(const ExecSpace &space, RecvView &rv, int src, int tag, MPI_Comm comm) {
-  Kokkos::Tools::pushRegion("KokkosComm::Impl::recv");
+  Kokkos::Tools::pushRegion("KokkosComm::mpi::recv");
 
   using KCT    = KokkosComm::Traits<RecvView>;
   using KCPT   = KokkosComm::PackTraits<RecvView>;
