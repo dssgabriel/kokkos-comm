@@ -31,17 +31,25 @@ using namespace KokkosComm::mpi;
 namespace {
 
 void view_access_via_mpi_extension() {
-#ifdef KOKKOSCOMM_IMPL_MPIEXT_H
 #if defined(KOKKOSCOMM_IMPL_MPI_IS_OPENMPI) && defined(KOKKOS_ENABLE_CUDA)
+
+#if defined(KOKKOSCOMM_IMPL_MPIEXT_H)
   EXPECT_EQ(1, MPIX_Query_cuda_support());
-#elif defined(KOKKOSCOMM_IMPL_MPI_IS_MPICH) && defined(KOKKOS_ENABLE_CUDA)
-  EXPECT_EQ(1, MPIX_Query_cuda_support());
-#else
-  GTEST_SKIP() << "Query CUDA support via MPI extension not available";
-#endif
 #else
   GTEST_SKIP() << "mpi-ext.h not available";
-#endif  // KOKKOSCOMM_IMPL_MPI_EXT_H
+#endif
+
+#elif defined(KOKKOSCOMM_IMPL_MPI_IS_MPICH)
+
+#if defined(KOKKOS_ENABLE_CUDA)
+  EXPECT_EQ(1, MPIX_Query_cuda_support());
+#else
+  GTEST_SKIP() << "CUDA not enabled";
+#endif
+
+#else
+  GTEST_SKIP() << "unable to check for CUDA-aware MPI";
+#endif
 }
 
 void doit() {
