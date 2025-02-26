@@ -45,6 +45,7 @@ auto data_handle(const View &v) {
   return v.data();
 }
 
+// return span in elements between the elements with the lowest and highest address
 template <KokkosView View>
 auto span(const View &v) {
   return v.span();

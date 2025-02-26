@@ -2,8 +2,8 @@
 Extending the documentation
 ***************************
 
-Using reStructedText
-====================
+Using reStructuredText
+======================
 
 Useful resources:
 
@@ -26,7 +26,7 @@ Building a local copy of the docs
 
         $ source .venv/bin/activate
 
-3. Install the documentaion pre-requisites:
+3. Install the documentation pre-requisites:
 
     .. code-block:: console
 

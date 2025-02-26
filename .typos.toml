@@ -1,0 +1,3 @@
+[default.extend-words]
+# Don't correct these word (parts)
+arange = "arange"

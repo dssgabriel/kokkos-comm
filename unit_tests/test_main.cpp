@@ -78,9 +78,6 @@ class MpiListener : public testing::EmptyTestEventListener {
 };
 
 int main(int argc, char *argv[]) {
-  // Intialize google test
-  ::testing::InitGoogleTest(&argc, argv);
-
   int provided;
   MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
   if (provided != MPI_THREAD_MULTIPLE) {
@@ -96,7 +93,7 @@ int main(int argc, char *argv[]) {
 
   Kokkos::initialize();
 
-  // Intialize google test
+  // Initialize google test
   ::testing::InitGoogleTest(&argc, argv);
 
   ::testing::AddGlobalTestEnvironment(new MpiEnvironment());

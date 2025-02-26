@@ -73,11 +73,13 @@ void send(const ExecSpace &space, const SendView &sv, int dest, int tag, MPI_Com
 
   if (KokkosComm::is_contiguous(sv)) {
     using SendScalar = typename SendView::value_type;
-    mpi_send_fn(sv.data(), sv.span(), KokkosComm::Impl::mpi_type_v<SendScalar>, dest, tag, comm);
+    space.fence("fence before MPI_Send");
+    mpi_send_fn(KokkosComm::data_handle(sv), KokkosComm::span(sv), KokkosComm::Impl::mpi_type_v<SendScalar>, dest, tag,
+                comm);
   } else {
     auto args = Packer::pack(space, sv);
-    space.fence();
-    mpi_send_fn(args.view.data(), args.count, args.datatype, dest, tag, comm);
+    space.fence("fence before MPI_Send");
+    mpi_send_fn(KokkosComm::data_handle(args.view), args.count, args.datatype, dest, tag, comm);
   }
 
   Kokkos::Tools::popRegion();

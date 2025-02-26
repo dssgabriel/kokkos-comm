@@ -46,6 +46,7 @@ Documentation Content
    CONTRIBUTING
    dev/impl_comm_space.rst
    dev/testing
+   dev/mpi
    dev/docs
 
 

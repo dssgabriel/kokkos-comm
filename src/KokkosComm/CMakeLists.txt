@@ -113,10 +113,14 @@ kokkoscomm_check_and_add_compile_options(KokkosCommFlags -Wmissing-include-dirs)
 kokkoscomm_check_and_add_compile_options(KokkosCommFlags -Wno-gnu-zero-variadic-macro-arguments)
 
 # Linking
-target_link_libraries(KokkosComm INTERFACE KokkosComm::KokkosCommFlags Kokkos::kokkos)
+# gh/pmodels/mpich#7304: MPICH 4.2.3 and 4.3.0 (and maybe earlier) rely on being
+# linked before CUDA and friends, so link MPI before Kokkos.
+# TODO_CMAKE: in CMake 3.31, we can use LINK_LIBRARIES_STRATEGY to explicitly ask CMake not to
+# reorder how libraries are linked. In the mean time, we have to just hope (?).
 if(KOKKOSCOMM_ENABLE_MPI)
   target_link_libraries(KokkosComm INTERFACE MPI::MPI_CXX)
 endif()
+target_link_libraries(KokkosComm INTERFACE KokkosComm::KokkosCommFlags Kokkos::kokkos)
 
 # Install library
 install(
