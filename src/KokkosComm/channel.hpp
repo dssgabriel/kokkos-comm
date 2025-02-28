@@ -35,23 +35,37 @@ namespace KokkosComm {
       requests_ = new MPI_Request[2]; // Example: 2 requests for send/recv
     }
 
+    Channel(int dest_rank, int src_rank, int tag, MPI_Comm comm)
+    : dest_rank_(dest_rank), 
+      src_rank_(src_rank), 
+      tag_(tag), 
+      comm_(comm),
+      state_(0),
+      send_parts_(0),
+      recv_parts_(0),
+      ready_count_(0) {
+        requests_ = new MPI_Request[2];
+    }
+
     ~Channel() {
-      delete[] requests_;
+      delete[] requests_; // TODO: Only free if in inactive state
     }
     
     template <class SendView>
     void sendinit(SendView view) {
       Kokkos::Tools::pushRegion("KokkosComm::Channel::sendinit");
+      using value_type = typename SendView::value_type;
       // Initialize persistent send
-      MPI_Send_init(view.data(), view.size(), MPI_BYTE, dest_rank_, tag_, comm_, &requests_[0]);
+      MPI_Send_init(view.data(), view.size(), KokkosComm::Impl::mpi_type_v<value_type>, dest_rank_, tag_, comm_, &requests_[0]);
       Kokkos::Tools::popRegion();
     }
     
     template <class RecvView>
     void recvinit(RecvView view) {
       Kokkos::Tools::pushRegion("KokkosComm::Channel::recvinit");
+      using value_type = typename RecvView::value_type;
       // Initialize persistent receive
-      MPI_Recv_init(view.data(), view.size(), MPI_BYTE, src_rank_, tag_, comm_, &requests_[1]);
+      MPI_Recv_init(view.data(), view.size(), KokkosComm::Impl::mpi_type_v<value_type>, src_rank_, tag_, comm_, &requests_[1]);
       Kokkos::Tools::popRegion();
     }
     
@@ -59,6 +73,7 @@ namespace KokkosComm {
       Kokkos::Tools::pushRegion("KokkosComm::Channel::start");
       MPI_Startall(2, requests_); // Start all requests
       Kokkos::Tools::popRegion();
+      // TODO: When completed, destroy OR maintain Channel
     }
 
     void wait() {

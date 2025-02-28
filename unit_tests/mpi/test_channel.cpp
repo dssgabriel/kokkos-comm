@@ -46,8 +46,53 @@ void send_comm_mode_1d_contig() {
   ASSERT_EQ(errs, 0);
 }
 
+template <CommunicationMode SendMode, typename Scalar>
+void test_channel_send_recv() {
+  int rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+  if (size < 2) {
+    GTEST_SKIP() << "This test requires at least 2 MPI processes";
+  }
+
+  const int dest_rank = (rank + 1) % size;       // send to next rank
+  const int src_rank = (rank - 1 + size) % size; // recv from prev rank
+  const int tag = 42; 
+
+  KokkosComm::Channel<SendMode> channel(dest_rank, src_rank, tag, MPI_COMM_WORLD);
+
+  const int N = 10;
+
+  // Create host views
+  Kokkos::View<Scalar*, Kokkos::HostSpace> send_host("send_host", N);
+  Kokkos::View<Scalar*, Kokkos::HostSpace> recv_host("recv_host", N);
+
+  for(int i=0; i<N; i++) send_host(i) = static_cast<Scalar>(rank * N + i);
+
+  channel.sendinit(send_host);
+  channel.recvinit(recv_host);
+
+  channel.start();
+  channel.wait();
+  // MPI_Barrier(MPI_COMM_WORLD);
+
+  int errs = 0;
+  for(int i = 0; i < N; i++) {
+    const Scalar expected = static_cast<Scalar>(src_rank * N + i);
+    if (recv_host(i) != expected) {
+      errs++;
+    }
+  }
+  EXPECT_EQ(errs, 0);
+}
+
 TYPED_TEST(ChannelSendRecv, 1D_contig_standard) {
   send_comm_mode_1d_contig<CommModeStandard, typename TestFixture::Scalar>();
+}
+
+TYPED_TEST(ChannelSendRecv, 1D_contig_standard_comm) {
+  test_channel_send_recv<CommModeStandard, typename TestFixture::Scalar>();
 }
 
 }  // namespace
