@@ -40,9 +40,9 @@ void send_comm_mode_1d_contig() {
 
   // is SendMode the correct object? it works
   KokkosComm::Channel<SendMode> channel();
-  
+
   // do something with errs, 0 is placeholder
-  int errs=0;
+  int errs = 0;
   ASSERT_EQ(errs, 0);
 }
 
@@ -56,9 +56,9 @@ void test_channel_send_recv() {
     GTEST_SKIP() << "This test requires at least 2 MPI processes";
   }
 
-  const int dest_rank = (rank + 1) % size;       // send to next rank
-  const int src_rank = (rank - 1 + size) % size; // recv from prev rank
-  const int tag = 42; 
+  const int dest_rank = (rank + 1) % size;         // send to next rank
+  const int src_rank  = (rank - 1 + size) % size;  // recv from prev rank
+  const int tag       = 42;
 
   KokkosComm::Channel<SendMode> channel(dest_rank, src_rank, tag, MPI_COMM_WORLD);
 
@@ -68,7 +68,7 @@ void test_channel_send_recv() {
   Kokkos::View<Scalar*, Kokkos::HostSpace> send_host("send_host", N);
   Kokkos::View<Scalar*, Kokkos::HostSpace> recv_host("recv_host", N);
 
-  for(int i=0; i<N; i++) send_host(i) = static_cast<Scalar>(rank * N + i);
+  for (int i = 0; i < N; i++) send_host(i) = static_cast<Scalar>(rank * N + i);
 
   channel.sendinit(send_host);
   channel.recvinit(recv_host);
@@ -78,7 +78,7 @@ void test_channel_send_recv() {
   // MPI_Barrier(MPI_COMM_WORLD);
 
   int errs = 0;
-  for(int i = 0; i < N; i++) {
+  for (int i = 0; i < N; i++) {
     const Scalar expected = static_cast<Scalar>(src_rank * N + i);
     if (recv_host(i) != expected) {
       errs++;
