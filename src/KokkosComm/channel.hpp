@@ -30,13 +30,8 @@ class Channel {
  public:
   using comm_space = CommSpace;
 
-  explicit Channel(int num_reqs = 2) // Example: 2 requests for send/recv
-      : state_(0), 
-        send_parts_(0), 
-        recv_parts_(0), 
-        ready_count_(0),
-        num_reqs_(num_reqs),
-        requests_(num_reqs_) {}
+  explicit Channel(int num_reqs = 2)  // Example: 2 requests for send/recv
+      : state_(0), send_parts_(0), recv_parts_(0), ready_count_(0), num_reqs_(num_reqs), requests_(num_reqs_) {}
 
   explicit Channel(int dest_rank, int src_rank, int tag, MPI_Comm comm, int num_reqs = 2)
       : state_(0),
@@ -70,14 +65,14 @@ class Channel {
     using value_type = typename RecvView::value_type;
     // Initialize persistent receive
     MPI_Recv_init(view.data(), view.size(), KokkosComm::Impl::mpi_type_v<value_type>, src_rank_, tag_, comm_,
-                  &(requests_[1].mpi_request())); //TODO: Currently breaks if more than 2
+                  &(requests_[1].mpi_request()));  // TODO: Currently breaks if more than 2
     Kokkos::Tools::popRegion();
   }
 
   void start() {
     Kokkos::Tools::pushRegion("KokkosComm::Channel::start");
     std::vector<MPI_Request> mpi_reqs;
-    for (auto& req : requests_){
+    for (auto& req : requests_) {
       mpi_reqs.push_back(req.mpi_request());
     }
     MPI_Startall(num_reqs_, mpi_reqs.data());
@@ -92,16 +87,16 @@ class Channel {
   }
 
  private:
-  int state_;              // Communication state
-  int send_parts_;         // # of send partitions
-  int recv_parts_;         // # of receive partitions
-  int ready_count_;        // # of ready partitions
-  int num_reqs_;           // # of requests
+  int state_;        // Communication state
+  int send_parts_;   // # of send partitions
+  int recv_parts_;   // # of receive partitions
+  int ready_count_;  // # of ready partitions
+  int num_reqs_;     // # of requests
   std::vector<Req<Mpi>> requests_;
-  int dest_rank_;          // Destination rank for send
-  int src_rank_;           // Source rank for receive
-  int tag_;                // MPI tag
-  MPI_Comm comm_;          // MPI communicator
+  int dest_rank_;  // Destination rank for send
+  int src_rank_;   // Source rank for receive
+  int tag_;        // MPI tag
+  MPI_Comm comm_;  // MPI communicator
 };
 
 }  // namespace KokkosComm
