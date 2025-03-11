@@ -30,25 +30,28 @@ class Channel {
  public:
   using comm_space = CommSpace;
 
-  Channel() : state_(0), send_parts_(0), recv_parts_(0), ready_count_(0) {
-    // Initialize MPI requests
-    requests_ = new MPI_Request[2];  // Example: 2 requests for send/recv
-  }
+  explicit Channel(int num_reqs = 2) // Example: 2 requests for send/recv
+      : state_(0), 
+        send_parts_(0), 
+        recv_parts_(0), 
+        ready_count_(0),
+        num_reqs_(num_reqs),
+        requests_(num_reqs_) {}
 
-  Channel(int dest_rank, int src_rank, int tag, MPI_Comm comm)
-      : dest_rank_(dest_rank),
-        src_rank_(src_rank),
-        tag_(tag),
-        comm_(comm),
-        state_(0),
+  explicit Channel(int dest_rank, int src_rank, int tag, MPI_Comm comm, int num_reqs = 2)
+      : state_(0),
         send_parts_(0),
         recv_parts_(0),
-        ready_count_(0) {
-    requests_ = new MPI_Request[2];
-  }
+        ready_count_(0),
+        num_reqs_(num_reqs),
+        requests_(num_reqs_),
+        dest_rank_(dest_rank),
+        src_rank_(src_rank),
+        tag_(tag),
+        comm_(comm) {}
 
   ~Channel() {
-    delete[] requests_;  // TODO: Only free if in inactive state
+    // delete[] requests_;  // TODO: Only free if in inactive state
   }
 
   template <class SendView>
@@ -57,7 +60,7 @@ class Channel {
     using value_type = typename SendView::value_type;
     // Initialize persistent send
     MPI_Send_init(view.data(), view.size(), KokkosComm::Impl::mpi_type_v<value_type>, dest_rank_, tag_, comm_,
-                  &requests_[0]);
+                  &(requests_[0].mpi_request()));
     Kokkos::Tools::popRegion();
   }
 
@@ -67,20 +70,24 @@ class Channel {
     using value_type = typename RecvView::value_type;
     // Initialize persistent receive
     MPI_Recv_init(view.data(), view.size(), KokkosComm::Impl::mpi_type_v<value_type>, src_rank_, tag_, comm_,
-                  &requests_[1]);
+                  &(requests_[1].mpi_request())); //TODO: Currently breaks if more than 2
     Kokkos::Tools::popRegion();
   }
 
   void start() {
     Kokkos::Tools::pushRegion("KokkosComm::Channel::start");
-    MPI_Startall(2, requests_);  // Start all requests
+    std::vector<MPI_Request> mpi_reqs;
+    for (auto& req : requests_){
+      mpi_reqs.push_back(req.mpi_request());
+    }
+    MPI_Startall(num_reqs_, mpi_reqs.data());
     Kokkos::Tools::popRegion();
     // TODO: When completed, destroy OR maintain Channel
   }
 
   void wait() {
     Kokkos::Tools::pushRegion("KokkosComm::Channel::wait");
-    MPI_Waitall(2, requests_, MPI_STATUSES_IGNORE);  // Wait for all requests
+    wait_all(requests_);
     Kokkos::Tools::popRegion();
   }
 
@@ -89,7 +96,8 @@ class Channel {
   int send_parts_;         // # of send partitions
   int recv_parts_;         // # of receive partitions
   int ready_count_;        // # of ready partitions
-  MPI_Request* requests_;  // MPI requests for send/recv
+  int num_reqs_;           // # of requests
+  std::vector<Req<Mpi>> requests_;
   int dest_rank_;          // Destination rank for send
   int src_rank_;           // Source rank for receive
   int tag_;                // MPI tag
