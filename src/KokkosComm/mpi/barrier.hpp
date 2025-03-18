@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "KokkosComm/concepts.hpp"
+#include <KokkosComm/concepts.hpp>
 
 namespace KokkosComm {
 
@@ -31,11 +31,13 @@ struct Barrier {
 }  // namespace Impl
 
 namespace mpi {
+
 inline void barrier(MPI_Comm comm) {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::barrier");
   MPI_Barrier(comm);
   Kokkos::Tools::popRegion();
 }
+
 }  // namespace mpi
 
 }  // namespace KokkosComm

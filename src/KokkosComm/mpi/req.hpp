@@ -17,12 +17,12 @@
 #pragma once
 
 #include <vector>
-#include <utility>
 #include <functional>
 
-#include "KokkosComm/fwd.hpp"
+#include <mpi.h>
 
-#include "mpi.hpp"
+#include <KokkosComm/fwd.hpp>
+#include "mpi_space.hpp"
 
 namespace KokkosComm {
 

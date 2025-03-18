@@ -16,32 +16,17 @@
 
 #pragma once
 
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
-
-#pragma once
-
+#include <mpi.h>
 #include <Kokkos_Core.hpp>
 
-#include "KokkosComm/traits.hpp"
+#include <KokkosComm/concepts.hpp>
+#include <KokkosComm/traits.hpp>
+
 #include "impl/pack_traits.hpp"
-#include "impl/include_mpi.hpp"
 #include "impl/types.hpp"
 
 namespace KokkosComm::Impl {
+
 template <KokkosExecutionSpace ExecSpace, KokkosView SendView, KokkosView RecvView>
 void alltoall(const ExecSpace &space, const SendView &sv, const size_t sendCount, const RecvView &rv,
               const size_t recvCount, MPI_Comm comm) {

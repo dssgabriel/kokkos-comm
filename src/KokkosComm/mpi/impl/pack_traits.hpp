@@ -16,9 +16,8 @@
 
 #pragma once
 
-#include "KokkosComm/traits.hpp"
-#include "KokkosComm/concepts.hpp"
-
+#include <KokkosComm/concepts.hpp>
+#include <KokkosComm/traits.hpp>
 #include "packer.hpp"
 
 namespace KokkosComm {
