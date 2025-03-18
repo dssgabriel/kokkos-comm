@@ -26,6 +26,7 @@
 #include "mpi/allgather.hpp"
 #include "mpi/alltoall.hpp"
 #include "mpi/barrier.hpp"
+#include "mpi/channel.hpp"
 #include "mpi/handle.hpp"
 #include "mpi/irecv.hpp"
 #include "mpi/isend.hpp"
@@ -38,7 +39,6 @@
 #include "concepts.hpp"
 #include "point_to_point.hpp"
 #include "collective.hpp"
-#include "channel.hpp"
 
 #include <Kokkos_Core.hpp>
 

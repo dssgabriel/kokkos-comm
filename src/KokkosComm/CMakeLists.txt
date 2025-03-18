@@ -26,7 +26,7 @@ target_sources(
     FILE_SET kokkoscomm_public_headers
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/src
-    FILES KokkosComm.hpp channel.hpp collective.hpp concepts.hpp fwd.hpp point_to_point.hpp traits.hpp
+    FILES KokkosComm.hpp collective.hpp concepts.hpp fwd.hpp point_to_point.hpp traits.hpp
 )
 
 # Implementation detail headers
@@ -62,6 +62,7 @@ if(KOKKOSCOMM_ENABLE_MPI)
         mpi/allgather.hpp
         mpi/alltoall.hpp
         mpi/barrier.hpp
+        mpi/channel.hpp
         mpi/commmode.hpp
         mpi/handle.hpp
         mpi/irecv.hpp

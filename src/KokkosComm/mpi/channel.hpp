@@ -19,6 +19,7 @@
 #include <Kokkos_Core.hpp>
 
 #include "KokkosComm/fwd.hpp"
+#include "KokkosComm/mpi/req.hpp"
 
 namespace KokkosComm {
 
