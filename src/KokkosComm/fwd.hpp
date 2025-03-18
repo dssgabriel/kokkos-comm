@@ -16,14 +16,13 @@
 
 #pragma once
 
-#include <vector>
-
-#include "concepts.hpp"
 #include <KokkosComm/config.hpp>
+#include "concepts.hpp"
 
 namespace KokkosComm {
+
 #if defined(KOKKOSCOMM_ENABLE_MPI)
-class Mpi;
+struct Mpi;
 using DefaultCommunicationSpace  = Mpi;
 using FallbackCommunicationSpace = Mpi;
 #else
