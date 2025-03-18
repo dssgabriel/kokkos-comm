@@ -19,17 +19,12 @@
 #include <Kokkos_Core.hpp>
 
 #include "KokkosComm/fwd.hpp"
-//#include "commmode.hpp"
-//#include "impl/pack_traits.hpp"
-//#include "impl/include_mpi.hpp"
 
 namespace KokkosComm {
 
-template <class CommSpace>
+template <typename CommSpace = DefaultCommunicationSpace>
 class Channel {
  public:
-  using comm_space = CommSpace;
-
   explicit Channel(int num_reqs = 2)  // Example: 2 requests for send/recv
       : state_(0), send_parts_(0), recv_parts_(0), ready_count_(0), num_reqs_(num_reqs), requests_(num_reqs_) {}
 

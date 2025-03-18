@@ -32,21 +32,7 @@ class ChannelSendRecv : public testing::Test {
 using ScalarTypes = ::testing::Types<int, int64_t, float, double, Kokkos::complex<float>, Kokkos::complex<double>>;
 TYPED_TEST_SUITE(ChannelSendRecv, ScalarTypes);
 
-template <CommunicationMode SendMode, typename Scalar>
-void send_comm_mode_1d_contig() {
-  if constexpr (std::is_same_v<SendMode, CommModeReady>) {
-    GTEST_SKIP() << "Skipping test for ready-mode send";
-  }
-
-  // is SendMode the correct object? it works
-  KokkosComm::Channel<SendMode> channel;
-
-  // do something with errs, 0 is placeholder
-  int errs = 0;
-  ASSERT_EQ(errs, 0);
-}
-
-template <CommunicationMode SendMode, typename Scalar>
+template <typename Scalar>
 void test_channel_send_recv() {
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -60,7 +46,7 @@ void test_channel_send_recv() {
   const int src_rank  = (rank - 1 + size) % size;  // recv from prev rank
   const int tag       = 42;
 
-  KokkosComm::Channel<SendMode> channel(dest_rank, src_rank, tag, MPI_COMM_WORLD);
+  KokkosComm::Channel<> channel(dest_rank, src_rank, tag, MPI_COMM_WORLD);
 
   const int N = 10;
 
@@ -87,12 +73,6 @@ void test_channel_send_recv() {
   EXPECT_EQ(errs, 0);
 }
 
-TYPED_TEST(ChannelSendRecv, 1D_contig_standard) {
-  send_comm_mode_1d_contig<CommModeStandard, typename TestFixture::Scalar>();
-}
-
-TYPED_TEST(ChannelSendRecv, 1D_contig_standard_comm) {
-  test_channel_send_recv<CommModeStandard, typename TestFixture::Scalar>();
-}
+TYPED_TEST(ChannelSendRecv, 1D_contig_standard) { test_channel_send_recv<typename TestFixture::Scalar>(); }
 
 }  // namespace
