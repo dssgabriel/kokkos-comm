@@ -45,8 +45,8 @@ class Channel {
     Kokkos::Tools::pushRegion("KokkosComm::Channel::sendinit");
     using value_type = typename SendView::value_type;
     // Initialize persistent send
-    MPI_Send_init(KokkosComm::data_handle(view), KokkosComm::span(view), KokkosComm::Impl::mpi_type_v<value_type>, dest_rank_, tag_, comm_,
-                  &(requests_[0].mpi_request()));
+    MPI_Send_init(KokkosComm::data_handle(view), KokkosComm::span(view), KokkosComm::Impl::mpi_type_v<value_type>,
+                  dest_rank_, tag_, comm_, &(requests_[0].mpi_request()));
     Kokkos::Tools::popRegion();
   }
 
@@ -55,7 +55,8 @@ class Channel {
     Kokkos::Tools::pushRegion("KokkosComm::Channel::recvinit");
     using value_type = typename RecvView::value_type;
     // Initialize persistent receive
-    MPI_Recv_init(KokkosComm::data_handle(view), KokkosComm::span(view), KokkosComm::Impl::mpi_type_v<value_type>, src_rank_, tag_, comm_,
+    MPI_Recv_init(KokkosComm::data_handle(view), KokkosComm::span(view), KokkosComm::Impl::mpi_type_v<value_type>,
+                  src_rank_, tag_, comm_,
                   &(requests_[1].mpi_request()));  // TODO: Currently breaks if more than 2
     Kokkos::Tools::popRegion();
   }
