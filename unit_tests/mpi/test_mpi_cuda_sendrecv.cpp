@@ -34,7 +34,6 @@ implementations from being used. Also, the CUDA libraries were statically linked
 */
 
 #include <iostream>
-
 #include <mpi.h>
 #include <cuda_runtime.h>
 #include <cuda.h>

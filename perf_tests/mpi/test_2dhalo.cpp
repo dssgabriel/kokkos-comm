@@ -16,9 +16,9 @@
 
 #include "test_utils.hpp"
 
-#include <iostream>
+#include "KokkosComm/KokkosComm.hpp"
 
-#include <KokkosComm/KokkosComm.hpp>
+#include <iostream>
 
 void noop(benchmark::State, MPI_Comm) {}
 

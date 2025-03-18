@@ -16,13 +16,11 @@
 
 #pragma once
 
-#include <mpi.h>
 #include <Kokkos_Core.hpp>
 
-#include <KokkosComm/concepts.hpp>
-#include <KokkosComm/traits.hpp>
-
+#include "KokkosComm/traits.hpp"
 #include "impl/pack_traits.hpp"
+#include "impl/include_mpi.hpp"
 #include "impl/types.hpp"
 
 namespace KokkosComm::mpi {
@@ -85,5 +83,4 @@ void reduce(const ExecSpace &space, const SendView &sv, const RecvView &rv, MPI_
 
   Kokkos::Tools::popRegion();
 }
-
 }  // namespace KokkosComm::mpi

@@ -15,7 +15,8 @@
 //@HEADER
 
 #include <gtest/gtest.h>
-#include <KokkosComm/KokkosComm.hpp>
+
+#include "KokkosComm/KokkosComm.hpp"
 
 #include "view_builder.hpp"
 

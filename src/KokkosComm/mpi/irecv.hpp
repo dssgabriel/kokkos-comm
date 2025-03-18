@@ -16,22 +16,17 @@
 
 #pragma once
 
-#include <KokkosComm/concepts.hpp>
-#include <KokkosComm/traits.hpp>
-#include "mpi_space.hpp"
-#include "handle.hpp"
-
-#include "impl/pack_traits.hpp"
+#include "mpi.hpp"
 #include "impl/tags.hpp"
-#include "impl/types.hpp"
 
 namespace KokkosComm {
-namespace Impl {
 
+namespace Impl {
 // Recv implementation for Mpi
 template <KokkosExecutionSpace ExecSpace, KokkosView RecvView>
 struct Recv<RecvView, ExecSpace, Mpi> {
   static Req<Mpi> execute(Handle<ExecSpace, Mpi> &h, const RecvView &rv, int src) {
+    using KCT    = KokkosComm::Traits<RecvView>;
     using KCPT   = KokkosComm::PackTraits<RecvView>;
     using Packer = typename KCPT::packer_type;
     using Args   = typename Packer::args_type;
@@ -54,11 +49,9 @@ struct Recv<RecvView, ExecSpace, Mpi> {
     return req;
   }
 };
-
 }  // namespace Impl
 
 namespace mpi {
-
 template <KokkosView RecvView>
 void irecv(const RecvView &rv, int src, int tag, MPI_Comm comm, MPI_Request &req) {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::irecv");
@@ -71,7 +64,6 @@ void irecv(const RecvView &rv, int src, int tag, MPI_Comm comm, MPI_Request &req
   }
   Kokkos::Tools::popRegion();
 }
-
 }  // namespace mpi
 
 }  // namespace KokkosComm

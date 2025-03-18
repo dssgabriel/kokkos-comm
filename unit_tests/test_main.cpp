@@ -18,11 +18,12 @@
 
 #include <sstream>
 
-#include <mpi.h>
 #include <gtest/gtest.h>
-#include <Kokkos_Core.hpp>
 
 #include <KokkosComm/config.hpp>
+#include <Kokkos_Core.hpp>
+
+#include "KokkosComm/mpi/impl/include_mpi.hpp"
 
 class MpiEnvironment : public ::testing::Environment {
  public:

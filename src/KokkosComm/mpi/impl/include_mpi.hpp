@@ -16,25 +16,13 @@
 
 #pragma once
 
-#include <type_traits>
+#define KOKKOSCOMM_GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
 
-#include <Kokkos_Core.hpp>
-
-namespace KokkosComm {
-
-namespace Impl {
-// fallback - most types are not a KokkosComm transport
-template <typename T>
-struct is_communication_space : public std::false_type {};
-}  // namespace Impl
-
-template <typename T>
-concept KokkosView = Kokkos::is_view_v<T>;
-
-template <typename T>
-concept KokkosExecutionSpace = Kokkos::is_execution_space_v<T>;
-
-template <typename T>
-concept CommunicationSpace = KokkosComm::Impl::is_communication_space<T>::value;
-
-}  // namespace KokkosComm
+#if KOKKOSCOMM_GCC_VERSION >= 11400
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
+#include <mpi.h>
+#pragma GCC diagnostic pop
+#else
+#include <mpi.h>
+#endif

@@ -16,7 +16,7 @@
 
 #include <gtest/gtest.h>
 
-#include <KokkosComm/KokkosComm.hpp>
+#include "KokkosComm/KokkosComm.hpp"
 
 namespace {
 

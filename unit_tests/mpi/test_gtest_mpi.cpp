@@ -16,6 +16,7 @@
 
 #include <gtest/gtest.h>
 #include <gtest/gtest-spi.h>
+
 #include <mpi.h>
 
 TEST(TestGtest, all_fail_nonfatal) {

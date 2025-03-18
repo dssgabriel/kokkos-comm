@@ -14,6 +14,8 @@
 #
 #@HEADER
 
+set(TARGET_LIBRARY kokkoscomm)
+
 add_library(KokkosComm INTERFACE)
 add_library(KokkosComm::KokkosComm ALIAS KokkosComm)
 
@@ -30,7 +32,11 @@ target_sources(
 # Implementation detail headers
 target_sources(
   KokkosComm
-  INTERFACE FILE_SET kokkoscomm_impl_headers TYPE HEADERS BASE_DIRS ${PROJECT_SOURCE_DIR}/src FILES impl/contiguous.hpp
+  INTERFACE
+    FILE_SET kokkoscomm_impl_headers
+    TYPE HEADERS
+    BASE_DIRS ${PROJECT_SOURCE_DIR}/src
+    FILES impl/KokkosComm_contiguous.hpp
 )
 
 # Configuration header
@@ -52,18 +58,18 @@ if(KOKKOSCOMM_ENABLE_MPI)
       TYPE HEADERS
       BASE_DIRS ${PROJECT_SOURCE_DIR}/src
       FILES
-        mpi/mpi_space.hpp
-        mpi/comm_mode.hpp
+        mpi/mpi.hpp
+        mpi/allgather.hpp
+        mpi/alltoall.hpp
+        mpi/barrier.hpp
+        mpi/commmode.hpp
         mpi/handle.hpp
-        mpi/req.hpp
         mpi/irecv.hpp
         mpi/isend.hpp
         mpi/recv.hpp
-        mpi/send.hpp
-        mpi/allgather.hpp
-        mpi/alltoall.hpp
         mpi/reduce.hpp
-        mpi/barrier.hpp
+        mpi/req.hpp
+        mpi/send.hpp
   )
 
   # Implementation detail MPI headers
@@ -73,7 +79,7 @@ if(KOKKOSCOMM_ENABLE_MPI)
       FILE_SET kokkoscomm_mpi_impl_headers
       TYPE HEADERS
       BASE_DIRS ${PROJECT_SOURCE_DIR}/src
-      FILES mpi/impl/pack_traits.hpp mpi/impl/packer.hpp mpi/impl/tags.hpp mpi/impl/types.hpp
+      FILES mpi/impl/include_mpi.hpp mpi/impl/pack_traits.hpp mpi/impl/packer.hpp mpi/impl/tags.hpp mpi/impl/types.hpp
   )
 endif()
 
@@ -103,7 +109,7 @@ kokkoscomm_check_and_add_compile_options(KokkosCommFlags -Wpedantic)
 kokkoscomm_check_and_add_compile_options(KokkosCommFlags -pedantic)
 kokkoscomm_check_and_add_compile_options(KokkosCommFlags -Wcast-align)
 kokkoscomm_check_and_add_compile_options(KokkosCommFlags -Wformat=2)
-kokkoscomm_check_and_add_compile_options(KokkosCommFlags -Wmissing-src-dirs)
+kokkoscomm_check_and_add_compile_options(KokkosCommFlags -Wmissing-include-dirs)
 kokkoscomm_check_and_add_compile_options(KokkosCommFlags -Wno-gnu-zero-variadic-macro-arguments)
 
 # Linking
@@ -120,9 +126,14 @@ target_link_libraries(KokkosComm INTERFACE KokkosComm::KokkosCommFlags Kokkos::k
 install(
   TARGETS KokkosComm KokkosCommFlags
   EXPORT KokkosCommTargets
-  FILE_SET kokkoscomm_public_headers
-  FILE_SET kokkoscomm_impl_headers
-  FILE_SET kokkoscomm_mpi_headers
-  FILE_SET kokkoscomm_mpi_impl_headers
-  FILE_SET kokkoscomm_config_headers
+  FILE_SET
+  kokkoscomm_public_headers
+  FILE_SET
+  kokkoscomm_impl_headers
+  FILE_SET
+  kokkoscomm_mpi_headers
+  FILE_SET
+  kokkoscomm_mpi_impl_headers
+  FILE_SET
+  kokkoscomm_config_headers
 )

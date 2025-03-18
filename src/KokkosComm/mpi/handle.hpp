@@ -16,9 +16,8 @@
 
 #pragma once
 
-#include <KokkosComm/fwd.hpp>
-#include <KokkosComm/concepts.hpp>
-#include "mpi_space.hpp"
+#include "KokkosComm/fwd.hpp"
+
 #include "req.hpp"
 
 namespace KokkosComm {
