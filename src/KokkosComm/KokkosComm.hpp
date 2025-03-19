@@ -20,12 +20,12 @@
 #include "concepts.hpp"
 #include "point_to_point.hpp"
 #include "collective.hpp"
-#include "channel.hpp"
 
 // Communication spaces declarations
 #if defined(KOKKOSCOMM_ENABLE_MPI)
 #include "mpi/mpi_space.hpp"
 
+#include "mpi/channel.hpp"
 #include "mpi/comm_mode.hpp"
 #include "mpi/handle.hpp"
 #include "mpi/req.hpp"
