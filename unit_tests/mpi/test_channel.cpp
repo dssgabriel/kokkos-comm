@@ -61,7 +61,6 @@ void test_channel_send_recv() {
 
   channel.start();
   channel.wait();
-  // MPI_Barrier(MPI_COMM_WORLD);
 
   int errs = 0;
   for (int i = 0; i < N; i++) {
