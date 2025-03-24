@@ -95,6 +95,21 @@ if(KOKKOSCOMM_ENABLE_MPI)
           ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ./test-mpi-cuda-sendrecv
     )
   endif()
+
+  if (Kokkos_ENABLE_HIP)
+    add_executable(test-mpi-hip-sendrecv)
+    target_sources(test-mpi-hip-sendrecv PRIVATE mpi/test_mpi_hip_sendrecv.cpp)
+    target_link_libraries(test-mpi-hip-sendrecv MPI::MPI_CXX)
+    find_package(hip REQUIRED)
+    target_link_libraries(test-mpi-hip-sendrecv hip::host)
+    target_compile_options(test-mpi-hip-sendrecv PUBLIC -x hip)
+    target_compile_definitions(test-mpi-hip-sendrecv PUBLIC __HIP_PLATFORM_AMD__)
+    add_test(
+      NAME test-mpi-hip-sendrecv
+      COMMAND
+          ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ./test-mpi-hip-sendrecv
+    )
+  endif()
 endif()
 
 # Tests using the MPI communication space, but not linking with MPI itself
