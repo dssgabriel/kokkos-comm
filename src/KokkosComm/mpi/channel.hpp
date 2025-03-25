@@ -28,70 +28,59 @@ namespace KokkosComm {
 template <typename CommSpace = DefaultCommunicationSpace>
 class Channel {
  public:
-  explicit Channel(int num_reqs = 2)  // Example: 2 requests for send/recv
-      : state_(0), send_parts_(0), recv_parts_(0), ready_count_(0), num_reqs_(num_reqs), requests_(num_reqs_) {}
+  explicit Channel(int dest_rank, int src_rank, int tag, MPI_Comm comm)
+      : dest_rank_(dest_rank), src_rank_(src_rank), tag_(tag), comm_(comm) {}
 
-  explicit Channel(int dest_rank, int src_rank, int tag, MPI_Comm comm, int num_reqs = 2)
-      : state_(0),
-        send_parts_(0),
-        recv_parts_(0),
-        ready_count_(0),
-        num_reqs_(num_reqs),
-        requests_(num_reqs_),
-        dest_rank_(dest_rank),
-        src_rank_(src_rank),
-        tag_(tag),
-        comm_(comm) {}
-
+  // Send initialization - dynamically adds a send request to the send queue
   template <class SendView>
   void sendinit(SendView view) {
     Kokkos::Tools::pushRegion("KokkosComm::Channel::sendinit");
     using value_type = typename SendView::value_type;
-    // Initialize persistent send
+    // Add a new request to the send_reqs_ vector
+    send_reqs_.emplace_back();
     MPI_Send_init(KokkosComm::data_handle(view), KokkosComm::span(view), KokkosComm::Impl::mpi_type_v<value_type>,
-                  dest_rank_, tag_, comm_, &(requests_[0].mpi_request()));
+                  dest_rank_, tag_, comm_, &(send_reqs_.back().mpi_request()));
     Kokkos::Tools::popRegion();
   }
 
+  // Receive initialization - dynamically adds a receive request to the recv queue
   template <class RecvView>
   void recvinit(RecvView view) {
     Kokkos::Tools::pushRegion("KokkosComm::Channel::recvinit");
     using value_type = typename RecvView::value_type;
-    // Initialize persistent receive
+    recv_reqs_.emplace_back();
     MPI_Recv_init(KokkosComm::data_handle(view), KokkosComm::span(view), KokkosComm::Impl::mpi_type_v<value_type>,
-                  src_rank_, tag_, comm_,
-                  &(requests_[1].mpi_request()));  // TODO: Currently breaks if more than 2
+                  src_rank_, tag_, comm_, &(recv_reqs_.back().mpi_request()));
     Kokkos::Tools::popRegion();
   }
 
   void start() {
     Kokkos::Tools::pushRegion("KokkosComm::Channel::start");
     std::vector<MPI_Request> mpi_reqs;
-    for (auto& req : requests_) {
+    for (auto& req : send_reqs_) {
       mpi_reqs.push_back(req.mpi_request());
     }
-    MPI_Startall(num_reqs_, mpi_reqs.data());
+    for (auto& req : recv_reqs_) {
+      mpi_reqs.push_back(req.mpi_request());
+    }
+    MPI_Startall(mpi_reqs.size(), mpi_reqs.data());
     Kokkos::Tools::popRegion();
-    // TODO: When completed, destroy OR maintain Channel
   }
 
   void wait() {
     Kokkos::Tools::pushRegion("KokkosComm::Channel::wait");
-    wait_all(requests_);
+    wait_all(send_reqs_);
+    wait_all(recv_reqs_);
     Kokkos::Tools::popRegion();
   }
 
  private:
-  int state_;        // Communication state
-  int send_parts_;   // # of send partitions
-  int recv_parts_;   // # of receive partitions
-  int ready_count_;  // # of ready partitions
-  int num_reqs_;     // # of requests
-  std::vector<Req<Mpi>> requests_;
-  int dest_rank_;  // Destination rank for send
-  int src_rank_;   // Source rank for receive
-  int tag_;        // MPI tag
-  MPI_Comm comm_;  // MPI communicator
+  std::vector<Req<Mpi>> send_reqs_;  // Queue for send requests
+  std::vector<Req<Mpi>> recv_reqs_;  // Queue for receive requests
+  int dest_rank_;                    // Destination rank for send
+  int src_rank_;                     // Source rank for receive
+  int tag_;                          // MPI tag
+  MPI_Comm comm_;                    // MPI communicator
 };
 
 }  // namespace KokkosComm
