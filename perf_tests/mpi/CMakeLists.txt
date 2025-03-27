@@ -20,6 +20,7 @@ target_sources(
   PRIVATE
     test_main.cpp
     test_sendrecv.cpp
+    test_channel_sendrecv.cpp
     test_2dhalo.cpp
     test_osu_latency.cpp
 )
