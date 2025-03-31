@@ -103,7 +103,6 @@ if(KOKKOSCOMM_ENABLE_MPI)
     find_package(hip REQUIRED)
     target_link_libraries(test-mpi-hip-sendrecv hip::host)
     target_compile_options(test-mpi-hip-sendrecv PUBLIC -x hip)
-    target_compile_definitions(test-mpi-hip-sendrecv PUBLIC __HIP_PLATFORM_AMD__)
     add_test(
       NAME test-mpi-hip-sendrecv
       COMMAND
