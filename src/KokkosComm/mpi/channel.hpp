@@ -19,7 +19,7 @@
 #include <Kokkos_Core.hpp>
 
 #include <KokkosComm/traits.hpp>
-#include "KokkosComm/mpi/req.hpp"
+#include "req.hpp"
 
 #include "impl/types.hpp"
 
