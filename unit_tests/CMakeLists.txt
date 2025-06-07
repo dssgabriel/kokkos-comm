@@ -130,5 +130,6 @@ add_mpi_test(test-mpi-view-access 2 mpi/test_mpi_view_access.cpp) # make sure MP
 add_mpi_test(test-sendrecv        2 mpi/test_sendrecv.cpp)
 add_mpi_test(test-isendrecv       2 mpi/test_isendrecv.cpp)
 add_mpi_test(test-reduce          2 mpi/test_reduce.cpp)
+add_mpi_test(test-allreduce       2 mpi/test_allreduce.cpp)
 add_mpi_test(test-alltoall        2 mpi/test_alltoall.cpp)
 add_mpi_test(test-allgather       2 mpi/test_allgather.cpp)
