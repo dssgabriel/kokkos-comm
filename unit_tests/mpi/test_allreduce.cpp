@@ -42,11 +42,11 @@ void test_allreduce_0d() {
   Kokkos::parallel_for(
       sv.extent(0), KOKKOS_LAMBDA(const int) { sv() = rank; });
 
-  KokkosComm::mpi::allreduce(Kokkos::DefaultExecutionSpace(), sv, rv, MPI_COMM_WORLD);
+  KokkosComm::mpi::allreduce(Kokkos::DefaultExecutionSpace(), sv, rv, MPI_SUM, MPI_COMM_WORLD);
 
   int errs;
   Kokkos::parallel_reduce(
-      rv.extent(0), KOKKOS_LAMBDA(const int) { rv() == size*(size-1)/2; }, errs);
+      rv.extent(0), KOKKOS_LAMBDA(const int, int& res) { res = (rv() == size*(size-1)/2); }, errs);
   EXPECT_EQ(errs, 0);
 }
 

@@ -35,6 +35,7 @@
 #include "mpi/send.hpp"
 
 #include "mpi/allgather.hpp"
+#include "mpi/allreduce.hpp"
 #include "mpi/alltoall.hpp"
 #include "mpi/reduce.hpp"
 
