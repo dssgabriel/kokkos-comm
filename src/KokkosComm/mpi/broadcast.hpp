@@ -27,7 +27,7 @@
 namespace KokkosComm::mpi {
 
 template <KokkosView View>
-void broadcast(View const &v, int root, MPI_Comm comm) {
+void broadcast(View const& v, int root, MPI_Comm comm) {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::broadcast");
 
   using Scalar = typename View::value_type;
