@@ -77,15 +77,13 @@ void test_allreduce_1d_contig() {
 
   int errs;
   Kokkos::parallel_reduce(
-      rv.extent(0), KOKKOS_LAMBDA(int i, int &lsum) { lsum += (rv(i) != size * (size - 1) / 2 + size * i); },
-      errs);
+      rv.extent(0), KOKKOS_LAMBDA(int i, int &lsum) { lsum += (rv(i) != size * (size - 1) / 2 + size * i); }, errs);
   EXPECT_EQ(errs, 0);
 
   KokkosComm::mpi::allreduce(Kokkos::DefaultExecutionSpace(), sv, MPI_SUM, MPI_COMM_WORLD);
 
   Kokkos::parallel_reduce(
-      sv.extent(0), KOKKOS_LAMBDA(int i, int &lsum) { lsum += (sv(i) != size * (size - 1) / 2 + size * i); },
-      errs);
+      sv.extent(0), KOKKOS_LAMBDA(int i, int &lsum) { lsum += (sv(i) != size * (size - 1) / 2 + size * i); }, errs);
   EXPECT_EQ(errs, 0);
 }
 
