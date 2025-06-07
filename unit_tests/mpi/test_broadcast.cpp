@@ -39,14 +39,14 @@ void test_broadcast_0d() {
 
   if (rank == 0) {
     Kokkos::parallel_for(
-        v.extent(0), KOKKOS_LAMBDA(int) { sv() = size; });
+        v.extent(0), KOKKOS_LAMBDA(int) { v() = size; });
   }
 
   KokkosComm::mpi::broadcast(Kokkos::DefaultExecutionSpace(), v, 0, MPI_COMM_WORLD);
 
   int errs;
   Kokkos::parallel_reduce(
-      v.extent(0), KOKKOS_LAMBDA(int, int &lsum) { lsum += rv() != size; }, errs);
+      v.extent(0), KOKKOS_LAMBDA(int, int &lsum) { lsum += v() != size; }, errs);
   EXPECT_EQ(errs, 0);
 }
 

@@ -34,6 +34,7 @@
 #include "mpi/recv.hpp"
 #include "mpi/send.hpp"
 
+#include "mpi/broadcast.hpp"
 #include "mpi/allgather.hpp"
 #include "mpi/alltoall.hpp"
 #include "mpi/reduce.hpp"
