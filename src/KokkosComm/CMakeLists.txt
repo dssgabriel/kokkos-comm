@@ -73,7 +73,12 @@ if(KOKKOSCOMM_ENABLE_MPI)
       FILE_SET kokkoscomm_mpi_impl_headers
       TYPE HEADERS
       BASE_DIRS ${PROJECT_SOURCE_DIR}/src
-      FILES mpi/impl/pack_traits.hpp mpi/impl/packer.hpp mpi/impl/tags.hpp mpi/impl/types.hpp
+      FILES 
+        mpi/impl/pack_traits.hpp 
+        mpi/impl/packer.hpp 
+        mpi/impl/tags.hpp 
+        mpi/impl/types.hpp 
+        mpi/impl/error-handling.hpp
   )
 endif()
 
