@@ -78,7 +78,7 @@ if(KOKKOSCOMM_ENABLE_MPI)
         mpi/impl/packer.hpp 
         mpi/impl/tags.hpp 
         mpi/impl/types.hpp 
-        mpi/impl/error-handling.hpp
+        mpi/impl/error_handling.hpp
   )
 endif()
 

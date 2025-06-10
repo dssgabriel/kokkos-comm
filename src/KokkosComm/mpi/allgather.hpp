@@ -23,7 +23,7 @@
 #include <KokkosComm/traits.hpp>
 
 #include "impl/types.hpp"
-#include "impl/error-handling.hpp"
+#include "impl/error_handling.hpp"
 
 namespace KokkosComm::mpi {
 
