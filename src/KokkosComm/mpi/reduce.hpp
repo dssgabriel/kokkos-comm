@@ -24,6 +24,7 @@
 
 #include "impl/pack_traits.hpp"
 #include "impl/types.hpp"
+#include "impl/error-handling.hpp"
 
 namespace KokkosComm::mpi {
 
@@ -31,14 +32,13 @@ template <KokkosView SendView, KokkosView RecvView>
 void reduce(const SendView &sv, const RecvView &rv, MPI_Op op, int root, MPI_Comm comm) {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::reduce");
 
-  if (KokkosComm::is_contiguous(sv) && KokkosComm::is_contiguous(rv)) {
-    using SendScalar = typename SendView::non_const_value_type;
-    MPI_Reduce(KokkosComm::data_handle(sv), KokkosComm::data_handle(rv), KokkosComm::span(sv),
-               KokkosComm::Impl::mpi_type_v<SendScalar>, op, root, comm);
-  } else {
-    Kokkos::Tools::popRegion();
-    throw std::runtime_error("only contiguous views supported for low-level reduce");
-  }
+  ::KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(sv) || !KokkosComm::is_contiguous(rv),
+                             "only contiguous views supported for low-level reduce");
+
+  using SendScalar = typename SendView::non_const_value_type;
+  MPI_Reduce(KokkosComm::data_handle(sv), KokkosComm::data_handle(rv), KokkosComm::span(sv),
+             KokkosComm::Impl::mpi_type_v<SendScalar>, op, root, comm);
+
   Kokkos::Tools::popRegion();
 }
 
