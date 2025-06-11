@@ -63,6 +63,7 @@ class Channel {
     for (auto& req : recv_reqs_) {
       mpi_reqs.push_back(req.mpi_request());
     }
+    Kokkos::fence();
     MPI_Startall(mpi_reqs.size(), mpi_reqs.data());
     Kokkos::Tools::popRegion();
   }
