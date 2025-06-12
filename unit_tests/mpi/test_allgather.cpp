@@ -95,9 +95,9 @@ void test_allgather_1d_inplace_contig() {
 
   // fill send buffer
   Kokkos::parallel_for(
-      nContrib, KOKKOS_LAMBDA(const int i) { rv(i + rank * nContrib) = rank + i; });
+      nContrib, KOKKOS_LAMBDA(const int i) { rv(rank * nContrib + i) = rank + i; });
 
-  KokkosComm::mpi::allgather(rv, MPI_COMM_WORLD);
+  KokkosComm::mpi::allgather(Kokkos::DefaultExecutionSpace(), rv, nContrib, MPI_COMM_WORLD);
 
   int errs;
   Kokkos::parallel_reduce(
