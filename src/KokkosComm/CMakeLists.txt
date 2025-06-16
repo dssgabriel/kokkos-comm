@@ -64,6 +64,7 @@ if(KOKKOSCOMM_ENABLE_MPI)
         mpi/alltoall.hpp
         mpi/reduce.hpp
         mpi/barrier.hpp
+        mpi/broadcast.hpp
   )
 
   # Implementation detail MPI headers
