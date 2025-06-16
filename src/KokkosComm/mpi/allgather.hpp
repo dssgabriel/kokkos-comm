@@ -57,7 +57,7 @@ void allgather(const ExecSpace &space, const RecvView &rv, const size_t recvCoun
   static_assert(KokkosComm::rank<RecvView>() <= 1, "allgather for RecvView::rank > 1 not supported");
 
   ::KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(rv), "low-level allgather requires contiguous recv view");
-  
+
   space.fence("fence before allgather");  // work in space may have been used to produce send view data
   MPI_Allgather(MPI_IN_PLACE, 0 /*ignored*/, MPI_DATATYPE_NULL /*ignored*/, KokkosComm::data_handle(rv), recvCount,
                 KokkosComm::Impl::mpi_type_v<RecvScalar>, comm);

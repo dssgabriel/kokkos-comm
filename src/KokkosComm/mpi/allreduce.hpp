@@ -38,15 +38,10 @@ void allreduce(SendView const &sv, RecvView const &rv, MPI_Op op, MPI_Comm comm)
   static_assert(KokkosComm::rank<SendView>() <= 1, "allreduce for SendView::rank > 1 not supported");
   static_assert(KokkosComm::rank<RecvView>() <= 1, "allreduce for RecvView::rank > 1 not supported");
 
-  if (!KokkosComm::is_contiguous(sv)) {
-    throw std::runtime_error{"low-level allreduce requires contiguous send view"};
-  }
-  if (!KokkosComm::is_contiguous(rv)) {
-    throw std::runtime_error{"low-level allreduce requires contiguous recv view"};
-  }
-  if (sv.size() != rv.size()) {
-    throw std::runtime_error{"allreduce requires send and receive views to have the same size"};
-  }
+  ::KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(sv), "low-level allreduce requires contiguous send view");
+  ::KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(rv), "low-level allreduce requires contiguous recv view");
+  ::KokkosComm::mpi::fail_if(sv.size() != rv.size(), "allreduce requires send and receive views to have the same size");
+
   int const count = sv.size();
   MPI_Allreduce(KokkosComm::data_handle(sv), KokkosComm::data_handle(rv), count,
                 KokkosComm::Impl::mpi_type_v<SendScalar>, op, comm);
@@ -62,9 +57,8 @@ void allreduce(View const &v, MPI_Op op, MPI_Comm comm) {
 
   static_assert(KokkosComm::rank<View>() <= 1, "allreduce for View::rank > 1 not supported");
 
-  if (!KokkosComm::is_contiguous(v)) {
-    throw std::runtime_error("low-level allgather requires contiguous recv view");
-  }
+  ::KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(v), "low-level allgather requires contiguous recv view");
+
   int const count = v.size();
   MPI_Allreduce(MPI_IN_PLACE, KokkosComm::data_handle(v), count, KokkosComm::Impl::mpi_type_v<Scalar>, op, comm);
 
@@ -75,9 +69,9 @@ template <KokkosExecutionSpace ExecSpace, KokkosView SendView, KokkosView RecvVi
 void allreduce(ExecSpace const &space, SendView const &sv, RecvView const &rv, MPI_Op op, MPI_Comm comm) {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::allreduce");
 
-  if (!KokkosComm::is_contiguous(sv) || !KokkosComm::is_contiguous(rv)) {
-    throw std::runtime_error("allreduce for non-contiguous views not implemented");
-  }
+  ::KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(sv) || !KokkosComm::is_contiguous(rv),
+                             "allreduce for non-contiguous views not implemented");
+
   space.fence("fence before allreduce");  // work in space may have been used to produce send view data
   allreduce(sv, rv, op, comm);
 
@@ -88,9 +82,8 @@ template <KokkosExecutionSpace ExecSpace, KokkosView View>
 void allreduce(ExecSpace const &space, View const &v, MPI_Op op, MPI_Comm comm) {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::allreduce");
 
-  if (!KokkosComm::is_contiguous(v)) {
-    throw std::runtime_error("allreduce for non-contiguous views not implemented");
-  }
+  ::KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(v), "allreduce for non-contiguous views not implemented");
+
   space.fence("fence before allreduce");  // work in space may have been used to produce send view data
   allreduce(v, op, comm);
 
