@@ -64,7 +64,7 @@ template <KokkosView RecvView>
 void irecv(const RecvView &rv, int src, int tag, MPI_Comm comm, MPI_Request &req) {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::irecv");
 
-  ::KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(rv), "Only contiguous irecv viewsupported");
+  KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(rv), "Only contiguous irecv viewsupported");
 
   using RecvScalar = typename RecvView::non_const_value_type;
   MPI_Irecv(KokkosComm::data_handle(rv), KokkosComm::span(rv), Impl::mpi_type_v<RecvScalar>, src, tag, comm, &req);
