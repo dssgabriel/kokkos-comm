@@ -16,12 +16,14 @@
 
 #pragma once
 
+#include <iostream>
 #include <mpi.h>
 
 namespace KokkosComm::mpi {
 inline void fail_if(bool condition, const char* error_msg) {
   if (condition) {
 #ifdef KOKKOSCOMM_ABORT_ON_ERROR
+    std::cerr << error_msg << std::endl;
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 #else
     throw std::runtime_error{error_msg};
