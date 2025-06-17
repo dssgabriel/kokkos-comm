@@ -38,9 +38,9 @@ void allreduce(SendView const &sv, RecvView const &rv, MPI_Op op, MPI_Comm comm)
   static_assert(KokkosComm::rank<SendView>() <= 1, "allreduce for SendView::rank > 1 not supported");
   static_assert(KokkosComm::rank<RecvView>() <= 1, "allreduce for RecvView::rank > 1 not supported");
 
-  ::KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(sv), "low-level allreduce requires contiguous send view");
-  ::KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(rv), "low-level allreduce requires contiguous recv view");
-  ::KokkosComm::mpi::fail_if(sv.size() != rv.size(), "allreduce requires send and receive views to have the same size");
+  KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(sv), "low-level allreduce requires contiguous send view");
+  KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(rv), "low-level allreduce requires contiguous recv view");
+  KokkosComm::mpi::fail_if(sv.size() != rv.size(), "allreduce requires send and receive views to have the same size");
 
   int const count = sv.size();
   MPI_Allreduce(KokkosComm::data_handle(sv), KokkosComm::data_handle(rv), count,
