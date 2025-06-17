@@ -38,7 +38,7 @@ void allgather(const SendView &sv, const RecvView &rv, MPI_Comm comm) {
   static_assert(KokkosComm::rank<RecvView>() <= 1, "allgather for RecvView::rank > 1 not supported");
 
   KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(sv), "low-level allgather requires contiguous send view");
-  ::KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(rv), "low-level allgather requires contiguous recv view");
+  KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(rv), "low-level allgather requires contiguous recv view");
 
   const int count = KokkosComm::span(sv);  // all ranks send/recv same count
   MPI_Allgather(KokkosComm::data_handle(sv), count, KokkosComm::Impl::mpi_type_v<SendScalar>,
@@ -56,7 +56,7 @@ void allgather(const ExecSpace &space, const RecvView &rv, const size_t recvCoun
 
   static_assert(KokkosComm::rank<RecvView>() <= 1, "allgather for RecvView::rank > 1 not supported");
 
-  ::KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(rv), "low-level allgather requires contiguous recv view");
+  KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(rv), "low-level allgather requires contiguous recv view");
 
   space.fence("fence before allgather");  // work in space may have been used to produce send view data
   MPI_Allgather(MPI_IN_PLACE, 0 /*ignored*/, MPI_DATATYPE_NULL /*ignored*/, KokkosComm::data_handle(rv), recvCount,
@@ -69,7 +69,7 @@ template <KokkosExecutionSpace ExecSpace, KokkosView SendView, KokkosView RecvVi
 void allgather(const ExecSpace &space, const SendView &sv, const RecvView &rv, MPI_Comm comm) {
   Kokkos::Tools::pushRegion("KokkosComm::Mpi::allgather");
 
-  ::KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(sv) || !KokkosComm::is_contiguous(rv),
+  KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(sv) || !KokkosComm::is_contiguous(rv),
                              "allgather for non-contiguous views not implemented");
 
   space.fence("fence before allgather");  // work in space may have been used to produce send view data
