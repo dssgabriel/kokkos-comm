@@ -70,7 +70,7 @@ void allreduce(ExecSpace const &space, SendView const &sv, RecvView const &rv, M
   Kokkos::Tools::pushRegion("KokkosComm::mpi::allreduce");
 
   KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(sv) || !KokkosComm::is_contiguous(rv),
-                             "allreduce for non-contiguous views not implemented");
+                           "allreduce for non-contiguous views not implemented");
 
   space.fence("fence before allreduce");  // work in space may have been used to produce send view data
   allreduce(sv, rv, op, comm);

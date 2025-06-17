@@ -70,7 +70,7 @@ void allgather(const ExecSpace &space, const SendView &sv, const RecvView &rv, M
   Kokkos::Tools::pushRegion("KokkosComm::Mpi::allgather");
 
   KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(sv) || !KokkosComm::is_contiguous(rv),
-                             "allgather for non-contiguous views not implemented");
+                           "allgather for non-contiguous views not implemented");
 
   space.fence("fence before allgather");  // work in space may have been used to produce send view data
   allgather(sv, rv, comm);

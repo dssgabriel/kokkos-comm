@@ -84,6 +84,10 @@ if(KOKKOSCOMM_ENABLE_MPI)
   )
 endif()
 
+if(KokkosComm_ABORT_ON_ERROR)
+  target_compile_definitions(KokkosComm INTERFACE KOKKOSCOMM_ABORT_ON_ERROR)
+endif()
+
 # --- COMPILE FLAGS --- #
 include(CheckCXXCompilerFlag)
 

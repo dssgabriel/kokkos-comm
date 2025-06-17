@@ -33,7 +33,7 @@ void reduce(const SendView &sv, const RecvView &rv, MPI_Op op, int root, MPI_Com
   Kokkos::Tools::pushRegion("KokkosComm::mpi::reduce");
 
   KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(sv) || !KokkosComm::is_contiguous(rv),
-                             "only contiguous views supported for low-level reduce");
+                           "only contiguous views supported for low-level reduce");
 
   using SendScalar = typename SendView::non_const_value_type;
   MPI_Reduce(KokkosComm::data_handle(sv), KokkosComm::data_handle(rv), KokkosComm::span(sv),
