@@ -93,7 +93,7 @@ template <KokkosView SendView>
 void isend(const SendView &sv, int dest, int tag, MPI_Comm comm, MPI_Request &req) {
   Kokkos::Tools::pushRegion("KokkosComm::Impl::isend");
 
-  ::KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(sv), "only contiguous views supported for low-level isend");
+  KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(sv), "only contiguous views supported for low-level isend");
 
   using SendScalar = typename SendView::non_const_value_type;
   MPI_Isend(KokkosComm::data_handle(sv), KokkosComm::span(sv), Impl::mpi_type_v<SendScalar>, dest, tag, comm, &req);
