@@ -42,8 +42,8 @@ void alltoall(const ExecSpace &space, const SendView &sv, const size_t sendCount
   // Make sure views are ready
   space.fence("KokkosComm::Impl::alltoall");
 
-  ::KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(sv) || !KokkosComm::is_contiguous(rv),
-                             "alltoall for non-contiguous views not implemented");
+  KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(sv) || !KokkosComm::is_contiguous(rv),
+                           "alltoall for non-contiguous views not implemented");
 
   int size;
   MPI_Comm_size(comm, &size);
@@ -52,13 +52,13 @@ void alltoall(const ExecSpace &space, const SendView &sv, const size_t sendCount
     std::stringstream ss;
     ss << "alltoall sendCount * communicator size (" << sendCount << " * " << size
        << ") is greater than send view size";
-    ::KokkosComm::mpi::fail_if(true, ss.str().data());
+    KokkosComm::mpi::fail_if(true, ss.str().data());
   }
   if (recvCount * size > KokkosComm::extent(rv, 0)) {
     std::stringstream ss;
     ss << "alltoall recvCount * communicator size (" << recvCount << " * " << size
        << ") is greater than recv view size";
-    ::KokkosComm::mpi::fail_if(true, ss.str().data());
+    KokkosComm::mpi::fail_if(true, ss.str().data());
   }
 
   MPI_Alltoall(KokkosComm::data_handle(sv), sendCount, mpi_type_v<SendScalar>, KokkosComm::data_handle(rv), recvCount,
@@ -79,7 +79,7 @@ void alltoall(const ExecSpace &space, const RecvView &rv, const size_t recvCount
   // Make sure views are ready
   space.fence("KokkosComm::Impl::alltoall");
 
-  ::KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(rv), "alltoall for non-contiguous views not implemented");
+  KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(rv), "alltoall for non-contiguous views not implemented");
 
   int size;
   MPI_Comm_size(comm, &size);
@@ -88,7 +88,7 @@ void alltoall(const ExecSpace &space, const RecvView &rv, const size_t recvCount
     std::stringstream ss;
     ss << "alltoall recvCount * communicator size (" << recvCount << " * " << size
        << ") is greater than recv view size";
-    ::KokkosComm::mpi::fail_if(true, ss.str().data());
+    KokkosComm::mpi::fail_if(true, ss.str().data());
   }
 
   MPI_Alltoall(MPI_IN_PLACE, 0 /*ignored*/, MPI_BYTE /*ignored*/, KokkosComm::data_handle(rv), recvCount,
