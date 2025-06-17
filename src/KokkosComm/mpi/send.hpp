@@ -46,7 +46,7 @@ void send(const SendView &sv, int dest, int tag, MPI_Comm comm, SendMode) {
     }
   };
 
-  ::KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(sv), "only contiguous views supported for low-level send");
+  KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(sv), "only contiguous views supported for low-level send");
 
   using SendScalar = typename SendView::non_const_value_type;
   MPI_Send(KokkosComm::data_handle(sv), KokkosComm::span(sv), KokkosComm::Impl::mpi_type_v<SendScalar>, dest, tag,
