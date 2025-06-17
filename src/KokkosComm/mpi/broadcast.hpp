@@ -32,7 +32,7 @@ void broadcast(View const& v, int root, MPI_Comm comm) {
 
   using Scalar = typename View::value_type;
 
-  ::KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(v), "low-level broadcast requires contiguous view");
+  KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(v), "low-level broadcast requires contiguous view");
 
   MPI_Bcast(KokkosComm::data_handle(v), KokkosComm::span(v), KokkosComm::Impl::mpi_type_v<Scalar>, root, comm);
 
