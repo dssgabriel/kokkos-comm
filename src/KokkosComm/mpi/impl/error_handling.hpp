@@ -26,7 +26,7 @@ inline void fail_if(bool condition, const char* error_msg) {
     std::cerr << error_msg << std::endl;
     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 #else
-    throw std::runtime_error{error_msg};
+    Kokkos::abort(error_msg);
 #endif
   }
 }
