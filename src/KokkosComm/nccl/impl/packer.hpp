@@ -26,27 +26,26 @@
 namespace KokkosComm::Experimental::nccl::Impl::Packer {
 
 template <KokkosView View>
-struct NcclArgs {
+struct PackedNcclView {
   View view_;
   ncclDataType_t datatype_;
   int count_;
 
-  NcclArgs(const View &view, const ncclDataType_t datatype, const int count)
+  PackedNcclView(const View &view, const ncclDataType_t datatype, const int count)
       : view_(view), datatype_(datatype), count_(count) {}
 };
 
 template <KokkosView View>
 struct DeepCopy {
   using PackedView = KokkosComm::Impl::contiguous_view_t<View>;
-  using Args       = NcclArgs<PackedView>;
 
   template <KokkosExecutionSpace ExecSpace>
-  static auto pack(const ExecSpace &space, const View &src) -> Args {
+  static auto pack(const ExecSpace &space, const View &src) -> PackedNcclView<PackedView> {
     PackedView packed_src = KokkosComm::Impl::allocate_contiguous_for(space, "DeepCopy::pack", src);
     // Use `ncclUint8` because there is no equivalent to `MPI_PACKED`.
-    Args args(packed_src, ncclUint8, src.span() * sizeof(PackedView::value_type));
-    Kokkos::deep_copy(space, args.view, src);
-    return args;
+    PackedNcclView<PackedView> packed(packed_src, ncclUint8, src.span() * sizeof(PackedView::value_type));
+    Kokkos::deep_copy(space, packed.view, src);
+    return packed;
   }
 
   template <KokkosExecutionSpace ExecSpace>
