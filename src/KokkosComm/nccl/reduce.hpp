@@ -68,7 +68,6 @@ void reduce(const ExecSpace &space, const SendView sv, RecvView rv, ncclRedOp_t 
                  space.cuda_stream());
       RecvPacker::unpack_into(space, rv, recv_args.view);
     } else {
-      space.fence();  // is this fence necessary?
       ncclReduce(send_args.view.data(), rv.data(), send_args.count, send_args.datatype, op, root, comm,
                  space.cuda_stream());
     }
@@ -81,7 +80,6 @@ void reduce(const ExecSpace &space, const SendView sv, RecvView rv, ncclRedOp_t 
                  space.cuda_stream());
       RecvPacker::unpack_into(space, rv, recv_args.view);
     } else {
-      space.fence();  // is this fence necessary?
       ncclReduce(sv.data(), rv.data(), sv.span(), datatype_v<SendScalar>, op, root, comm, space.cuda_stream());
     }
   }
