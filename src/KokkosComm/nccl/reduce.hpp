@@ -16,13 +16,13 @@
 
 #pragma once
 
+#include <Kokkos_Core.hpp>
+#include <nccl.h>
+
 #include <KokkosComm/concepts.hpp>
 #include <KokkosComm/reduction_op.hpp>
 #include <KokkosComm/nccl/impl/pack_traits.hpp>
 #include <KokkosComm/nccl/impl/types.hpp>
-
-#include <Kokkos_Core.hpp>
-#include <nccl.h>
 
 namespace KokkosComm::Experimental::nccl::Impl {
 
@@ -39,10 +39,8 @@ constexpr auto reduction_op() -> ncclRedOp_t {
   } else if constexpr (std::is_same_v<RedOp, ReduceAverage>) {
     return ncclAvg;
   } else {
-    {
-      static_assert(std::is_void_v<RedOp>, "NCCL reduction operator not implemented");
-      return ncclMax;  // unreachable
-    }
+    static_assert(std::is_void_v<RedOp>, "NCCL reduction operator not implemented");
+    return ncclMax;  // unreachable
   }
 }
 
