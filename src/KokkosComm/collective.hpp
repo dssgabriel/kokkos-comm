@@ -29,7 +29,7 @@ auto broadcast(Handle<ExecSpace, CommSpace>& h, const SendView sv, RecvView rv, 
 template <KokkosView View, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
           CommunicationSpace CommSpace = DefaultCommunicationSpace>
 auto broadcast(Handle<ExecSpace, CommSpace>& h, View v, int root) -> Req<CommSpace> {
-  return Impl::Broadcast<View, ExecSpace, CommSpace>::execute(h, v, v, root);
+  return Impl::Broadcast<View, View, ExecSpace, CommSpace>::execute(h, v, v, root);
 }
 
 template <KokkosView SendView, KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
