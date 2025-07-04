@@ -16,11 +16,11 @@
 
 #pragma once
 
-#include <KokkosComm/concepts.hpp>
+#include <type_traits>
 
 #include <Kokkos_Core_fwd.hpp>  // Kokkos::Cuda
 
-#include <type_traits>
+#include <KokkosComm/concepts.hpp>
 
 namespace KokkosComm::Experimental {
 
