@@ -25,49 +25,37 @@
 
 namespace KokkosComm {
 
-struct ReduceMaximum {};
 template <>
-struct KokkosComm::Impl::is_reduction_operator<ReduceMaximum> : public std::true_type {};
+struct KokkosComm::Impl::is_reduction_operator<Kokkos::BAnd> : public std::true_type {};
+template <>
+struct KokkosComm::Impl::is_reduction_operator<Kokkos::BOr> : public std::true_type {};
+template <>
+struct KokkosComm::Impl::is_reduction_operator<Kokkos::LAnd> : public std::true_type {};
+template <>
+struct KokkosComm::Impl::is_reduction_operator<Kokkos::LOr> : public std::true_type {};
+template <>
+struct KokkosComm::Impl::is_reduction_operator<Kokkos::Max> : public std::true_type {};
+template <>
+struct KokkosComm::Impl::is_reduction_operator<Kokkos::MaxLoc> : public std::true_type {};
+template <>
+struct KokkosComm::Impl::is_reduction_operator<Kokkos::Min> : public std::true_type {};
+template <>
+struct KokkosComm::Impl::is_reduction_operator<Kokkos::MinLoc> : public std::true_type {};
+template <>
+struct KokkosComm::Impl::is_reduction_operator<Kokkos::MinMax> : public std::true_type {};
+template <>
+struct KokkosComm::Impl::is_reduction_operator<Kokkos::MinMaxLoc> : public std::true_type {};
+template <>
+struct KokkosComm::Impl::is_reduction_operator<Kokkos::Sum> : public std::true_type {};
+template <>
+struct KokkosComm::Impl::is_reduction_operator<Kokkos::Prod> : public std::true_type {};
 
-struct ReduceMinimum {};
+/// Custom "marker" reducer for computing an average.
+///
+/// Does nothing on its own, but is meant to serve as a "marker" reduction operator when calling NCCL reductions.
+struct Average {};
 template <>
-struct KokkosComm::Impl::is_reduction_operator<ReduceMinimum> : public std::true_type {};
-
-struct ReduceSum {};
-template <>
-struct KokkosComm::Impl::is_reduction_operator<ReduceSum> : public std::true_type {};
-
-struct ReduceProduct {};
-template <>
-struct KokkosComm::Impl::is_reduction_operator<ReduceProduct> : public std::true_type {};
-
-struct ReduceAverage {};
-template <>
-struct KokkosComm::Impl::is_reduction_operator<ReduceAverage> : public std::true_type {};
-
-struct ReduceLogicalAnd {};
-template <>
-struct KokkosComm::Impl::is_reduction_operator<ReduceLogicalAnd> : public std::true_type {};
-
-struct ReduceLogicalOr {};
-template <>
-struct KokkosComm::Impl::is_reduction_operator<ReduceLogicalOr> : public std::true_type {};
-
-struct ReduceBinaryAnd {};
-template <>
-struct KokkosComm::Impl::is_reduction_operator<ReduceBinaryAnd> : public std::true_type {};
-
-struct ReduceBinaryOr {};
-template <>
-struct KokkosComm::Impl::is_reduction_operator<ReduceBinaryOr> : public std::true_type {};
-
-struct ReduceMaximumLoc {};
-template <>
-struct KokkosComm::Impl::is_reduction_operator<ReduceMaximumLoc> : public std::true_type {};
-
-struct ReduceMinimumLoc {};
-template <>
-struct KokkosComm::Impl::is_reduction_operator<ReduceMinimumLoc> : public std::true_type {};
+struct KokkosComm::Impl::is_reduction_operator<Average> : public std::true_type {};
 
 #ifdef KOKKOSCOMM_ENABLE_NCCL
 namespace Experimental::nccl::Impl {
