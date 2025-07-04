@@ -37,11 +37,11 @@ namespace KokkosComm {
 #if defined(KOKKOSCOMM_ENABLE_MPI) && defined(KOKKOSCOMM_ENABLE_NCCL)
 class Mpi;
 class Nccl;
-using DefaultCommunicationSpace  = Mpi;
+using DefaultCommunicationSpace  = Nccl;
 using FallbackCommunicationSpace = Mpi;
 #elif defined(KOKKOSCOMM_ENABLE_MPI)
 class Mpi;
-using DefaultCommunicationSpace  = Nccl;
+using DefaultCommunicationSpace  = Mpi;
 using FallbackCommunicationSpace = Mpi;
 #else
 #error at least one communication space must be enabled
