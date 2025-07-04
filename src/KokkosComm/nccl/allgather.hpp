@@ -28,25 +28,22 @@
 namespace KokkosComm::Experimental::nccl::Impl {
 
 template <KokkosExecutionSpace ExecSpace, KokkosView SendView, KokkosView RecvView>
-  Kokkos::Tools::pushRegion("KokkosComm::Experimental::nccl::Impl::allgather");
-
 auto allgather(const ExecSpace &space, const SendView &sv, const RecvView &rv, ncclComm_t comm) -> void {
   using SendScalar = typename SendView::value_type;
   using RecvScalar = typename RecvView::value_type;
+  using SendScalar = typename SendView::value_type;
+  using RecvScalar = typename RecvView::value_type;
+  static_assert(std::is_same_v<SendScalar, RecvScalar>, "nccl::allgather: View value types must be identical");
+  static_assert(KokkosComm::rank<SendView>() <= 1 && KokkosComm::rank<RecvView>() <= 1,
+                "nccl::allgather: only rank-1 Views are supported");
 
-  static_assert(std::is_same_v<SendScalar, RecvScalar>, "NCCL allgather requires View value types to be identical");
-  static_assert(KokkosComm::rank<SendView>() <= 1, "allgather for SendView::rank > 1 not supported");
-  static_assert(KokkosComm::rank<RecvView>() <= 1, "allgather for RecvView::rank > 1 not supported");
+  Kokkos::Tools::pushRegion("KokkosComm::Experimental::nccl::Impl::allgather");
 
   if (!KokkosComm::is_contiguous(sv) || !KokkosComm::is_contiguous(rv)) {
-    using SPT = PackTraits<SendView>;
-    using RPT = PackTraits<RecvView>;
-
-    throw std::runtime_error("allgather for non-contiguous views not implemented");
+    Kokkos::abort("nccl::allgather: unimplemented for non-contiguous views");
   } else {
-    constexpr auto count = KokkosComm::span(sv);  // all ranks recv `nranks * count`
-    ncclAllGather(KokkosComm::data_handle(sv), KokkosComm::data_handle(rv), count, datatype_v<SendScalar>, comm,
-                  space.cuda_stream());
+    ncclAllGather(KokkosComm::data_handle(sv), KokkosComm::data_handle(rv), KokkosComm::span(sv),
+                  datatype_v<SendScalar>, comm, space.cuda_stream());
   }
 
   Kokkos::Tools::popRegion();
