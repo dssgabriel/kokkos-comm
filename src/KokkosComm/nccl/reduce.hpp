@@ -23,27 +23,9 @@
 #include <KokkosComm/traits.hpp>
 
 namespace KokkosComm::Experimental::nccl::Impl {
+#include "impl/pack_traits.hpp"
+#include "impl/types.hpp"
 
-template <ReductionOperator RedOp>
-constexpr auto reduction_op() -> ncclRedOp_t {
-  if constexpr (std::is_same_v<RedOp, ReduceMaximum>) {
-    return ncclMax;
-  } else if constexpr (std::is_same_v<RedOp, ReduceMinimum>) {
-    return ncclMin;
-  } else if constexpr (std::is_same_v<RedOp, ReduceSum>) {
-    return ncclSum;
-  } else if constexpr (std::is_same_v<RedOp, ReduceProduct>) {
-    return ncclProd;
-  } else if constexpr (std::is_same_v<RedOp, ReduceAverage>) {
-    return ncclAvg;
-  } else {
-    static_assert(std::is_void_v<RedOp>, "NCCL reduction operator not implemented");
-    return ncclMax;  // unreachable
-  }
-}
-
-template <ReductionOperator RedOp>
-inline constexpr ncclRedOp_t reduction_op_v = reduction_op<RedOp>();
 
 template <KokkosExecutionSpace ExecSpace, KokkosView SendView, KokkosView RecvView>
   Kokkos::Tools::pushRegion("KokkosComm::Experimental::nccl::Impl::reduce");

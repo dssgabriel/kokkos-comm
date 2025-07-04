@@ -69,4 +69,31 @@ struct ReduceMinimumLoc {};
 template <>
 struct KokkosComm::Impl::is_reduction_operator<ReduceMinimumLoc> : public std::true_type {};
 
+#ifdef KOKKOSCOMM_ENABLE_NCCL
+namespace Experimental::nccl::Impl {
+
+template <ReductionOperator RedOp>
+constexpr auto reduction_op() -> ncclRedOp_t {
+  if constexpr (std::is_same_v<RedOp, Kokkos::Max>) {
+    return ncclMax;
+  } else if constexpr (std::is_same_v<RedOp, Kokkos::Min>) {
+    return ncclMin;
+  } else if constexpr (std::is_same_v<RedOp, Kokkos::Sum>) {
+    return ncclSum;
+  } else if constexpr (std::is_same_v<RedOp, Kokkos::Prod>) {
+    return ncclProd;
+  } else if constexpr (std::is_same_v<RedOp, KokkosComm::Average>) {
+    return ncclAvg;
+  } else {
+    static_assert(std::is_void_v<RedOp>, "NCCL reduction operator not implemented");
+    return ncclMax;  // unreachable
+  }
+}
+
+template <ReductionOperator RedOp>
+inline constexpr ncclRedOp_t reduction_op_v = reduction_op<RedOp>();
+
+}  // namespace Experimental::nccl::Impl
+#endif
+
 }  // namespace KokkosComm
