@@ -33,17 +33,18 @@
 
 namespace KokkosComm {
 
-#if defined(KOKKOSCOMM_ENABLE_MPI)
-class Mpi;
-using DefaultCommunicationSpace  = Mpi;
-using FallbackCommunicationSpace = Mpi;
-#elif defined(KOKKOSCOMM_ENABLE_NCCL)
+// NCCL backend also requires MPI to be enabled
+#if defined(KOKKOSCOMM_ENABLE_MPI) && defined(KOKKOSCOMM_ENABLE_NCCL)
 class Mpi;
 class Nccl;
+using DefaultCommunicationSpace  = Mpi;
+using FallbackCommunicationSpace = Mpi;
+#elif defined(KOKKOSCOMM_ENABLE_MPI)
+class Mpi;
 using DefaultCommunicationSpace  = Nccl;
 using FallbackCommunicationSpace = Mpi;
 #else
-#error at least one transport must be defined
+#error at least one communication space must be enabled
 #endif
 
 template <CommunicationSpace CommSpace = DefaultCommunicationSpace>
@@ -68,9 +69,19 @@ struct Send;
 // Collectives are currently experimental functions
 namespace Experimental::Impl {
 
+template <KokkosView SendView, KokkosView RecvView = SendView,
+          KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
+          CommunicationSpace CommSpace   = DefaultCommunicationSpace>
+struct Broadcast;
+
 template <KokkosView SendView, KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
           CommunicationSpace CommSpace = DefaultCommunicationSpace>
 struct AllGather;
+
+template <KokkosView SendView, KokkosView RecvView, ReductionOperator RedOp,
+          KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
+          CommunicationSpace CommSpace   = DefaultCommunicationSpace>
+struct AllReduce;
 
 template <KokkosView SendView, KokkosView RecvView, ReductionOperator RedOp,
           KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
