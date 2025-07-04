@@ -28,12 +28,12 @@
 namespace KokkosComm::Experimental::Impl {
 
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
-template <KokkosView SendView, KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::Cuda,
-          CommunicationSpace CommSpace = Nccl>
-struct AllGather {
-  static auto execute(Handle<ExecSpace, CommSpace> &h, const SendView sv, RecvView) -> Req<CommSpace> {
+template <KokkosView SendView, KokkosView RecvView>
+struct AllGather<Kokkos::Cuda, KokkosComm::Experimental::Nccl> {
+  static auto execute(Handle<Kokkos::Cuda, KokkosComm::Experimental::Nccl> &h, const SendView sv, RecvView rv)
+      -> Req<KokkosComm::Experimental::Nccl> {
     KokkosComm::Experimental::nccl::Impl::allgather(h.space(), sv, rv, h.comm());
-    return Req<CommSpace>(h.space().cuda_stream());
+    return Req<KokkosComm::Experimental::Nccl>(h.space().cuda_stream());
   }
 };
 #endif

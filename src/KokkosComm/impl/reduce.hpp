@@ -29,13 +29,13 @@
 namespace KokkosComm::Experimental::Impl {
 
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
-template <KokkosView SendView, KokkosView RecvView, ReductionOperator RedOp,
-          KokkosExecutionSpace ExecSpace = Kokkos::Cuda, CommunicationSpace CommSpace = Nccl>
-struct Reduce {
-  static auto execute(Handle<ExecSpace, CommSpace> &h, const SendView sv, RecvView, int root) -> Req<CommSpace> {
+template <KokkosView SendView, KokkosView RecvView, ReductionOperator RedOp>
+struct Reduce<Kokkos::Cuda, KokkosComm::Experimental::Nccl> {
+  static auto execute(Handle<Kokkos::Cuda, KokkosComm::Experimental::Nccl> &h, const SendView sv, RecvView rv, int root)
+      -> Req<KokkosComm::Experimental::Nccl> {
     KokkosComm::Experimental::nccl::Impl::reduce(
         h.space(), sv, rv, KokkosComm::Experimental::nccl::Impl::reduction_op_v<RedOp>, root, h.rank(), h.comm());
-    return Req<CommSpace>(h.space().cuda_stream());
+    return Req<KokkosComm::Experimental::Nccl>(h.space().cuda_stream());
   }
 };
 #endif
