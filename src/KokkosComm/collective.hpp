@@ -3,11 +3,18 @@
 
 #pragma once
 
-#include <KokkosComm/fwd.hpp>
+#include <utility>
 
 #include <Kokkos_Core_fwd.hpp>
 
-#include <utility>
+#include <KokkosComm/fwd.hpp>
+#if defined(KOKKOSCOMM_ENABLE_NCCL)
+#include <KokkosComm/nccl/nccl_space.hpp>
+#include <KokkosComm/nccl/broadcast.hpp>
+#include <KokkosComm/nccl/allgather.hpp>
+#include <KokkosComm/nccl/allreduce.hpp>
+#include <KokkosComm/nccl/reduce.hpp>
+#endif
 
 namespace KokkosComm::Experimental {
 

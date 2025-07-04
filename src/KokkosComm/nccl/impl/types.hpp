@@ -17,7 +17,6 @@
 #pragma once
 
 #include <Kokkos_Core.hpp>
-
 #include <nccl.h>
 
 namespace KokkosComm::Experimental::nccl::Impl {

@@ -16,9 +16,10 @@
 
 #pragma once
 
-#include <KokkosComm/fwd.hpp>
-
 #include <nccl.h>
+
+#include <KokkosComm/fwd.hpp>
+#include "nccl_space.hpp"
 
 namespace KokkosComm::Experimental {
 

@@ -16,12 +16,14 @@
 
 #pragma once
 
-#include <KokkosComm/concepts.hpp>
-#include <KokkosComm/nccl/impl/types.hpp>
-#include <KokkosComm/nccl/impl/pack_traits.hpp>
-
 #include <Kokkos_Core.hpp>
 #include <nccl.h>
+
+#include <KokkosComm/concepts.hpp>
+#include <KokkosComm/traits.hpp>
+
+#include "impl/types.hpp"
+#include "impl/pack_traits.hpp"
 
 namespace KokkosComm::Experimental::nccl::Impl {
 

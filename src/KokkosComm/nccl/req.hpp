@@ -16,14 +16,14 @@
 
 #pragma once
 
-#include <KokkosComm/fwd.hpp>
-#include <KokkosComm/nccl/nccl.hpp>
+#include <functional>
+#include <span>
+#include <utility>
 
 #include <cuda.h>
 
-#include <span>
-#include <utility>
-#include <functional>
+#include <KokkosComm/fwd.hpp>
+#include "nccl_space.hpp"
 
 namespace KokkosComm::Experimental {
 

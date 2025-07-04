@@ -20,9 +20,7 @@
 #include <nccl.h>
 
 #include <KokkosComm/concepts.hpp>
-#include <KokkosComm/reduction_op.hpp>
-#include <KokkosComm/nccl/impl/pack_traits.hpp>
-#include <KokkosComm/nccl/impl/types.hpp>
+#include <KokkosComm/traits.hpp>
 
 namespace KokkosComm::Experimental::nccl::Impl {
 

@@ -16,6 +16,11 @@
 
 #pragma once
 
+#include <Kokkos_Core.hpp>
+#ifdef KOKKOSCOMM_ENABLE_NCCL
+#include <nccl.h>
+#endif
+
 #include <KokkosComm/concepts.hpp>
 
 namespace KokkosComm {

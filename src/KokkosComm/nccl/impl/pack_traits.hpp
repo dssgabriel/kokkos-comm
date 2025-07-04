@@ -18,7 +18,7 @@
 
 #include <KokkosComm/traits.hpp>
 #include <KokkosComm/concepts.hpp>
-#include <KokkosComm/nccl/impl/packer.hpp>
+#include "packer.hpp"
 
 namespace KokkosComm::Experimental::nccl::Impl {
 

@@ -16,15 +16,14 @@
 
 #pragma once
 
+#include <Kokkos_Core.hpp>
+
 #include <KokkosComm/fwd.hpp>
 #include <KokkosComm/concepts.hpp>
-
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
 #include <KokkosComm/nccl/handle.hpp>
 #include <KokkosComm/nccl/send.hpp>
 #endif
-
-#include <Kokkos_Core.hpp>
 
 namespace KokkosComm::Impl {
 
