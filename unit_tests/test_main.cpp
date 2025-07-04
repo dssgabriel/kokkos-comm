@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
 
   Kokkos::initialize();
 
-  // Intialize google test
+  // Initialize google test
   ::testing::InitGoogleTest(&argc, argv);
 
 #if defined(KOKKOSCOMM_ENABLE_MPI)
