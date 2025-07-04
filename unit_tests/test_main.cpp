@@ -11,7 +11,7 @@
 #include <Kokkos_Core.hpp>
 
 #if defined(KOKKOSCOMM_ENABLE_MPI)
-#include "KokkosComm/mpi/impl/include_mpi.hpp"
+#include <mpi.h>
 
 class MpiEnvironment : public ::testing::Environment {
  public:
