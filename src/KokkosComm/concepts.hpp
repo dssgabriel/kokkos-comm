@@ -10,11 +10,12 @@
 namespace KokkosComm {
 
 namespace Impl {
-//
-// fallback - most types are not a KokkosComm transport
+
+/// Fallback: most types are not a KokkosComm communication space
 template <typename T>
 struct is_communication_space : public std::false_type {};
 
+/// Fallback: most types are not a KokkosComm reduction operator
 template <typename T>
 struct is_reduction_operator : public std::false_type {};
 
