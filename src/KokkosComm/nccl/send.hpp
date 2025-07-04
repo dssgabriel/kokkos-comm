@@ -28,7 +28,7 @@
 namespace KokkosComm::Experimental::nccl::Impl {
 
 template <KokkosExecutionSpace ExecSpace, KokkosView SendView>
-void send(const ExecSpace& space, const SendView& sv, int dest, ncclComm_t comm) {
+auto send(const ExecSpace& space, const SendView& sv, int peer, ncclComm_t comm) -> void {
   Kokkos::Tools::pushRegion("KokkosComm::Impl::send");
 
   if (KokkosComm::is_contiguous(sv)) {

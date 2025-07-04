@@ -43,7 +43,7 @@ class Handle<ExecSpace, Nccl> {
   using rank_type           = int;
 
   explicit Handle(const execution_space &space, communicator_type comm) : space_(space), comm_(comm) {}
-  explicit Handle(communicator_type comm) : Handle(execution_space{}, comm) {}
+  explicit Handle(communicator_type comm) : Handle(execution_space(), comm) {}
 
   // NOTE: Do we want to allow users creating a NCCL Handle without providing the communicator?
   // This would require us initializing it manually, which is a lot more work than for initializing MPI.

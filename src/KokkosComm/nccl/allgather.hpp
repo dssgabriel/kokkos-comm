@@ -28,9 +28,9 @@
 namespace KokkosComm::Experimental::nccl::Impl {
 
 template <KokkosExecutionSpace ExecSpace, KokkosView SendView, KokkosView RecvView>
-void allgather(const ExecSpace &space, const SendView &sv, const RecvView &rv, ncclComm_t comm) {
   Kokkos::Tools::pushRegion("KokkosComm::Experimental::nccl::Impl::allgather");
 
+auto allgather(const ExecSpace &space, const SendView &sv, const RecvView &rv, ncclComm_t comm) -> void {
   using SendScalar = typename SendView::value_type;
   using RecvScalar = typename RecvView::value_type;
 

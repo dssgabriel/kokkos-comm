@@ -14,28 +14,28 @@
 
 namespace KokkosComm {
 
-template <KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
+template <KokkosView SendView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
           CommunicationSpace CommSpace = DefaultCommunicationSpace>
-Req<CommSpace> recv(Handle<ExecSpace, CommSpace> &h, RecvView &rv, int src) {
-  return Impl::Recv<RecvView, ExecSpace, CommSpace>::execute(h, rv, src);
-}
-
-template <KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
-          CommunicationSpace CommSpace = DefaultCommunicationSpace>
-Req<CommSpace> recv(RecvView &rv, int src) {
-  return recv<RecvView, ExecSpace, CommSpace>(Handle<ExecSpace, CommSpace>{}, rv, src);
+auto send(Handle<ExecSpace, CommSpace> &h, SendView &sv, int peer) -> Req<CommSpace> {
+  return Impl::Send<SendView, ExecSpace, CommSpace>::execute(h, sv, peer);
 }
 
 template <KokkosView SendView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
           CommunicationSpace CommSpace = DefaultCommunicationSpace>
-Req<CommSpace> send(Handle<ExecSpace, CommSpace> &h, SendView &sv, int dest) {
-  return Impl::Send<SendView, ExecSpace, CommSpace>::execute(h, sv, dest);
+auto send(SendView &sv, int peer) -> Req<CommSpace> {
+  return send<SendView, ExecSpace, CommSpace>(Handle<ExecSpace, CommSpace>{}, sv, peer);
 }
 
-template <KokkosView SendView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
+template <KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
           CommunicationSpace CommSpace = DefaultCommunicationSpace>
-Req<CommSpace> send(SendView &sv, int dest) {
-  return send<SendView, ExecSpace, CommSpace>(Handle<ExecSpace, CommSpace>{}, sv, dest);
+auto recv(Handle<ExecSpace, CommSpace> &h, RecvView &rv, int peer) -> Req<CommSpace> {
+  return Impl::Recv<RecvView, ExecSpace, CommSpace>::execute(h, rv, peer);
+}
+
+template <KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
+          CommunicationSpace CommSpace = DefaultCommunicationSpace>
+auto recv(RecvView &rv, int peer) -> Req<CommSpace> {
+  return recv<RecvView, ExecSpace, CommSpace>(Handle<ExecSpace, CommSpace>{}, rv, peer);
 }
 
 }  // namespace KokkosComm

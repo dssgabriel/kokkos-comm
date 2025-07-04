@@ -22,7 +22,7 @@
 namespace KokkosComm::Experimental::nccl::Impl {
 
 template <typename Scalar>
-ncclDataType_t datatype() {
+auto datatype() -> ncclDataType_t {
   using T = std::decay_t<Scalar>;
 
   if constexpr (std::is_same_v<T, char>) {

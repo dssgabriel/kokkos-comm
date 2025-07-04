@@ -28,7 +28,7 @@
 namespace KokkosComm::Experimental::nccl::Impl {
 
 template <KokkosExecutionSpace ExecSpace, KokkosView RecvView>
-void recv(const ExecSpace &space, RecvView &rv, int src, ncclComm_t comm) {
+auto recv(const ExecSpace &space, RecvView &rv, int peer, ncclComm_t comm) -> void {
   Kokkos::Tools::pushRegion("KokkosComm::Impl::recv");
 
   if (KokkosComm::is_contiguous(rv)) {
