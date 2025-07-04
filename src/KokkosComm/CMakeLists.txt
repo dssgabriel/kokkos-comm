@@ -42,6 +42,7 @@ if(KOKKOSCOMM_ENABLE_MPI)
       FILES
         # Structures
         mpi/mpi_space.hpp
+        mpi/comm_mode.hpp
         mpi/handle.hpp
         mpi/req.hpp
         mpi/commmode.hpp
@@ -53,6 +54,7 @@ if(KOKKOSCOMM_ENABLE_MPI)
         # Collectives
         mpi/broadcast.hpp
         mpi/allgather.hpp
+        mpi/allreduce.hpp
         mpi/alltoall.hpp
         mpi/reduce.hpp
         mpi/scan.hpp
