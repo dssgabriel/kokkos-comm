@@ -86,7 +86,16 @@ if(KOKKOSCOMM_ENABLE_NCCL)
       FILE_SET kokkoscomm_nccl_headers
       TYPE HEADERS
       BASE_DIRS ${PROJECT_SOURCE_DIR}/src
-      FILES nccl/nccl.hpp nccl/handle.hpp nccl/req.hpp nccl/send.hpp nccl/recv.hpp nccl/allgather.hpp nccl/reduce.hpp
+      FILES
+        nccl/nccl_space.hpp
+        nccl/handle.hpp
+        nccl/req.hpp
+        nccl/send.hpp
+        nccl/recv.hpp
+        nccl/broadcast.hpp
+        nccl/allgather.hpp
+        nccl/allreduce.hpp
+        nccl/reduce.hpp
   )
 
     # Implementation detail NCCL headers
