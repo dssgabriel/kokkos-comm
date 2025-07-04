@@ -18,7 +18,7 @@
 
 #include <KokkosComm/concepts.hpp>
 #include <KokkosComm/traits.hpp>
-#include <KokkosComm/impl/KokkosComm_contiguous.hpp>
+#include <KokkosComm/impl/contiguous.hpp>
 #include <KokkosComm/nccl/impl/types.hpp>
 
 #include <nccl.h>

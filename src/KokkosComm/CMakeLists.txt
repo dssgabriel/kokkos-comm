@@ -105,7 +105,6 @@ macro(kokkoscomm_check_and_add_compile_options)
     set(target ${ARGV0})
     set(flag ${ARGV1})
 
-<<<<<<< HEAD
   check_cxx_compiler_flag(
     ${flag}
     HAS_${flag}
@@ -113,15 +112,6 @@ macro(kokkoscomm_check_and_add_compile_options)
   if(HAS_${flag})
     target_compile_options(${target} INTERFACE ${flag})
   endif()
-=======
-    check_cxx_compiler_flag(
-    ${flag}
-    HAS_${flag}
-  )
-    if(HAS_${flag})
-        target_compile_options(${target} INTERFACE ${flag})
-    endif()
->>>>>>> 70ed18c (feat: add NCCL files to CMake)
 endmacro()
 
 # KokkosComm is a C++20 project
@@ -160,15 +150,12 @@ if(KOKKOSCOMM_ENABLE_NCCL)
     target_link_libraries(KokkosComm INTERFACE ${NCCL_LIBRARIES})
     target_include_directories(KokkosComm SYSTEM INTERFACE ${NCCL_INCLUDE_DIRS})
 endif()
-<<<<<<< HEAD
 target_link_libraries(
   KokkosComm
   INTERFACE
     KokkosComm::KokkosCommFlags
     Kokkos::kokkos
 )
-=======
->>>>>>> 70ed18c (feat: add NCCL files to CMake)
 
 # Install library
 install(
@@ -185,12 +172,9 @@ install(
   FILE_SET
   kokkoscomm_mpi_impl_headers
   FILE_SET
-<<<<<<< HEAD
-=======
   kokkoscomm_nccl_headers
   FILE_SET
   kokkoscomm_nccl_impl_headers
   FILE_SET
->>>>>>> 70ed18c (feat: add NCCL files to CMake)
   kokkoscomm_config_headers
 )
