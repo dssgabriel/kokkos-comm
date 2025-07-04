@@ -22,18 +22,23 @@
 #include <KokkosComm/concepts.hpp>
 #include <KokkosComm/traits.hpp>
 
-namespace KokkosComm::Experimental::nccl::Impl {
 #include "impl/pack_traits.hpp"
 #include "impl/types.hpp"
 
+namespace KokkosComm::Experimental::nccl::Impl {
 
 template <KokkosExecutionSpace ExecSpace, KokkosView SendView, KokkosView RecvView>
-  Kokkos::Tools::pushRegion("KokkosComm::Experimental::nccl::Impl::reduce");
-
 auto reduce(const ExecSpace &space, const SendView sv, RecvView rv, ncclRedOp_t op, int root, int rank, ncclComm_t comm)
     -> void {
   using SendPacker = typename PackTraits<SendView>::packer_type;
   using RecvPacker = typename PackTraits<RecvView>::packer_type;
+  using SendScalar = typename SendView::value_type;
+  using RecvScalar = typename RecvView::value_type;
+  static_assert(std::is_same_v<SendScalar, RecvScalar>, "nccl::reduce: View value types must be identical");
+  static_assert(KokkosComm::rank<SendView>() <= 1 && KokkosComm::rank<RecvView>() <= 1,
+                "nccl::reduce: only rank-1 Views are supported");
+
+  Kokkos::Tools::pushRegion("KokkosComm::Experimental::nccl::Impl::reduce");
 
   if (!KokkosComm::is_contiguous(sv)) {
     auto send_args = SendPacker::pack(space, sv);
@@ -41,24 +46,23 @@ auto reduce(const ExecSpace &space, const SendView sv, RecvView rv, ncclRedOp_t 
     if ((root == rank) && !KokkosComm::is_contiguous(rv)) {
       auto recv_args = RecvPacker::allocate_packed_for(space, "reduce recv", rv);
       space.fence();
-      using SendScalar = typename SendView::non_const_value_type;
-      ncclReduce(send_args.view.data(), recv_args.view.data(), send_args.count, send_args.datatype, op, root, comm,
-                 space.cuda_stream());
+      ncclReduce(KokkosComm::data_handle(send_args.view_), KokkosComm::data_handle(recv_args.view_),
+                 KokkosComm::span(send_args.view_), datatype_v<SendScalar>, op, root, comm, space.cuda_stream());
       RecvPacker::unpack_into(space, rv, recv_args.view);
     } else {
-      ncclReduce(send_args.view.data(), rv.data(), send_args.count, send_args.datatype, op, root, comm,
-                 space.cuda_stream());
+      ncclReduce(KokkosComm::data_handle(send_args.view_), KokkosComm::data_handle(rv),
+                 KokkosComm::span(send_args.view_), datatype_v<SendScalar>, op, root, comm, space.cuda_stream());
     }
   } else {
-    using SendScalar = typename SendView::value_type;
     if ((root == rank) && !KokkosComm::is_contiguous(rv)) {
       auto recv_args = RecvPacker::allocate_packed_for(space, "reduce recv", rv);
       space.fence();
-      ncclReduce(sv.data(), recv_args.view.data(), sv.span(), datatype_v<SendScalar>, op, root, comm,
-                 space.cuda_stream());
+      ncclReduce(KokkosComm::data_handle(sv), KokkosComm::data_handle(recv_args.view_), KokkosComm::data_handle(sv),
+                 datatype_v<SendScalar>, op, root, comm, space.cuda_stream());
       RecvPacker::unpack_into(space, rv, recv_args.view);
     } else {
-      ncclReduce(sv.data(), rv.data(), sv.span(), datatype_v<SendScalar>, op, root, comm, space.cuda_stream());
+      ncclReduce(KokkosComm::data_handle(sv), KokkosComm::data_handle(rv), KokkosComm::span(sv), datatype_v<SendScalar>,
+                 op, root, comm, space.cuda_stream());
     }
   }
 
