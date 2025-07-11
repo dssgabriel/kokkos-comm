@@ -30,7 +30,7 @@ using ScalarTypes = ::testing::Types<int, int64_t, float, double, Kokkos::comple
 TYPED_TEST_SUITE(Scan, ScalarTypes);
 
 template <typename Scalar>
-void test_inclusive_scan_0d() {
+void test_scan_0d() {
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -56,10 +56,10 @@ void test_inclusive_scan_0d() {
   EXPECT_EQ(errs, 0);
 }
 
-TYPED_TEST(Scan, 0D) { test_inclusive_scan_0d<typename TestFixture::Scalar>(); }
+TYPED_TEST(Scan, 0D) { test_scan_0d<typename TestFixture::Scalar>(); }
 
 template <typename Scalar>
-void test_inclusive_scan_1d_contig() {
+void test_scan_1d_contig() {
   int rank, size;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -89,6 +89,6 @@ void test_inclusive_scan_1d_contig() {
   EXPECT_EQ(errs, 0);
 }
 
-TYPED_TEST(Scan, 1D_contig) { test_inclusive_scan_1d_contig<typename TestFixture::Scalar>(); }
+TYPED_TEST(Scan, 1D_contig) { test_scan_1d_contig<typename TestFixture::Scalar>(); }
 
 }  // namespace
