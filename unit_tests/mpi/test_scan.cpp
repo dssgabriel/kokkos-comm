@@ -48,6 +48,12 @@ void test_inclusive_scan_0d() {
   Kokkos::parallel_reduce(
       rv.extent(0), KOKKOS_LAMBDA(int, int &lsum) { lsum += (rv() != rank * (rank + 1) / 2); }, errs);
   EXPECT_EQ(errs, 0);
+
+  Kokkos::View<Scalar> rv2("rv2");
+  KokkosComm::mpi::exclusive_scan(Kokkos::DefaultExecutionSpace(), sv, rv2, MPI_SUM, MPI_COMM_WORLD);
+  Kokkos::parallel_reduce(
+      rv2.extent(0), KOKKOS_LAMBDA(int, int &lsum) { lsum += (rv2() != rank * (rank - 1) / 2); }, errs);
+  EXPECT_EQ(errs, 0);
 }
 
 TYPED_TEST(Scan, 0D) { test_inclusive_scan_0d<typename TestFixture::Scalar>(); }
@@ -73,6 +79,13 @@ void test_inclusive_scan_1d_contig() {
   Kokkos::parallel_reduce(
       rv.extent(0),
       KOKKOS_LAMBDA(int i, int &lsum) { lsum += (rv(i) != (rank + i) * (rank + i + 1) / 2 - i * (i - 1) / 2); }, errs);
+  EXPECT_EQ(errs, 0);
+
+  Kokkos::View<Scalar *> rv2("rv2", nContrib);
+  KokkosComm::mpi::exclusive_scan(Kokkos::DefaultExecutionSpace(), sv, rv2, MPI_SUM, MPI_COMM_WORLD);
+  Kokkos::parallel_reduce(
+      rv2.extent(0),
+      KOKKOS_LAMBDA(int i, int &lsum) { lsum += (rv2(i) != (rank + i) * (rank + i - 1) / 2 - i * (i - 1) / 2); }, errs);
   EXPECT_EQ(errs, 0);
 }
 
