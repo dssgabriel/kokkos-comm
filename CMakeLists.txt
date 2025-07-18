@@ -34,6 +34,7 @@ include(cmake/mpi-vendor.cmake)
 option(KokkosComm_ENABLE_PERFTESTS "Build KokkosComm perf tests" OFF)
 option(KokkosComm_ENABLE_TESTS "Build KokkosComm tests" OFF)
 option(KokkosComm_ENABLE_MPI "Build KokkosComm with MPI transport" ON)
+option(KokkosComm_ABORT_ON_ERROR "Runtime error checks trigger a global abort" OFF)
 
 # Resolve options
 set(KOKKOSCOMM_ENABLE_PERFTESTS ${KokkosComm_ENABLE_PERFTESTS} CACHE BOOL "" FORCE)
