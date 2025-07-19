@@ -13,6 +13,8 @@ project(
   HOMEPAGE_URL "https://kokkos.org/kokkos-comm/"
 )
 
+include(cmake/mpi-vendor.cmake)
+
 option(KokkosComm_ENABLE_PERFTESTS "Build KokkosComm perf tests" OFF)
 option(KokkosComm_ENABLE_TESTS "Build KokkosComm tests" OFF)
 option(KokkosComm_ENABLE_MPI "Build KokkosComm with MPI transport" ON)
@@ -29,15 +31,18 @@ find_package(Kokkos REQUIRED)
 if(KOKKOSCOMM_ENABLE_MPI)
   find_package(MPI REQUIRED)
 endif()
+kokkoscomm_set_mpi_vendor_variables()
 if(KOKKOSCOMM_ENABLE_NCCL)
   find_package(NCCL REQUIRED)
 endif()
 
 add_subdirectory(src/KokkosComm)
 if(KOKKOSCOMM_ENABLE_TESTS)
+  enable_testing() # so we can run ctest at the top-level build dir
   add_subdirectory(unit_tests)
 endif()
 if(KOKKOSCOMM_ENABLE_PERFTESTS)
+  enable_testing() # so we can run ctest at the top-level build dir
   add_subdirectory(perf_tests)
 endif()
 
