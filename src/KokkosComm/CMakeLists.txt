@@ -45,7 +45,7 @@ if(KOKKOSCOMM_ENABLE_MPI)
         mpi/comm_mode.hpp
         mpi/handle.hpp
         mpi/req.hpp
-        mpi/commmode.hpp
+        mpi/comm_mode.hpp
         # P2P
         mpi/irecv.hpp
         mpi/isend.hpp
