@@ -67,6 +67,7 @@ if(KOKKOSCOMM_ENABLE_MPI)
         mpi/req.hpp
         mpi/send.hpp
         mpi/broadcast.hpp
+        mpi/scan.hpp
   )
 
   # Implementation detail MPI headers
@@ -76,8 +77,17 @@ if(KOKKOSCOMM_ENABLE_MPI)
       FILE_SET kokkoscomm_mpi_impl_headers
       TYPE HEADERS
       BASE_DIRS ${PROJECT_SOURCE_DIR}/src
-      FILES mpi/impl/pack_traits.hpp mpi/impl/packer.hpp mpi/impl/tags.hpp mpi/impl/types.hpp
+      FILES 
+        mpi/impl/pack_traits.hpp 
+        mpi/impl/packer.hpp 
+        mpi/impl/tags.hpp 
+        mpi/impl/types.hpp 
+        mpi/impl/error_handling.hpp
   )
+endif()
+
+if(KokkosComm_ABORT_ON_ERROR)
+  target_compile_definitions(KokkosComm INTERFACE KOKKOSCOMM_ABORT_ON_ERROR)
 endif()
 
 # --- COMPILE FLAGS --- #

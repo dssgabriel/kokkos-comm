@@ -40,6 +40,7 @@
 #include "mpi/allreduce.hpp"
 #include "mpi/alltoall.hpp"
 #include "mpi/reduce.hpp"
+#include "mpi/scan.hpp"
 
 #include "mpi/barrier.hpp"
 #else

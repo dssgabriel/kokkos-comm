@@ -115,7 +115,7 @@ endif()
 function(add_mpi_test test_name num_procs)
     # Extract source files from remaining arguments
     set(sources ${ARGN})
-    
+
     # Add test_main.cpp and the provided source files
     add_executable(${test_name})
     target_sources(
@@ -124,14 +124,14 @@ function(add_mpi_test test_name num_procs)
             test_main.cpp
             ${sources}
     )
-    
+
     target_link_libraries(
         ${test_name}
         PRIVATE
             KokkosComm::KokkosComm
             gtest
     )
-    
+
     add_test(
         NAME ${test_name}
         COMMAND
@@ -148,4 +148,5 @@ add_mpi_test(test-reduce          2 mpi/test_reduce.cpp)
 add_mpi_test(test-allreduce       2 mpi/test_allreduce.cpp)
 add_mpi_test(test-alltoall        2 mpi/test_alltoall.cpp)
 add_mpi_test(test-allgather       2 mpi/test_allgather.cpp)
+add_mpi_test(test-scan            2 mpi/test_scan.cpp)
 add_mpi_test(test-channel         2 mpi/test_channel.cpp)

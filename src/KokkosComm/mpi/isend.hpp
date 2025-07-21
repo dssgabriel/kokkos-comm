@@ -27,6 +27,7 @@
 #include "impl/pack_traits.hpp"
 #include "impl/tags.hpp"
 #include "impl/types.hpp"
+#include "impl/error_handling.hpp"
 
 namespace KokkosComm {
 
@@ -92,12 +93,11 @@ template <KokkosView SendView>
 void isend(const SendView &sv, int dest, int tag, MPI_Comm comm, MPI_Request &req) {
   Kokkos::Tools::pushRegion("KokkosComm::Impl::isend");
 
-  if (KokkosComm::is_contiguous(sv)) {
-    using SendScalar = typename SendView::non_const_value_type;
-    MPI_Isend(KokkosComm::data_handle(sv), KokkosComm::span(sv), Impl::mpi_type_v<SendScalar>, dest, tag, comm, &req);
-  } else {
-    throw std::runtime_error("only contiguous views supported for low-level isend");
-  }
+  KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(sv), "only contiguous views supported for low-level isend");
+
+  using SendScalar = typename SendView::non_const_value_type;
+  MPI_Isend(KokkosComm::data_handle(sv), KokkosComm::span(sv), Impl::mpi_type_v<SendScalar>, dest, tag, comm, &req);
+
   Kokkos::Tools::popRegion();
 }
 
