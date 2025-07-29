@@ -95,7 +95,6 @@ if(KOKKOSCOMM_ENABLE_MPI)
           ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ./test-mpi-cuda-sendrecv
     )
   endif()
-
 endif()
 
 # Tests using the MPI communication space, but not linking with MPI itself
