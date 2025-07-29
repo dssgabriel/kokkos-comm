@@ -95,6 +95,20 @@ if(KOKKOSCOMM_ENABLE_MPI)
           ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ./test-mpi-cuda-sendrecv
     )
   endif()
+
+  if (Kokkos_ENABLE_HIP)
+    add_executable(test-mpi-hip-sendrecv)
+    target_sources(test-mpi-hip-sendrecv PRIVATE mpi/test_mpi_hip_sendrecv.cpp)
+    target_link_libraries(test-mpi-hip-sendrecv MPI::MPI_CXX)
+    find_package(hip REQUIRED)
+    target_link_libraries(test-mpi-hip-sendrecv hip::host)
+    target_compile_options(test-mpi-hip-sendrecv PUBLIC -x hip)
+    add_test(
+      NAME test-mpi-hip-sendrecv
+      COMMAND
+          ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ./test-mpi-hip-sendrecv
+    )
+  endif()
 endif()
 
 # Tests using the MPI communication space, but not linking with MPI itself
@@ -135,3 +149,4 @@ add_mpi_test(test-allreduce       2 mpi/test_allreduce.cpp)
 add_mpi_test(test-alltoall        2 mpi/test_alltoall.cpp)
 add_mpi_test(test-allgather       2 mpi/test_allgather.cpp)
 add_mpi_test(test-scan            2 mpi/test_scan.cpp)
+add_mpi_test(test-channel         2 mpi/test_channel.cpp)
