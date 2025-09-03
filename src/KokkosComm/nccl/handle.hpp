@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <Kokkos_Core.hpp>
 #include <nccl.h>
 
 #include <KokkosComm/fwd.hpp>
