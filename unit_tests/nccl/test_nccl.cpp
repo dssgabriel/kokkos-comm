@@ -14,6 +14,8 @@
 //
 //@HEADER
 
+// NOTE: This file is a NCCL smoke test and does nothing related to KokkosComm.
+
 #include <iostream>
 #include <sstream>
 #include <iomanip>
