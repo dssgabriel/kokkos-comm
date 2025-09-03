@@ -30,8 +30,21 @@
 #include "mpi/scan.hpp"
 
 #include "mpi/barrier.hpp"
+#else if defined(KOKKOSCOMM_ENABLE_NCCL)
+#include "nccl/nccl_space.hpp"
+
+#include "nccl/handle.hpp"
+#include "nccl/req.hpp"
+
+#include "nccl/send.hpp"
+#include "nccl/recv.hpp"
+
+#include "nccl/broadcast.hpp"
+#include "nccl/allgather.hpp"
+#include "nccl/allreduce.hpp"
+#include "nccl/reduce.hpp"
 #else
-#error at least one transport must be defined
+#error at least one communication space must be defined
 #endif
 
 namespace KokkosComm {}  // namespace KokkosComm
