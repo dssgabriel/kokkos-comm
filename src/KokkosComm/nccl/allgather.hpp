@@ -31,8 +31,6 @@ template <KokkosExecutionSpace ExecSpace, KokkosView SendView, KokkosView RecvVi
 auto allgather(const ExecSpace &space, const SendView &sv, const RecvView &rv, ncclComm_t comm) -> void {
   using SendScalar = typename SendView::value_type;
   using RecvScalar = typename RecvView::value_type;
-  using SendScalar = typename SendView::value_type;
-  using RecvScalar = typename RecvView::value_type;
   static_assert(std::is_same_v<SendScalar, RecvScalar>, "nccl::allgather: View value types must be identical");
   static_assert(KokkosComm::rank<SendView>() <= 1 && KokkosComm::rank<RecvView>() <= 1,
                 "nccl::allgather: only rank-1 Views are supported");
