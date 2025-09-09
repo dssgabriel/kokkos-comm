@@ -30,6 +30,8 @@ jobs:
           mpirun --version
           which mpicxx
           mpicxx --version
+      - name: CMake Version
+        run: cmake --version
       - name: Check out repository code
         uses: actions/checkout@v4
       - name: List files in the repository
@@ -64,6 +66,8 @@ jobs:
           mpirun --version
           which mpicxx
           mpicxx --version
+      - name: CMake Version
+        run: cmake --version
       - name: Check out repository code
         uses: actions/checkout@v4
       - name: Build Kokkos
