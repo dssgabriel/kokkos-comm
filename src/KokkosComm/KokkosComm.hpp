@@ -30,7 +30,7 @@
 #include "mpi/scan.hpp"
 
 #include "mpi/barrier.hpp"
-#else if defined(KOKKOSCOMM_ENABLE_NCCL)
+#elif defined(KOKKOSCOMM_ENABLE_NCCL)
 #include "nccl/nccl_space.hpp"
 
 #include "nccl/handle.hpp"
