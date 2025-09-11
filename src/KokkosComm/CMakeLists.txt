@@ -32,8 +32,8 @@ target_sources(
 )
 
 if(KOKKOSCOMM_ENABLE_MPI)
-    # Public MPI headers
-    target_sources(
+  # Public MPI headers
+  target_sources(
     KokkosComm
     INTERFACE
       FILE_SET kokkoscomm_mpi_headers
@@ -63,8 +63,8 @@ if(KOKKOSCOMM_ENABLE_MPI)
         mpi/barrier.hpp
   )
 
-    # Implementation detail MPI headers
-    target_sources(
+  # Implementation detail MPI headers
+  target_sources(
     KokkosComm
     INTERFACE
       FILE_SET kokkoscomm_mpi_impl_headers
@@ -80,27 +80,31 @@ if(KOKKOSCOMM_ENABLE_MPI)
 endif()
 
 if(KOKKOSCOMM_ENABLE_NCCL)
-    # Public NCCL headers
-    target_sources(
+  # Public NCCL headers
+  target_sources(
     KokkosComm
     INTERFACE
       FILE_SET kokkoscomm_nccl_headers
       TYPE HEADERS
       BASE_DIRS ${PROJECT_SOURCE_DIR}/src
       FILES
+        # Structures
         nccl/nccl_space.hpp
         nccl/handle.hpp
         nccl/req.hpp
+        # P2P
         nccl/send.hpp
         nccl/recv.hpp
+        # Collectives
         nccl/broadcast.hpp
+        nccl/alltoall.hpp
         nccl/allgather.hpp
         nccl/allreduce.hpp
         nccl/reduce.hpp
   )
 
-    # Implementation detail NCCL headers
-    target_sources(
+  # Implementation detail NCCL headers
+  target_sources(
     KokkosComm
     INTERFACE
       FILE_SET kokkoscomm_nccl_impl_headers
@@ -111,16 +115,15 @@ if(KOKKOSCOMM_ENABLE_NCCL)
 endif()
 
 if(KokkosComm_ABORT_ON_ERROR)
-    target_compile_definitions(KokkosComm INTERFACE KOKKOSCOMM_ABORT_ON_ERROR)
+  target_compile_definitions(KokkosComm INTERFACE KOKKOSCOMM_ABORT_ON_ERROR)
 endif()
 
 # --- COMPILE FLAGS --- #
 include(CheckCXXCompilerFlag)
 
 macro(kokkoscomm_check_and_add_compile_options)
-    set(target ${ARGV0})
-    set(flag ${ARGV1})
-
+  set(target ${ARGV0})
+  set(flag ${ARGV1})
   check_cxx_compiler_flag(
     ${flag}
     HAS_${flag}
@@ -159,12 +162,12 @@ target_link_libraries(
     Kokkos::kokkos
 )
 if(KOKKOSCOMM_ENABLE_MPI)
-    target_link_libraries(KokkosComm INTERFACE MPI::MPI_CXX)
+  target_link_libraries(KokkosComm INTERFACE MPI::MPI_CXX)
 endif()
 if(KOKKOSCOMM_ENABLE_NCCL)
-    # TODO: determine if this is the right way to link with NCCL
-    target_link_libraries(KokkosComm INTERFACE ${NCCL_LIBRARIES})
-    target_include_directories(KokkosComm SYSTEM INTERFACE ${NCCL_INCLUDE_DIRS})
+  # TODO: determine if this is the right way to link with NCCL
+  target_link_libraries(KokkosComm INTERFACE ${NCCL_LIBRARIES})
+  target_include_directories(KokkosComm SYSTEM INTERFACE ${NCCL_INCLUDE_DIRS})
 endif()
 target_link_libraries(
   KokkosComm

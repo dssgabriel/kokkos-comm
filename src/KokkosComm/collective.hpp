@@ -7,13 +7,14 @@
 
 #include <Kokkos_Core_fwd.hpp>
 
-#include <KokkosComm/fwd.hpp>
+#include "fwd.hpp"
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
-#include <KokkosComm/nccl/nccl_space.hpp>
-#include <KokkosComm/nccl/broadcast.hpp>
-#include <KokkosComm/nccl/allgather.hpp>
-#include <KokkosComm/nccl/allreduce.hpp>
-#include <KokkosComm/nccl/reduce.hpp>
+#include "nccl/nccl_space.hpp"
+#include "nccl/broadcast.hpp"
+#include "nccl/alltoall.hpp"
+#include "nccl/allgather.hpp"
+#include "nccl/allreduce.hpp"
+#include "nccl/reduce.hpp"
 #endif
 
 namespace KokkosComm::Experimental {
@@ -32,10 +33,18 @@ auto broadcast(Handle<ExecSpace, CommSpace>& h, View v, int root) -> Req<CommSpa
   return Impl::Broadcast<View, View, ExecSpace, CommSpace>::execute(h, v, v, root);
 }
 
+/// All-gather w/ explicit handle
 template <KokkosView SendView, KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
           CommunicationSpace CommSpace = DefaultCommunicationSpace>
 auto allgather(Handle<ExecSpace, CommSpace>& h, const SendView sv, RecvView rv) -> Req<CommSpace> {
   return Impl::AllGather<SendView, RecvView, ExecSpace, CommSpace>::execute(h, sv, rv);
+}
+
+/// All-to-all w/ explicit handle
+template <KokkosView SendView, KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
+          CommunicationSpace CommSpace = DefaultCommunicationSpace>
+auto alltoall(Handle<ExecSpace, CommSpace>& h, const SendView sv, RecvView rv, int count) -> Req<CommSpace> {
+  return Impl::AllToAll<SendView, RecvView, ExecSpace, CommSpace>::execute(h, sv, rv, count);
 }
 
 template <KokkosView SendView, KokkosView RecvView, ReductionOperator RedOp,
