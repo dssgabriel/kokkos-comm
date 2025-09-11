@@ -14,7 +14,7 @@
 namespace KokkosComm::Experimental::nccl::Impl {
 
 template <KokkosExecutionSpace ExecSpace, KokkosView SendView, KokkosView RecvView>
-auto alltoall(const ExecSpace &space, const SendView &sv, const RecvView &rv, ncclComm_t comm, int npes) -> void {
+auto alltoall(const ExecSpace &space, const SendView &sv, const RecvView &rv, ncclComm_t comm, int count) -> void {
   using SendScalar = typename SendView::value_type;
   using RecvScalar = typename RecvView::value_type;
   static_assert(std::is_same_v<SendScalar, RecvScalar>, "nccl::alltoall: View value types must be identical");
@@ -26,18 +26,8 @@ auto alltoall(const ExecSpace &space, const SendView &sv, const RecvView &rv, nc
   if (!KokkosComm::is_contiguous(sv) || !KokkosComm::is_contiguous(rv)) {
     Kokkos::abort("nccl::alltoall: unimplemented for non-contiguous views");
   } else {
-    auto dtype = datatype_v<SendScalar>;
-    int n_pe;
-    ncclCommCount(comm, &n_pe);
-
-    ncclGroupStart();
-    for (int r = 0; r < npes; ++r) {
-      ncclSend(KokkosComm::data_handle(sv) + r * KokkosComm::span(sv), KokkosComm::span(sv), dtype, r, comm,
-               space.cuda_stream());
-      ncclRecv(KokkosComm::data_handle(rv) + r * KokkosComm::span(rv), KokkosComm::span(rv), dtype, r, comm,
-               space.cuda_stream());
-    }
-    ncclGroupEnd();
+    ncclAlltoAll(KokkosComm::data_handle(sv), KokkosComm::data_handle(rv), count, datatype_v<SendScalar>, comm,
+                 space.cuda_stream());
   }
 
   Kokkos::Tools::popRegion();
