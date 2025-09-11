@@ -1,22 +1,28 @@
+//@HEADER
+// ************************************************************************
+//
+//                        Kokkos v. 4.0
+//       Copyright (2022) National Technology & Engineering
+//               Solutions of Sandia, LLC (NTESS).
+//
+// Under the terms of Contract DE-NA0003525 with NTESS,
+// the U.S. Government retains certain rights in this software.
+//
+// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
+// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//@HEADER
 
 #include <cstddef>
 #include <cstdint>
-#include <cstdlib>
-#include <format>
-#include <iosfwd>
-#include <type_traits>
 
 #include <gtest/gtest.h>
 #include <nccl.h>
 
 #include <KokkosComm/KokkosComm.hpp>
 
-#define NCCL_CHECK(cmd)                                                    \
-  if (ncclResult_t res = cmd; res != ncclSuccess) {                        \
-    std::cerr << std::format("NCCL error: {}\n", ncclGetErrorString(res)); \
-    std::exit(EXIT_FAILURE);                                               \
-  }
+#include "utils.hpp"
 
 namespace {
 
@@ -33,52 +39,19 @@ using ScalarTypes = ::testing::Types<float, double, int, unsigned, int64_t, size
 
 TYPED_TEST_SUITE(P2P, ScalarTypes);
 
-auto init_mpi() -> std::tuple<int, int> {
-  static bool is_initialized = false;
-  if (not is_initialized) {
-    MPI_Init(nullptr, nullptr);
-    is_initialized = true;
-  }
-  int np, me;
-  MPI_Comm_size(MPI_COMM_WORLD, &np);
-  MPI_Comm_rank(MPI_COMM_WORLD, &me);
-  return std::make_tuple(np, me);
-}
-
-auto create_nccl_comm() -> ncclComm_t {
-  auto [np, me] = init_mpi();
-  ncclUniqueId id;
-  if (0 == me) {
-    ncclGetUniqueId(&id);
-  }
-  MPI_Bcast(&id, sizeof(id), MPI_BYTE, 0, MPI_COMM_WORLD);
-
-  MPI_Barrier(MPI_COMM_WORLD);
-  ncclComm_t comm;
-  ncclGroupStart();
-  // Assume one device per process
-  ncclCommInitRank(&comm, np, id, me);
-  ncclGroupEnd();
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  // We can finalize MPI since we only need it for initializing NCCL
-  MPI_Finalize();
-  return comm;
-}
-
 template <typename Scalar>
 auto p2p_1d_contig() -> void {
   Kokkos::View<Scalar *> a("a", 1000);
 
-  KokkosComm::Handle<ExecSpace, CommSpace> h(create_nccl_comm());
+  auto nccl_ctx = test_utils::nccl::Ctx::init();
+  KokkosComm::Handle<ExecSpace, CommSpace> h(nccl_ctx.comm());
   if (h.size() < 2) {
     GTEST_SKIP() << "Requires >= 2 ranks (" << h.size() << " provided)";
   }
 
   if (0 == h.rank()) {
     int dst = 1;
-    Kokkos::parallel_for(
-        a.extent(0), KOKKOS_LAMBDA(const int i) { a(i) = i; });
+    Kokkos::parallel_for(a.extent(0), KOKKOS_LAMBDA(const int i) { a(i) = i; });
     auto req = KokkosComm::send(h, a, dst);
     KokkosComm::wait(req);
   } else if (1 == h.rank()) {
@@ -86,8 +59,7 @@ auto p2p_1d_contig() -> void {
     auto req = KokkosComm::recv(h, a, src);
     KokkosComm::wait(req);
     int errs;
-    Kokkos::parallel_reduce(
-        a.extent(0), KOKKOS_LAMBDA(const int &i, int &lsum) { lsum += a(i) != Scalar(i); }, errs);
+    Kokkos::parallel_reduce(a.extent(0), KOKKOS_LAMBDA(const int &i, int &lsum) { lsum += a(i) != Scalar(i); }, errs);
     ASSERT_EQ(errs, 0);
   }
 }
@@ -97,15 +69,15 @@ auto p2p_1d_noncontig() -> void {
   Kokkos::View<Scalar **, Kokkos::LayoutRight> b("a", 10, 10);
   auto a = Kokkos::subview(b, Kokkos::ALL, 2);  // take column 2 (non-contiguous)
 
-  KokkosComm::Handle<ExecSpace, CommSpace> h(create_nccl_comm());
+  auto nccl_ctx = test_utils::nccl::Ctx::init();
+  KokkosComm::Handle<ExecSpace, CommSpace> h(nccl_ctx.comm());
   if (h.size() < 2) {
     GTEST_SKIP() << "Requires >= 2 ranks (" << h.size() << " provided)";
   }
 
   if (0 == h.rank()) {
     int dst = 1;
-    Kokkos::parallel_for(
-        a.extent(0), KOKKOS_LAMBDA(const int i) { a(i) = i; });
+    Kokkos::parallel_for(a.extent(0), KOKKOS_LAMBDA(const int i) { a(i) = i; });
     KokkosComm::Req req = KokkosComm::send(h, a, dst);
     KokkosComm::wait(req);
   } else if (1 == h.rank()) {
@@ -113,8 +85,7 @@ auto p2p_1d_noncontig() -> void {
     auto req = KokkosComm::recv(h, a, src);
     KokkosComm::wait(req);
     int errs;
-    Kokkos::parallel_reduce(
-        a.extent(0), KOKKOS_LAMBDA(const int &i, int &lsum) { lsum += a(i) != Scalar(i); }, errs);
+    Kokkos::parallel_reduce(a.extent(0), KOKKOS_LAMBDA(const int &i, int &lsum) { lsum += a(i) != Scalar(i); }, errs);
     ASSERT_EQ(errs, 0);
   }
 }
