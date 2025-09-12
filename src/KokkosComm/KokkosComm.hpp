@@ -40,6 +40,7 @@
 #include "nccl/recv.hpp"
 
 #include "nccl/broadcast.hpp"
+#include "nccl/alltoall.hpp"
 #include "nccl/allgather.hpp"
 #include "nccl/allreduce.hpp"
 #include "nccl/reduce.hpp"
