@@ -164,7 +164,7 @@ class Ctx {
   Ctx(const Ctx &)                     = delete;
   auto operator=(const Ctx &) -> Ctx & = delete;
   Ctx(Ctx &&)                          = delete;
-  auto operator=(Ctx &&) -> Ctx &      = delete;
+  auto operator=(Ctx &&) -> Ctx      & = delete;
   ncclComm_t comm_;
   int n_ranks_;
   int my_rank_;
