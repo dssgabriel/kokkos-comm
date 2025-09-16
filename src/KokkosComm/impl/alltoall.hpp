@@ -32,7 +32,7 @@ template <KokkosView SendView, KokkosView RecvView>
 struct AllToAll<Kokkos::Cuda, KokkosComm::Experimental::Nccl> {
   static auto execute(Handle<Kokkos::Cuda, KokkosComm::Experimental::Nccl> &h, const SendView sv, RecvView rv,
                       int count) -> Req<KokkosComm::Experimental::Nccl> {
-    KokkosComm::Experimental::nccl::Impl::alltoall(h.space(), sv, rv, h.comm(), count);
+    KokkosComm::Experimental::nccl::Impl::alltoall(h.space(), sv, rv, count, h.comm());
     return Req<KokkosComm::Experimental::Nccl>(h.space().cuda_stream());
   }
 };
