@@ -25,6 +25,7 @@
 #include <iosfwd>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include <mpi.h>
 #include <nccl.h>
@@ -114,14 +115,14 @@ class Ctx {
 
     // Retrieve rank info
     int n_ranks, my_rank;
-    MPI_Comm_size(comm, &n_ranks);
-    MPI_Comm_rank(comm, &my_rank);
+    MPI_Comm_size(mpi_comm, &n_ranks);
+    MPI_Comm_rank(mpi_comm, &my_rank);
 
     // Compute `local_rank` based on hostname which is used in selecting a GPU
     int local_rank;
-    std::vector<uint64_t> hostname_hashes(n_pe);
-    auto hostname       = get_hostname();
-    host_hashs[my_rank] = hash_hostname(hostname);
+    std::vector<uint64_t> hostname_hashes(n_ranks);
+    auto hostname            = get_hostname();
+    hostname_hashes[my_rank] = hash_hostname(hostname);
     MPI_CHECK(MPI_Allgather(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL, hostname_hashes.data(), sizeof(uint64_t), MPI_BYTE,
                             mpi_comm));
     for (int p = 0; p < n_ranks; ++p) {
@@ -165,6 +166,7 @@ class Ctx {
   auto operator=(const Ctx &) -> Ctx & = delete;
   Ctx(Ctx &&)                          = delete;
   auto operator=(Ctx &&) -> Ctx      & = delete;
+
   ncclComm_t comm_;
   int n_ranks_;
   int my_rank_;
