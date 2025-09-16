@@ -1,6 +1,6 @@
 name: SNL-AT2
 
-on: 
+on:
   pull_request:
     paths-ignore:
     - 'docs/**'

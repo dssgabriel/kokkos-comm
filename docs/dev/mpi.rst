@@ -30,7 +30,7 @@ This was observed to work with CUDA 12.2.
 It was necessary to use both ``--with-cuda`` and ``--with-cuda-libdir``, otherwise it would not detect the CUDA library.
 
 .. code-block:: bash
-    
+
     OPENMPI_SRC="$PWD"/openmpi-5.0.6
     MPI_INSTALL="$PWD"/openmpi-5.0.6-install
     wget --continue https://download.open-mpi.org/release/open-mpi/v5.0/openmpi-5.0.6.tar.gz

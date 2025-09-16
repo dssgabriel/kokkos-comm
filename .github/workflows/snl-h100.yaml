@@ -11,7 +11,7 @@ jobs:
   PR_CUDA1250_OPENMPI504:
     name: PR_CUDA1250_OPENMPI504
     runs-on: [cuda125-openmpi504-latest-latest]
-    
+
     steps:
       - name: Checkout Kokkos Comm
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2

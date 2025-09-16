@@ -110,7 +110,7 @@ Point-to-point
 
 
 .. cpp:function:: template <KokkosExecutionSpace ExecSpace, KokkosView RecvView> \
-                  auto recv(const ExecSpace &space, RecvView &rv, int src, int tag, MPI_Comm comm) -> void 
+                  auto recv(const ExecSpace &space, RecvView &rv, int src, int tag, MPI_Comm comm) -> void
 
     Initiates a blocking receive operation with a specified execution space.
 
@@ -144,7 +144,7 @@ Collectives
 ===========
 
 .. cpp:function:: template <KokkosView SendView, KokkosView RecvView> \
-                  auto allgather(const SendView &sv, const RecvView &rv, MPI_Comm comm) -> void 
+                  auto allgather(const SendView &sv, const RecvView &rv, MPI_Comm comm) -> void
 
     Performs an allgather operation, gathering data from all processes and distributing it to all processes.
 
@@ -159,7 +159,7 @@ Collectives
 
 
 .. cpp:function:: template <KokkosView RecvView> \
-                  auto allgather(const RecvView &rv, MPI_Comm comm) -> void 
+                  auto allgather(const RecvView &rv, MPI_Comm comm) -> void
 
     Performs an in-place allgather operation, gathering data from all processes and distributing it to all processes.
 
@@ -170,7 +170,7 @@ Collectives
 
 
 .. cpp:function:: template <KokkosExecutionSpace ExecSpace, KokkosView SendView, KokkosView RecvView> \
-                  auto allgather(const ExecSpace &space, const SendView &sv, const RecvView &rv, MPI_Comm comm) -> void 
+                  auto allgather(const ExecSpace &space, const SendView &sv, const RecvView &rv, MPI_Comm comm) -> void
 
     Performs an allgather operation with a specified execution space, gathering data from all processes and distributing it to all processes.
 
@@ -185,7 +185,7 @@ Collectives
 
 
 .. cpp:function:: template <KokkosView SendView, KokkosView RecvView> \
-                  auto reduce(const SendView &sv, const RecvView &rv, MPI_Op op, int root, MPI_Comm comm) -> void 
+                  auto reduce(const SendView &sv, const RecvView &rv, MPI_Op op, int root, MPI_Comm comm) -> void
 
     Performs a reduction operation, combining data from all processes and distributing the result to the root process.
 
@@ -200,7 +200,7 @@ Collectives
 
 
 .. cpp:function:: template <KokkosExecutionSpace ExecSpace, KokkosView SendView, KokkosView RecvView> \
-                  auto reduce(const ExecSpace &space, const SendView &sv, const RecvView &rv, MPI_Op op, int root, MPI_Comm comm) -> void 
+                  auto reduce(const ExecSpace &space, const SendView &sv, const RecvView &rv, MPI_Op op, int root, MPI_Comm comm) -> void
 
     Performs a reduction operation with a specified execution space, combining data from all processes and distributing the result to the root process.
 

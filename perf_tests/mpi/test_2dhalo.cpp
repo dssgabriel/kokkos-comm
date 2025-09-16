@@ -99,7 +99,7 @@ void benchmark_2dhalo(benchmark::State &state) {
   state.counters["nx"]           = nx;
   // clang-format off
   state.SetBytesProcessed(
-      sizeof(Scalar) 
+      sizeof(Scalar)
     * rs * rs // active ranks
     * state.iterations()
     * nprops
