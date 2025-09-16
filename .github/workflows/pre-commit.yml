@@ -1,0 +1,58 @@
+name: Lint checks
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+  push:
+    branches:
+      - develop
+
+jobs:
+  pre-commit-push:
+    name: Pre-commit on Push
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.13
+      # We run pre-commit on all files instead of only the push commit changes so linting errors persist.
+      - uses: pre-commit/action@v3.0.1
+
+  pre-commit-pr:
+    name: Pre-commit on PR
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'pull_request' }}
+    permissions:
+      contents: read
+      checks: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Checkout the PR head instead of the base
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.13
+      # We only lint on the changed files in the PR.
+      - id: changed-files
+        uses: tj-actions/changed-files@v45
+      - id: run-pre-commit
+        uses: pre-commit/action@v3.0.1
+        with:
+          extra_args: --files ${{ steps.changed-files.outputs.all_changed_files }}
+      # Post change suggestions from pre-commit to the PR.
+      - uses: reviewdog/action-suggester@v1.21.0
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: ${{ failure() && steps.run-pre-commit.conclusion == 'failure' }}
+        with:
+          tool_name: pre-commit
+          level: warning
+          reviewdog_flags: "-fail-level=error"
