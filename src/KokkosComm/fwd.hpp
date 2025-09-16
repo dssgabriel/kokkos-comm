@@ -33,8 +33,8 @@
 
 namespace KokkosComm {
 
-// NCCL backend also requires MPI to be enabled
-#if defined(KOKKOSCOMM_ENABLE_MPI) && defined(KOKKOSCOMM_ENABLE_NCCL)
+// NCCL backend also implicitly declares MPI
+#if defined(KOKKOSCOMM_ENABLE_NCCL)
 class Mpi;
 class Nccl;
 using DefaultCommunicationSpace  = Nccl;
@@ -73,6 +73,10 @@ template <KokkosView SendView, KokkosView RecvView = SendView,
           KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
           CommunicationSpace CommSpace   = DefaultCommunicationSpace>
 struct Broadcast;
+
+template <KokkosView SendView, KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
+          CommunicationSpace CommSpace = DefaultCommunicationSpace>
+struct AllToAll;
 
 template <KokkosView SendView, KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
           CommunicationSpace CommSpace = DefaultCommunicationSpace>
