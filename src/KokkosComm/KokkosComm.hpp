@@ -35,15 +35,6 @@
 
 #include "nccl/handle.hpp"
 #include "nccl/req.hpp"
-
-#include "nccl/send.hpp"
-#include "nccl/recv.hpp"
-
-#include "nccl/broadcast.hpp"
-#include "nccl/alltoall.hpp"
-#include "nccl/allgather.hpp"
-#include "nccl/allreduce.hpp"
-#include "nccl/reduce.hpp"
 #else
 #error at least one communication space must be defined
 #endif
