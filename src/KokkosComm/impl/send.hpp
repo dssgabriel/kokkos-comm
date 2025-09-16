@@ -22,6 +22,7 @@
 #include <KokkosComm/concepts.hpp>
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
 #include <KokkosComm/nccl/handle.hpp>
+#include <KokkosComm/nccl/req.hpp>
 #include <KokkosComm/nccl/send.hpp>
 #endif
 

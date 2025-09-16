@@ -10,6 +10,8 @@
 #include "fwd.hpp"
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
 #include "nccl/nccl_space.hpp"
+#include "nccl/handle.hpp"
+#include "nccl/req.hpp"
 #include "nccl/broadcast.hpp"
 #include "nccl/alltoall.hpp"
 #include "nccl/allgather.hpp"
@@ -47,6 +49,7 @@ auto alltoall(Handle<ExecSpace, CommSpace>& h, const SendView sv, RecvView rv, i
   return Impl::AllToAll<SendView, RecvView, ExecSpace, CommSpace>::execute(h, sv, rv, count);
 }
 
+/// All-reduce w/ explicit handle
 template <KokkosView SendView, KokkosView RecvView, ReductionOperator RedOp,
           KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
           CommunicationSpace CommSpace   = DefaultCommunicationSpace>
@@ -54,6 +57,7 @@ auto allreduce(Handle<ExecSpace, CommSpace>& h, const SendView sv, RecvView rv) 
   return Impl::AllReduce<SendView, RecvView, RedOp, ExecSpace, CommSpace>::execute(h, sv, rv);
 }
 
+/// Reduce w/ explicit handle
 template <KokkosView SendView, KokkosView RecvView, ReductionOperator RedOp,
           KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
           CommunicationSpace CommSpace   = DefaultCommunicationSpace>
