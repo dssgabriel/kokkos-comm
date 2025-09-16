@@ -12,13 +12,51 @@ Please freely use GitHub Issues/Discussions, the Kokkos Team Slack, or emails to
 In very limited circumstances, modifications may need to be tested as branches in the repository rather than pull requests.
 Such changes should always be made in consultation with the core development team.
 
-For a more detailed overview of what is expected of a "good" PR, please refer to `this section <https://kokkos.org/kokkos-core-wiki/developer-guides/prs-and-reviews.html>`_ of the Kokkos documentation.
+For a more detailed overview of what is expected of a "good" PR, please refer to `the related section <https://kokkos.org/kokkos-core-wiki/developer-guides/prs-and-reviews.html>`_ in the Kokkos documentation.
+
+
+Pre-commit hooks
+================
+
+KokkosComm provides a pre-commit configuration to allow contributors to easily check that their changes will pass CI with regards to code formatting, spell-checking, etc.
+
+To enable it on your machine, run the following commands (or check `the pre-commit docs <https://pre-commit.com/>`):
+
+.. code-block:: console
+
+    $ pip install pre-commit
+    $ pre-commit install
+
+Then, you can either manually run the pre-commit hooks with:
+
+.. code-block:: console
+
+    $ pre-commit run [--all-files]
+
+Or let Git run them automatically when committing.
+
+KokkosComm pre-commits perform the following checks:
+
+* Correct code formatting in C++ files (using ``clang-format``)
+
+* Correct formatting in CMake files (using ``gersemi``)
+
+* Correctness of YAML files (mainly CI config)
+
+* Trim trailing white space
+
+* Fix missing new line in EOF
+
+* Correct spelling and fixing typos
+
+* Large files haven't been inadvertently added
 
 
 Code formatting
 ===============
 
-All code shall be formatted with clang-format 14:
+All code shall be formatted with ``clang-format`` v14.x.
+If not using the provided pre-commit hooks, one can format the files using the following command:
 
 .. code-block:: console
 
