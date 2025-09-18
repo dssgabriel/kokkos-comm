@@ -35,7 +35,7 @@ MPI
 
     .. cpp:function:: template <KokkosExecutionSpace ExecSpace> \
                       static auto allocate_packed_for(const ExecSpace &space, const std::string &label, const View &src)-> args_type
-        
+
         Allocates  contiguous Kokkos view large enough to hold all the data in ``src``.
 
         :param space: The execution space to operate in.
@@ -47,20 +47,20 @@ MPI
 
     .. cpp:function:: template <KokkosExecutionSpace ExecSpace> \
                       static auto pack(const ExecSpace &space, const View &src) -> args_type
-    
+
         Uses ``allocate_packed_for`` and ``Kokkos::deep_copy`` to pack the data in ``src``.
 
         :param space: The execution space to operate in.
         :param src: A Kokkos view produced by ``allocate_packed_for``.
 
         :return: A packed Kokkos view of the data in ``src``.
-    
+
 
     .. cpp:function:: template <KokkosExecutionSpace ExecSpace> \
                       static auto unpack_into(const ExecSpace &space, const View &dst, const non_const_packed_view_type &src) -> void
-    
+
         Uses ``Kokkos::deep_copy`` to fill ``dst`` with an unpacked view of the data in ``src``.
-    
+
         :param space: The execution space to operate in.
         :param src: A Kokkos view produced by ``allocate_packed_for``.
         :param dst: A corresponding unpacked Kokkos view.
@@ -83,7 +83,7 @@ MPI
             * the ``src``;
             * an ``MPI_Datatype`` describing the possibly-non-contiguous data in that Kokkos::View, and;
             * a count equal to 1.
-    
+
         :param space: The execution space to operate in.
         :param label: Identification label for the allocation.
         :param src: A Kokkos view produced by ``allocate_packed_for``.

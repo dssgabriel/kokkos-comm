@@ -1,0 +1,38 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+    - id: trailing-whitespace
+      name: Trim trailing white space
+    - id: end-of-file-fixer
+      name: Fix EOFs
+    - id: check-yaml
+      name: Check YAML files
+    - id: check-added-large-files
+      name: Check adding large files
+
+    # C++ formatting with clang-format
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v14.0.6
+    hooks:
+    - id: clang-format
+      name: Format C++ files
+      types_or: [c++, c]
+      exclude: ^docs/ # do not format any C++ files in the documentation
+
+    # CMake formatting with gersemi
+  - repo: https://github.com/BlankSpruce/gersemi
+    rev: 0.22.2
+    hooks:
+    - id: gersemi
+      name: Format CMake files
+      args: ["--config=.cmake-format"]
+
+    # Spell-checking
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.36.2
+    hooks:
+      - id: typos
+        name: Spell-check for typos

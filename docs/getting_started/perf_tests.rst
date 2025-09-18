@@ -21,4 +21,4 @@ Available benchmarks:
       - ping-pong between ranks 0 and 1
 
 
-To build and run the benchmarks, see the `dedicated page on testing <../dev/testing.html>`_: 
+To build and run the benchmarks, see the `dedicated page on testing <../dev/testing.html>`_:
