@@ -30,8 +30,7 @@ jobs:
       - name: Create workspace
         run: mkdir -p ${{ github.workspace }}
 
-      - name: Check out Repository Code
-        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
 
       # Inside the container, `GITHUB_WORKSPACE` is something like `/__w/...`, which is not the same as
       # `${{github.workspace}}`. For consistency, we do everything in `${{github.workspace}}`, so move the files there.
@@ -48,36 +47,34 @@ jobs:
           tar -C /usr/local --strip-components=1 -xf cmake-3.23.5-linux-x86_64.tar.gz
 
       # Build a CUDA-enabled Open MPI. This is probably not necessary for a compile-only test.
-      - name: Fetch Open MPI
+      - name: Open MPI - fetch
         run: |
           wget https://download.open-mpi.org/release/open-mpi/v5.0/openmpi-5.0.8.tar.bz2
           tar -xf openmpi-5.0.8.tar.bz2
-      - name: Configure Open MPI
+      - name: Open MPI - configure
         run: >
           cd openmpi-5.0.8 && ./configure
           --prefix=/usr/local
           --with-cuda=/usr/local/cuda
           --with-cuda-libdir=/usr/local/cuda/lib64/stubs
-      - name: Build Open MPI
+      - name: Open MPI - build
         run: make -C openmpi-5.0.8 all -j $(nproc)
-      - name: Install Open MPI
+      - name: Open MPI - install
         run: |
           make -C openmpi-5.0.8 install
           ldconfig
-      - name: Print Open MPI info
+      - name: Open MPI - check CUDA support
         run: |
           which mpirun
           mpirun --version
           which mpicxx
           mpicxx --version
-      - name: Check Open MPI CUDA support
-        run: |
           ompi_info | grep "MPI extensions"
           ompi_info --parsable --all | grep mpi_built_with_cuda_support:value:true
 
-      - name: Fetch Kokkos
+      - name: Kokkos - fetch
         run: git clone https://github.com/kokkos/kokkos.git --branch master --depth 1 "$KOKKOS_SRC"
-      - name: Configure Kokkos
+      - name: Kokkos - configure
         run: >
           cmake
           -S "$KOKKOS_SRC"
@@ -87,12 +84,12 @@ jobs:
           -DKokkos_ENABLE_SERIAL=ON
           -DKokkos_ENABLE_CUDA=ON
           -DKokkos_ARCH_HOPPER90=ON
-      - name: Build Kokkos
+      - name: Kokkos - build
         run: cmake --build "$KOKKOS_BUILD" --parallel $(nproc)
-      - name: Install Kokkos
+      - name: Kokkos - install
         run: cmake --install "$KOKKOS_BUILD" --prefix "$KOKKOS_INSTALL"
 
-      - name: Configure KokkosComm with MPI backend
+      - name: KokkosComm - configure (MPI backend)
         run: >
           cmake
           -S "$KOKKOSCOMM_SRC"
@@ -103,10 +100,10 @@ jobs:
           -DKokkosComm_ENABLE_MPI=ON
           -DKokkosComm_ENABLE_TESTS=ON
           -DKokkosComm_ENABLE_PERFTESTS=ON
-      - name: Build KokkosComm with MPI backend
+      - name: KokkosComm - build (MPI backend)
         run: cmake --build "$KOKKOSCOMM_BUILD_MPI" --parallel $(nproc) --verbose
 
-      - name: Configure KokkosComm with NCCL backend
+      - name: KokkosComm - configure (NCCL backend)
         run: >
           cmake
           -S "$KOKKOSCOMM_SRC"
@@ -116,6 +113,5 @@ jobs:
           -DKokkos_ROOT="$KOKKOS_INSTALL"
           -DKokkosComm_ENABLE_NCCL=ON
           -DKokkosComm_ENABLE_TESTS=ON
-          -DKokkosComm_ENABLE_PERFTESTS=ON
-      - name: Build KokkosComm with NCCL backend
+      - name: KokkosComm - build (NCCL backend)
         run: cmake --build "$KOKKOSCOMM_BUILD_NCCL" --parallel $(nproc) --verbose
