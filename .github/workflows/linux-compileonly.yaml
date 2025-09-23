@@ -1,6 +1,6 @@
-name: Linux-CompileOnly
+name: Compile-only (Linux)
 
-# only run most recent workflow in branch
+# Only run most recent workflow in branch
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -14,61 +14,102 @@ on:
   workflow_dispatch:
 
 jobs:
-  Kokkos-master-OpenMPI416-CUDA1250-Release:
+  Kokkos-master-OpenMPI508-CUDA1290-Release:
     runs-on: ubuntu-latest
     container:
-      image: nvidia/cuda:12.5.0-devel-ubuntu22.04
+      image: nvidia/cuda:12.9.0-devel-ubuntu24.04
       env:
-        KOKKOS_SRC: ${{ github.workspace }}/_deps/kokkos
-        KOKKOS_BUILD: ${{ github.workspace }}/_deps/kokkos-build
-        KOKKOS_INSTALL: ${{ github.workspace }}/_deps/kokkos-install
-        COMM_SRC: ${{ github.workspace }}
-        COMM_BUILD: ${{ github.workspace }}/build
-        timeout-minutes: 20
+        KOKKOS_SRC: ${{ github.workspace }}/build/_deps/kokkos-src
+        KOKKOS_BUILD: ${{ github.workspace }}/build/_deps/kokkos-build
+        KOKKOS_INSTALL: ${{ github.workspace }}/build/_deps/kokkos-install
+        KOKKOSCOMM_SRC: ${{ github.workspace }}
+        KOKKOSCOMM_BUILD_MPI: ${{ github.workspace }}/build/mpi
+        KOKKOSCOMM_BUILD_NCCL: ${{ github.workspace }}/build/nccl
+        timeout-minutes: 30
     steps:
       - name: Create workspace
         run: mkdir -p ${{ github.workspace }}
+
       - name: Check out Repository Code
-        uses: actions/checkout@v4
-      # inside the container, GITHUB_WORKSPACE is something like /__w/... which is not the same as ${{github.workspace}}. For consistency, we'll try to do everything in ${{github.workspace}}, so move the files over there.
-      - name: Move Repository Code to Expected Location
+        uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+
+      # Inside the container, `GITHUB_WORKSPACE` is something like `/__w/...`, which is not the same as
+      # `${{github.workspace}}`. For consistency, we do everything in `${{github.workspace}}`, so move the files there.
+      - name: Move code to expected location
         shell: bash # for shopt -s dotglob, which also moves hidden files
-        run: |
-          shopt -s dotglob && mv "$GITHUB_WORKSPACE"/* ${{ github.workspace }}
+        run: shopt -s dotglob && mv "$GITHUB_WORKSPACE"/* ${{ github.workspace }}
+
       - name: Install packages
-        run: |
-          apt-get update && apt-get install -y wget git
+        run: apt-get update && apt-get install -y wget git
+
       - name: Install CMake
         run: |
           wget https://github.com/Kitware/CMake/releases/download/v3.23.5/cmake-3.23.5-linux-x86_64.tar.gz
           tar -C /usr/local --strip-components=1 -xf cmake-3.23.5-linux-x86_64.tar.gz
-      # Build a CUDA-enabled OpenMPI. This is probably not necessary for a compile-only test.
-      - name: Download MPI
+
+      # Build a CUDA-enabled Open MPI. This is probably not necessary for a compile-only test.
+      - name: Fetch Open MPI
         run: |
-          wget https://download.open-mpi.org/release/open-mpi/v4.1/openmpi-4.1.6.tar.bz2
-          tar -xf openmpi-4.1.6.tar.bz2
-      - name: Configure MPI
-        run: cd openmpi-4.1.6 && ./configure --prefix=/usr/local --with-cuda=/usr/local/cuda
-      - name: Build MPI
-        run: make -C openmpi-4.1.6 -j$(nproc) all
-      - name: Install MPI
+          wget https://download.open-mpi.org/release/open-mpi/v5.0/openmpi-5.0.8.tar.bz2
+          tar -xf openmpi-5.0.8.tar.bz2
+      - name: Configure Open MPI
+        run: cd openmpi-5.0.8 && ./configure --prefix=/usr/local --with-cuda=/usr/local/cuda
+      - name: Build Open MPI
+        run: make -C openmpi-5.0.8 -j$(nproc) all
+      - name: Install Open MPI
         run: |
-          make -C openmpi-4.1.6 all install
+          make -C openmpi-5.0.8 all install
           ldconfig
-      - name: Print some MPI Info
+      - name: Print Open MPI info
         run: |
           which mpirun
           mpirun --version
           which mpicxx
           mpicxx --version
-      - name: Check MPI CUDA Support
+      - name: Check Open MPI CUDA support
         run: ompi_info --parsable --all | grep mpi_built_with_cuda_support:value:true
+
+      - name: Fetch Kokkos
+        run: git clone https://github.com/kokkos/kokkos.git --branch master --depth 1 "$KOKKOS_SRC"
+      - name: Configure Kokkos
+        run: >
+          cmake
+          -S "$KOKKOS_SRC"
+          -B "$KOKKOS_BUILD"
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_CXX_COMPILER="$KOKKOS_SRC/bin/nvcc_wrapper"
+          -DKokkos_ENABLE_SERIAL=ON
+          -DKokkos_ENABLE_CUDA=ON
+          -DKokkos_ARCH_HOPPER90=ON
       - name: Build Kokkos
-        run: |
-          git clone https://github.com/kokkos/kokkos.git --branch master --depth 1 "$KOKKOS_SRC"
-          cmake -S "$KOKKOS_SRC" -B "$KOKKOS_BUILD" -DCMAKE_CXX_COMPILER="$KOKKOS_SRC/bin/nvcc_wrapper" -DCMAKE_INSTALL_PREFIX="$KOKKOS_INSTALL" -DCMAKE_BUILD_TYPE=Release -DKokkos_ENABLE_SERIAL=ON -DKokkos_ENABLE_CUDA=ON -DKokkos_ARCH_AMPERE80=ON
-          cmake --build "$KOKKOS_BUILD" --parallel $(nproc) -t install
-      - name: Build Kokkos Comm
-        run: |
-          cmake -S "$COMM_SRC" -B "$COMM_BUILD" -DCMAKE_CXX_COMPILER="$KOKKOS_SRC/bin/nvcc_wrapper" -DKokkos_ROOT="$KOKKOS_INSTALL" -DCMAKE_BUILD_TYPE=Release -DKokkosComm_ENABLE_TESTS=ON -DKokkosComm_ENABLE_PERFTESTS=ON
-          VERBOSE=1 cmake --build "$COMM_BUILD"
+        run: cmake --build "$KOKKOS_BUILD" --parallel $(nproc)
+      - name: Install Kokkos
+        run: cmake --install "$KOKKOS_BUILD" --prefix "$KOKKOS_INSTALL"
+
+      - name: Configure KokkosComm with MPI backend
+        run: >
+          cmake
+          -S "$KOKKOSCOMM_SRC"
+          -B "$KOKKOSCOMM_BUILD_MPI"
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_CXX_COMPILER="$KOKKOS_SRC/bin/nvcc_wrapper"
+          -DKokkos_ROOT="$KOKKOS_INSTALL"
+          -DKokkosComm_ENABLE_MPI=ON
+          -DKokkosComm_ENABLE_TESTS=ON
+          -DKokkosComm_ENABLE_PERFTESTS=ON
+      - name: Build KokkosComm with MPI backend
+        run: cmake --build "$KOKKOSCOMM_BUILD_MPI" --parallel $(nproc) --verbose
+
+      - name: Configure KokkosComm with NCCL backend
+        run: >
+          cmake
+          -S "$KOKKOSCOMM_SRC"
+          -B "$KOKKOSCOMM_BUILD_NCCL"
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_CXX_COMPILER="$KOKKOS_SRC/bin/nvcc_wrapper"
+          -DKokkos_ROOT="$KOKKOS_INSTALL"
+          -DKokkosComm_ENABLE_NCCL=ON
+          -DKokkosComm_ENABLE_TESTS=ON
+          -DKokkosComm_ENABLE_PERFTESTS=ON
+      - name: Build KokkosComm with NCCL backend
+        run: cmake --build "$KOKKOSCOMM_BUILD_NCCL" --parallel $(nproc) --verbose
