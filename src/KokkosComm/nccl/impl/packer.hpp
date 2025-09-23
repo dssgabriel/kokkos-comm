@@ -23,7 +23,7 @@
 #include <KokkosComm/traits.hpp>
 
 #include <KokkosComm/impl/contiguous.hpp>
-#include "impl/types.hpp"
+#include "types.hpp"
 
 namespace KokkosComm::Experimental::nccl::Impl::Packer {
 
