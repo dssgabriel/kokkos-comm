@@ -13,7 +13,8 @@ project(
   HOMEPAGE_URL "https://kokkos.org/kokkos-comm/"
 )
 
-include(cmake/mpi-vendor.cmake)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(mpi-vendor)
 
 option(KokkosComm_ENABLE_PERFTESTS "Build KokkosComm perf tests" OFF)
 option(KokkosComm_ENABLE_TESTS "Build KokkosComm tests" OFF)
