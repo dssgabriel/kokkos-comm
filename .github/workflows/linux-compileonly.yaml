@@ -53,12 +53,16 @@ jobs:
           wget https://download.open-mpi.org/release/open-mpi/v5.0/openmpi-5.0.8.tar.bz2
           tar -xf openmpi-5.0.8.tar.bz2
       - name: Configure Open MPI
-        run: cd openmpi-5.0.8 && ./configure --prefix=/usr/local --with-cuda=/usr/local/cuda
+        run: >
+          cd openmpi-5.0.8 && ./configure
+          --prefix=/usr/local
+          --with-cuda=/usr/local/cuda
+          --with-cuda-libdir=/usr/local/cuda/lib64/stubs
       - name: Build Open MPI
-        run: make -C openmpi-5.0.8 -j$(nproc) all
+        run: make -C openmpi-5.0.8 all -j $(nproc)
       - name: Install Open MPI
         run: |
-          make -C openmpi-5.0.8 all install
+          make -C openmpi-5.0.8 install
           ldconfig
       - name: Print Open MPI info
         run: |
@@ -67,7 +71,9 @@ jobs:
           which mpicxx
           mpicxx --version
       - name: Check Open MPI CUDA support
-        run: ompi_info --parsable --all | grep mpi_built_with_cuda_support:value:true
+        run: |
+          ompi_info | grep "MPI extensions"
+          ompi_info --parsable --all | grep mpi_built_with_cuda_support:value:true
 
       - name: Fetch Kokkos
         run: git clone https://github.com/kokkos/kokkos.git --branch master --depth 1 "$KOKKOS_SRC"
