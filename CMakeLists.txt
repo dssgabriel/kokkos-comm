@@ -33,7 +33,6 @@ if(KOKKOSCOMM_ENABLE_MPI)
 endif()
 kokkoscomm_set_mpi_vendor_variables()
 if(KOKKOSCOMM_ENABLE_NCCL)
-  include(cmake/thirdparty/pytorch/FindNCCL.cmake)
   find_package(NCCL REQUIRED)
 endif()
 
