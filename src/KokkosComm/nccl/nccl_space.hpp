@@ -18,8 +18,6 @@
 
 #include <type_traits>
 
-#include <Kokkos_Core_fwd.hpp>  // Kokkos::Cuda
-
 #include <KokkosComm/concepts.hpp>
 
 namespace KokkosComm::Experimental {
