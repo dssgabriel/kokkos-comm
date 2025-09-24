@@ -68,12 +68,12 @@ class Req<Experimental::Nccl> {
  private:
   std::shared_ptr<Record> record_;
 
-  friend void wait(Req<Nccl> req);
-  friend void wait_all(std::span<Req<Nccl>> reqs);
   friend int wait_any(std::span<Req<Nccl>> reqs);
+  friend void wait(Req<Experimental::Nccl> &req);
+  friend void wait_all(std::span<Req<Experimental::Nccl>> reqs);
 };
 
-inline auto wait(Req<Nccl> req) -> void {
+inline auto wait(Req<Experimental::Nccl> &req) -> void {
   cudaStreamSynchronize(&req.get_inner());
   for (auto &f : req.record_->postWaits_) {
     f();
@@ -81,8 +81,8 @@ inline auto wait(Req<Nccl> req) -> void {
   req.record_->postWaits_.clear();
 }
 
-inline auto wait_all(std::span<Req<Nccl>> reqs) -> void {
-  for (Req<Nccl> &req : reqs) {
+inline auto wait_all(std::span<Req<Experimental::Nccl>> reqs) -> void {
+  for (Req<Experimental::Nccl> &req : reqs) {
     wait(req);
   }
 }
