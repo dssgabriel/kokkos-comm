@@ -75,14 +75,14 @@ struct KokkosComm::Impl::is_reduction_operator<KokkosComm::Prod> : public std::t
 
 struct Average {};
 template <>
-struct KokkosComm::Impl::is_reduction_operator<Average> : public std::true_type {};
+struct KokkosComm::Impl::is_reduction_operator<KokkosComm::Average> : public std::true_type {};
 
 #ifdef KOKKOSCOMM_ENABLE_NCCL
 namespace Experimental::nccl::Impl {
 
 template <ReductionOperator RedOp>
 constexpr auto reduction_op() -> ncclRedOp_t {
-  if constexpr (std::is_same_v<RedOp, Kokkos::Max>) {
+  if constexpr (std::is_same_v<RedOp, KokkosComm::Max>) {
     return ncclMax;
   } else if constexpr (std::is_same_v<RedOp, KokkosComm::Min>) {
     return ncclMin;
