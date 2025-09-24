@@ -17,8 +17,10 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 #include <span>
 #include <utility>
+#include <vector>
 
 #include <cuda.h>
 
@@ -41,7 +43,6 @@ class Req<Experimental::Nccl> {
   };
 
   struct Record {
-    Record() : req_() {}
     explicit Record(cudaStream_t stream) : req_(stream) {}
 
     cudaStream_t req_;
@@ -49,8 +50,7 @@ class Req<Experimental::Nccl> {
   };
 
  public:
-  Req() : record_(std::make_shared<Record>()) {}
-  explicit Req(cudaStream_t stream) : record_(stream) {}
+  explicit Req(cudaStream_t stream) : record_(std::make_shared<Record>(stream)) {}
 
   auto get_inner() -> cudaStream_t & { return record_->req_; }
 
