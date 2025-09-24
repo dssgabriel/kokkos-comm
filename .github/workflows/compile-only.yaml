@@ -1,0 +1,176 @@
+name: Compile-only
+
+# Only run most recent workflow in branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    paths-ignore:
+    - README.md
+    - 'docs/**'
+    types: [ opened, reopened, synchronize ]
+  workflow_dispatch:
+
+env:
+  KOKKOS_SRC: ${{ github.workspace }}/build/_deps/kokkos-src
+  KOKKOS_BUILD: ${{ github.workspace }}/build/_deps/kokkos-build
+  KOKKOS_INSTALL: ${{ github.workspace }}/build/_deps/kokkos-install
+  KOKKOSCOMM_SRC: ${{ github.workspace }}
+
+jobs:
+  build-base-image:
+    runs-on: ubuntu-latest
+    outputs:
+      image-exists: ${{ steps.check-cache.outputs.cache-hit }}
+      image-key: ${{ steps.cache-key.outputs.key }}
+    steps:
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+      - name: Generate cache key
+        id: cache-key
+        run: |
+          # Create hash from relevant files that would affect the base image
+          HASH=$(echo "${{ github.repository }}${{ hashFiles('.github/workflows/linux-compileonly.yaml') }}" | sha256sum | cut -d' ' -f1)
+          echo "key=base-image-cuda129-openmpi508-${HASH:0:8}" >> $GITHUB_OUTPUT
+      - name: Check for cached image
+        id: check-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: /tmp/base-image.tar
+          key: ${{ steps.cache-key.outputs.key }}
+
+      - name: Build base image
+        if: steps.check-cache.outputs.cache-hit != 'true'
+        run: |
+          # Create Dockerfile for base image
+          cat > Dockerfile << 'EOF'
+          FROM nvidia/cuda:12.9.0-devel-ubuntu24.04
+
+          RUN apt-get update && apt-get install -y wget git
+
+          # Install CMake
+          RUN wget https://github.com/Kitware/CMake/releases/download/v3.23.5/cmake-3.23.5-linux-x86_64.tar.gz && \
+              tar -C /usr/local --strip-components=1 -xf cmake-3.23.5-linux-x86_64.tar.gz && \
+              rm cmake-3.23.5-linux-x86_64.tar.gz
+
+          # Build CUDA-enabled Open MPI
+          RUN wget https://download.open-mpi.org/release/open-mpi/v5.0/openmpi-5.0.8.tar.bz2 && \
+              tar -xf openmpi-5.0.8.tar.bz2 && \
+              cd openmpi-5.0.8 && \
+              ./configure --prefix=/usr/local --with-cuda=/usr/local/cuda --with-cuda-libdir=/usr/local/cuda/lib64/stubs && \
+              make all -j $(nproc) && \
+              make install && \
+              ldconfig && \
+              cd .. && \
+              rm -rf openmpi-5.0.8*
+
+          # Verify CUDA support
+          RUN mpirun --version && mpicxx --version && ompi_info --parsable --all | grep mpi_built_with_cuda_support:value:true
+          EOF
+
+          docker build -t kokkoscomm-base:latest .
+          docker save kokkoscomm-base:latest > /tmp/kokkoscomm-base-image.tar
+
+  kokkos-setup:
+    needs: build-base-image
+    runs-on: ubuntu-latest
+    container:
+      image: kokkoscomm-base:latest
+    steps:
+      - name: Load base image
+        run: |
+          if [ -f /tmp/base-image.tar ]; then
+            docker load < /tmp/base-image.tar
+          fi
+      - name: Create workspace
+        run: mkdir -p ${{ github.workspace }}
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+      - name: Move code to expected location
+        shell: bash
+        run: shopt -s dotglob && mv "$GITHUB_WORKSPACE"/* ${{ github.workspace }}
+
+      - name: Kokkos - Fetch
+        run: git clone https://github.com/kokkos/kokkos.git --branch master --depth 1 "$KOKKOS_SRC"
+      - name: Kokkos - Configure
+        run: >
+          cmake
+          -S "$KOKKOS_SRC"
+          -B "$KOKKOS_BUILD"
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_CXX_COMPILER="$KOKKOS_SRC/bin/nvcc_wrapper"
+          -DKokkos_ENABLE_SERIAL=ON
+          -DKokkos_ENABLE_CUDA=ON
+          -DKokkos_ARCH_HOPPER90=ON
+      - name: Kokkos - Build
+        run: cmake --build "$KOKKOS_BUILD" --parallel $(nproc)
+      - name: Kokkos - Install
+        run: cmake --install "$KOKKOS_BUILD" --prefix "$KOKKOS_INSTALL"
+
+      - name: Cache Kokkos installation
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ github.workspace }}/build/_deps/kokkos-install
+          key: kokkos-install-${{ hashFiles('**/CMakeLists.txt') }}-${{ github.sha }}
+      - name: Upload workspace
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: kokkos-workspace
+          path: ${{ github.workspace }}
+
+  kokkoscomm-mpi:
+    needs: kokkos-setup
+    runs-on: ubuntu-latest
+    container:
+      image: kokkos-base:latest
+    env:
+      KOKKOSCOMM_BUILD_MPI: ${{ github.workspace }}/build/mpi
+      timeout-minutes: 10
+    steps:
+      - name: Download workspace
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: kokkos-workspace
+          path: ${{ github.workspace }}
+
+      - name: KokkosComm - Configure MPI backend
+        run: >
+          cmake
+          -S "$KOKKOSCOMM_SRC"
+          -B "$KOKKOSCOMM_BUILD_MPI"
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_CXX_COMPILER="$KOKKOS_SRC/bin/nvcc_wrapper"
+          -DKokkos_ROOT="$KOKKOS_INSTALL"
+          -DKokkosComm_ENABLE_MPI=ON
+          -DKokkosComm_ENABLE_TESTS=ON
+          -DKokkosComm_ENABLE_PERFTESTS=ON
+      - name: KokkosComm - Build MPI backend
+        run: cmake --build "$KOKKOSCOMM_BUILD_MPI" --parallel $(nproc) --verbose
+
+  kokkoscomm-nccl:
+    needs: kokkos-setup
+    runs-on: ubuntu-latest
+    container:
+      image: kokkos-base:latest
+    env:
+      KOKKOSCOMM_BUILD_NCCL: ${{ github.workspace }}/build/nccl
+      timeout-minutes: 10
+    steps:
+      - name: Download workspace
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: kokkos-workspace
+          path: ${{ github.workspace }}
+
+      - name: KokkosComm - Configure NCCL backend
+        run: >
+          cmake
+          -S "$KOKKOSCOMM_SRC"
+          -B "$KOKKOSCOMM_BUILD_NCCL"
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_CXX_COMPILER="$KOKKOS_SRC/bin/nvcc_wrapper"
+          -DKokkos_ROOT="$KOKKOS_INSTALL"
+          -DKokkosComm_ENABLE_NCCL=ON
+          -DKokkosComm_ENABLE_TESTS=ON
+      - name: KokkosComm - Build NCCL backend
+        run: cmake --build "$KOKKOSCOMM_BUILD_NCCL" --parallel $(nproc) --verbose
