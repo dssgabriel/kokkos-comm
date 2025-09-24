@@ -25,10 +25,10 @@
 #include <KokkosComm/fwd.hpp>
 #include "nccl_space.hpp"
 
-namespace KokkosComm::Experimental {
+namespace KokkosComm {
 
 template <>
-class Req<Nccl> {
+class Req<Experimental::Nccl> {
   // A type-erased view. Request uses these to keep temporary views alive for the lifetime of NCCL operations
   struct ViewHolderBase {
     virtual ~ViewHolderBase() {}
@@ -97,4 +97,4 @@ inline auto wait_any(std::span<Req<Nccl>> reqs) -> int {
   return false;
 }
 
-}  // namespace KokkosComm::Experimental
+}  // namespace KokkosComm
