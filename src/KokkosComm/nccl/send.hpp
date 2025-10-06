@@ -25,30 +25,43 @@
 #include "impl/types.hpp"
 #include "impl/pack_traits.hpp"
 
-namespace KokkosComm::Experimental::nccl::Impl {
+namespace KokkosComm {
+namespace Experimental::nccl {
 
 template <KokkosExecutionSpace ExecSpace, KokkosView SendView>
-auto send(const ExecSpace& space, const SendView& sv, int peer, ncclComm_t comm) -> void {
-  using SendScalar = typename SendView::value_type;
-
+auto send(const ExecSpace& space, const SendView& sv, int peer, ncclComm_t comm) -> Req<Nccl> {
+  using T = typename SendView::non_const_value_type;
   Kokkos::Tools::pushRegion("KokkosComm::Impl::send");
 
-  if (!KokkosComm::is_contiguous(sv)) {
+  Req<Nccl> req{space.cuda_stream()};
+  if (is_contiguous(sv)) {
+    ncclSend(data_handle(sv), span(sv), Impl::datatype_v<T>, peer, comm, space.cuda_stream());
+  } else {
     using Packer = typename Impl::PackTraits<SendView>::packer_type;
     auto args    = Packer::pack(space(), sv);
-    // TODO: consider using a private stream pool in order to avoid synchronizing the underlying stream (which may not
-    // be empty and have in-flight communications we don't want to wait on)
+    // TODO: Consider using a private stream pool to avoid synchronizing the underlying stream, which may not
+    // be empty and have in-flight communications we do not want to wait on.
     space().fence();
 
-    ncclSend(KokkosComm::data_handle(args.view_), KokkosComm::span(args.view_), datatype_v<SendScalar>, peer, comm,
-             space.cuda_stream());
+    ncclSend(data_handle(args.view_), span(args.view_), Impl::datatype_v<T>, peer, comm, space.cuda_stream());
     Packer::unpack_into(space, sv, args.view_);
-  } else {
-    ncclSend(KokkosComm::data_handle(sv), KokkosComm::span(sv), datatype_v<SendScalar>, peer, comm,
-             space.cuda_stream());
+    req.extend_view_lifetime(args.view_);
   }
+  req.extend_view_lifetime(sv);
 
   Kokkos::Tools::popRegion();
+  return req;
 }
 
-}  // namespace KokkosComm::Experimental::nccl::Impl
+}  // namespace Experimental::nccl
+namespace Impl {
+
+template <KokkosView SendView>
+struct Send<Kokkos::Cuda, Experimental::Nccl> {
+  static auto execute(Handle<Kokkos::Cuda, Experimental::Nccl>& h, SendView sv, int peer) -> Req<Experimental::Nccl> {
+    return Experimental::nccl::send(h.space(), sv, peer, h.comm());
+  }
+};
+
+}  // namespace Impl
+}  // namespace KokkosComm

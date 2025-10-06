@@ -25,26 +25,41 @@
 #include "impl/pack_traits.hpp"
 #include "impl/types.hpp"
 
-namespace KokkosComm::Experimental::nccl::Impl {
+namespace KokkosComm::Experimental {
+namespace nccl {
 
 template <KokkosExecutionSpace ExecSpace, KokkosView SendView, KokkosView RecvView>
-auto broadcast(const ExecSpace &space, const SendView &sv, const RecvView &rv, int root, ncclComm_t comm) -> void {
-  using SendScalar = typename SendView::value_type;
-  using RecvScalar = typename RecvView::value_type;
-  static_assert(std::is_same_v<SendScalar, RecvScalar>, "nccl::broadcast: View value types must be identical");
-  static_assert(KokkosComm::rank<SendView>() <= 1 && KokkosComm::rank<RecvView>() <= 1,
-                "nccl::broadcast: only rank-1 Views are supported");
+auto broadcast(const ExecSpace &space, const SendView &sv, const RecvView &rv, int root, ncclComm_t comm) -> Req<Nccl> {
+  using ST = typename SendView::non_const_value_type;
+  using RT = typename RecvView::non_const_value_type;
+  static_assert(std::is_same_v<ST, RT>,
+                "KokkosComm::Experimental::nccl::broadcast: View value types must be identical");
+  static_assert(rank<SendView>() == 1 and rank<RecvView>() == 1,
+                "KokkosComm::Experimental::nccl::broadcast: only rank-1 Views are supported");
+  Kokkos::Tools::pushRegion("KokkosComm::Experimental::nccl::broadcast");
 
-  Kokkos::Tools::pushRegion("KokkosComm::Experimental::nccl::Impl::broadcast");
-
-  if (!KokkosComm::is_contiguous(sv) || !KokkosComm::is_contiguous(rv)) {
-    Kokkos::abort("nccl::broadcast: unimplemented for non-contiguous views");
+  Req<Nccl> req{space.cuda_stream()};
+  if (is_contiguous(sv) and is_contiguous(rv)) {
+    ncclBroadcast(data_handle(sv), data_handle(rv), span(sv), Impl::datatype_v<ST>, root, comm, space.cuda_stream());
   } else {
-    ncclBroadcast(KokkosComm::data_handle(sv), KokkosComm::data_handle(rv), KokkosComm::span(sv),
-                  datatype_v<SendScalar>, root, comm, space.cuda_stream());
+    Kokkos::abort("KokkosComm::Experimental::nccl::broadcast: unimplemented for non-contiguous views");
   }
+  req.extend_view_lifetime(sv);
+  req.extend_view_lifetime(rv);
 
   Kokkos::Tools::popRegion();
+  return req;
 }
 
-}  // namespace KokkosComm::Experimental::nccl::Impl
+}  // namespace nccl
+namespace Impl {
+
+template <KokkosView SendView, KokkosView RecvView>
+struct Broadcast<Kokkos::Cuda, Nccl> {
+  static auto execute(Handle<Kokkos::Cuda, Nccl> &h, const SendView sv, RecvView rv, int root) -> Req<Nccl> {
+    return nccl::broadcast(h.space(), sv, rv, root, h.comm());
+  }
+};
+
+}  // namespace Impl
+}  // namespace KokkosComm::Experimental

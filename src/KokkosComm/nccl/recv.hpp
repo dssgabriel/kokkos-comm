@@ -25,30 +25,43 @@
 #include "impl/types.hpp"
 #include "impl/pack_traits.hpp"
 
-namespace KokkosComm::Experimental::nccl::Impl {
+namespace KokkosComm {
+namespace Experimental::nccl {
 
 template <KokkosExecutionSpace ExecSpace, KokkosView RecvView>
-auto recv(const ExecSpace &space, RecvView &rv, int peer, ncclComm_t comm) -> void {
-  using RecvScalar = typename RecvView::value_type;
-
+auto recv(const ExecSpace &space, RecvView &rv, int peer, ncclComm_t comm) -> Req<Nccl> {
+  using T = typename RecvView::non_const_value_type;
   Kokkos::Tools::pushRegion("KokkosComm::Impl::recv");
 
-  if (!KokkosComm::is_contiguous(rv)) {
-    using Packer = typename Impl::PackTraits<RecvView>::packer_type;
+  Req<Nccl> req{space.cuda_stream()};
+  if (is_contiguous(rv)) {
+    ncclRecv(data_handle(rv), span(rv), Impl::datatype_v<T>, peer, comm, space.cuda_stream());
+  } else {
+    using Packer = typename Impl::PackTraits<T>::packer_type;
     auto args    = Packer::pack(space, rv);
-    // TODO: consider using a private stream pool in order to avoid synchronizing the underlying stream (which may not
-    // be empty and have in-flight communications we don't want to wait on)
+    // TODO: Consider using a private stream pool to avoid synchronizing the underlying stream, which may not
+    // be empty and have in-flight communications we do not want to wait on.
     space.fence();  // make sure allocation is complete before receiving
 
-    ncclRecv(KokkosComm::data_handle(args.view_), KokkosComm::span(args.view_), datatype_v<RecvScalar>, peer, comm,
-             space.cuda_stream());
+    ncclRecv(data_handle(args.view_), span(args.view_), Impl::datatype_v<T>, peer, comm, space.cuda_stream());
     Packer::unpack_into(space, rv, args.view_);
-  } else {
-    ncclRecv(KokkosComm::data_handle(rv), KokkosComm::span(rv), datatype_v<RecvScalar>, peer, comm,
-             space.cuda_stream());
+    req.extend_view_lifetime(args.view_);
   }
+  req.extend_view_lifetime(rv);
 
   Kokkos::Tools::popRegion();
+  return req;
 }
 
-}  // namespace KokkosComm::Experimental::nccl::Impl
+}  // namespace Experimental::nccl
+namespace Impl {
+
+template <KokkosView RecvView>
+struct Recv<Kokkos::Cuda, Experimental::Nccl> {
+  static auto execute(Handle<Kokkos::Cuda, Experimental::Nccl> &h, RecvView sv, int peer) -> Req<Experimental::Nccl> {
+    return Experimental::nccl::recv(h.space(), sv, peer, h.comm());
+  }
+};
+
+}  // namespace Impl
+}  // namespace KokkosComm

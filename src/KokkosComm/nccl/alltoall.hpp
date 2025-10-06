@@ -25,26 +25,50 @@
 #include "impl/pack_traits.hpp"
 #include "impl/types.hpp"
 
-namespace KokkosComm::Experimental::nccl::Impl {
+namespace KokkosComm::Experimental {
+namespace nccl {
 
 template <KokkosExecutionSpace ExecSpace, KokkosView SendView, KokkosView RecvView>
-auto alltoall(const ExecSpace &space, const SendView &sv, const RecvView &rv, int count, ncclComm_t comm) -> void {
-  using SendScalar = typename SendView::value_type;
-  using RecvScalar = typename RecvView::value_type;
-  static_assert(std::is_same_v<SendScalar, RecvScalar>, "nccl::alltoall: View value types must be identical");
-  static_assert(KokkosComm::rank<SendView>() <= 1 && KokkosComm::rank<RecvView>() <= 1,
-                "nccl::alltoall: only rank-1 Views are supported");
+auto alltoall(const ExecSpace &space, const SendView &sv, const RecvView &rv, int count, ncclComm_t comm) -> Req<Nccl> {
+  using ST = typename SendView::non_const_value_type;
+  using RT = typename RecvView::non_const_value_type;
+  static_assert(std::is_same_v<ST, RT>, "KokkosComm::Experimental::nccl::alltoall: View value types must be identical");
+  static_assert(rank<SendView>() == 1 and rank<RecvView>() == 1,
+                "KokkosComm::Experimental::nccl::alltoall: only rank-1 Views are supported");
+  Kokkos::Tools::pushRegion("KokkosComm::Experimental::nccl::alltoall");
 
-  Kokkos::Tools::pushRegion("KokkosComm::Experimental::nccl::Impl::alltoall");
-
-  if (!KokkosComm::is_contiguous(sv) || !KokkosComm::is_contiguous(rv)) {
-    Kokkos::abort("nccl::alltoall: unimplemented for non-contiguous views");
+  Req<Nccl> req{space.cuda_stream()};
+  if (is_contiguous(sv) and is_contiguous(rv)) {
+#if NCCL_VERSION_CODE >= NCCL_VERSION(2, 28, 0)
+    ncclAlltoAll(data_handle(sv), data_handle(rv), count, Impl::datatype_v<ST>, comm, space.cuda_stream());
+#else
+    int n_pes;
+    ncclCommCount(comm, &n_pes);
+    ncclGroupStart();
+    for (int r = 0; r < n_pres; ++r) {
+      ncclSend(data_handle(sv) + r * count, count, Impl::datatype_v<ST>, r, comm, space.cuda_stream());
+      ncclRecv(data_handle(rv) + r * count, count, Impl::datatype_v<RT>, r, comm, space.cuda_stream());
+    }
+    ncclGroupEnd();
+#endif
   } else {
-    ncclAlltoAll(KokkosComm::data_handle(sv), KokkosComm::data_handle(rv), count, datatype_v<SendScalar>, comm,
-                 space.cuda_stream());
+    Kokkos::abort("KokkosComm::Experimental::nccl::alltoall: unimplemented for non-contiguous views");
   }
+  req.extend_view_lifetime(sv);
+  req.extend_view_lifetime(rv);
 
   Kokkos::Tools::popRegion();
+  return req;
 }
 
-}  // namespace KokkosComm::Experimental::nccl::Impl
+}  // namespace nccl
+namespace Impl {
+
+struct AllToAll<Kokkos::Cuda, Nccl> {
+  static auto execute(Handle<Kokkos::Cuda, Nccl> &h, const SendView sv, RecvView rv, int count) -> Req<Nccl> {
+    return nccl::alltoall(h.space(), sv, rv, count, h.comm());
+  }
+};
+
+}  // namespace Impl
+}  // namespace KokkosComm::Experimental
