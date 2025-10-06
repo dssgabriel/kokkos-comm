@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include <Kokkos_Core.hpp>
 #include <nccl.h>
 
@@ -47,7 +49,7 @@ auto datatype() -> ncclDataType_t {
     return ncclDouble;
   } else {
     {
-      static_assert(std::is_void_v<T>, "nccl_type not implemented");
+      static_assert(std::is_void_v<T>, "KokkosComm::Experimental::nccl::Impl::datatype: unsupported data type");
       return ncclChar;  // unreachable
     }
   }
