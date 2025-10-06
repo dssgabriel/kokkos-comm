@@ -23,7 +23,7 @@ void test_1d(const View1D &a) {
   static_assert(View1D::rank == 1, "");
   using Scalar = typename View1D::non_const_value_type;
 
-  KokkosComm::Handle<> h;
+  KokkosComm::Handle h;
   if (h.size() < 2) {
     GTEST_SKIP() << "Requires >= 2 ranks (" << h.size() << " provided)";
   }
@@ -48,7 +48,7 @@ void test_2d(const View2D &a) {
   static_assert(View2D::rank == 2, "");
   using Scalar = typename View2D::non_const_value_type;
 
-  KokkosComm::Handle<> h;
+  KokkosComm::Handle h;
   if (h.size() < 2) {
     GTEST_SKIP() << "Requires >= 2 ranks (" << h.size() << " provided)";
   }
