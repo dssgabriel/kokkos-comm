@@ -35,9 +35,11 @@ namespace KokkosComm {
 
 // NCCL backend also implicitly declares MPI
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
-class Mpi;
+namespace Experimental {
 class Nccl;
-using DefaultCommunicationSpace  = Nccl;
+}  // namespace Experimental
+class Mpi;
+using DefaultCommunicationSpace  = Experimental::Nccl;
 using FallbackCommunicationSpace = Mpi;
 #elif defined(KOKKOSCOMM_ENABLE_MPI)
 class Mpi;
