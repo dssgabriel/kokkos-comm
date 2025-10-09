@@ -56,8 +56,9 @@ class Req<Experimental::Nccl> {
   std::shared_ptr<Record> record_;
 
   friend void wait(Req<Experimental::Nccl> &req);
+  friend void wait(Req<Experimental::Nccl> &&req);
   friend void wait_all(std::span<Req<Experimental::Nccl>> reqs);
-  friend void wait_any(std::span<Req<Experimental::Nccl>> reqs);
+  friend int wait_any(std::span<Req<Experimental::Nccl>> reqs);
 };
 
 inline auto wait(Req<Experimental::Nccl> &req) -> void {
@@ -68,24 +69,24 @@ inline auto wait(Req<Experimental::Nccl> &req) -> void {
   req.record_->postWaits_.clear();
 }
 
+inline auto wait(Req<Experimental::Nccl> &&req) -> void { wait(req); }
+
 inline auto wait_all(std::span<Req<Experimental::Nccl>> reqs) -> void {
   for (Req<Experimental::Nccl> &req : reqs) {
     wait(req);
   }
 }
 
-inline auto wait_any(std::span<Req<Experimental::Nccl>> reqs) -> void {
-  int completed = 0;
+inline auto wait_any(std::span<Req<Experimental::Nccl>> reqs) -> int {
   // Loop while we don't have at least one completed request.
-  while (completed == 0) {
-    for (Req<Experimental::Nccl> &req : reqs) {
-      auto res = cudaStreamQuery(req.get_inner());
-
+  while (true) {
+    for (size_t r = 0; r < reqs.size(); ++r) {
+      auto res = cudaStreamQuery(reqs[r].get_inner());
       // If the current request has completed, we must make sure the post-wait callbacks run and are cleared.
       // Calling `wait` should be a no-op if the request has no callback to execute.
       if (res == cudaSuccess) {
-        completed++;
-        wait(req);
+        wait(reqs[r]);
+        return static_cast<int>(r);
       }
     }
   }
