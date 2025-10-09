@@ -17,8 +17,12 @@ class SendRecv : public testing::Test {
   using Scalar = T;
 };
 
+#if defined(KOKKOSCOMM_ENABLE_NCCL)
+using ScalarTypes = ::testing::Types<float, double, int, int64_t>;
+#else
 using ScalarTypes =
     ::testing::Types<float, double, Kokkos::complex<float>, Kokkos::complex<double>, int, unsigned, int64_t, size_t>;
+#endif
 TYPED_TEST_SUITE(SendRecv, ScalarTypes);
 
 template <KokkosComm::KokkosView View1D>
@@ -31,10 +35,10 @@ void test_1d(const View1D &a) {
   // This hack will be required as long as we don't define a way to create a "default" NCCL communicator in KokkosComm.
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
   auto nccl_ctx = test_utils::nccl::Ctx::init();
-  KokkosComm::Handle<KokkosComm::Experimental::Nccl> h(nccl_ctx.comm());
+  KokkosComm::Handle<Kokkos::Cuda, KokkosComm::Experimental::Nccl> h(Kokkos::Cuda(), nccl_ctx.comm());
 #else
   KokkosComm::Handle h;
-#end
+#endif
   if (h.size() < 2) {
     GTEST_SKIP() << "Requires >= 2 ranks (" << h.size() << " provided)";
   }
@@ -59,7 +63,12 @@ void test_2d(const View2D &a) {
   static_assert(View2D::rank == 2, "");
   using Scalar = typename View2D::non_const_value_type;
 
+#if defined(KOKKOSCOMM_ENABLE_NCCL)
+  auto nccl_ctx = test_utils::nccl::Ctx::init();
+  KokkosComm::Handle<Kokkos::Cuda, KokkosComm::Experimental::Nccl> h(Kokkos::Cuda(), nccl_ctx.comm());
+#else
   KokkosComm::Handle h;
+#endif
   if (h.size() < 2) {
     GTEST_SKIP() << "Requires >= 2 ranks (" << h.size() << " provided)";
   }
