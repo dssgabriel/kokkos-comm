@@ -11,17 +11,9 @@
 #include <cuda_runtime.h>
 #include <nccl.h>
 
-#define CUDA_CHECK(cmd)                            \
-  if (cudaError_t err = cmd; err != cudaSuccess) { \
-    std::cerr << cudaGetErrorString(err) << "\n";  \
-    exit(1);                                       \
-  }
+#include "utils.hpp"
 
-#define NCCL_CHECK(cmd)                             \
-  if (ncclResult_t res = cmd; res != ncclSuccess) { \
-    std::cerr << ncclGetErrorString(res) << "\n";   \
-    exit(2);                                        \
-  }
+namespace {
 
 std::string uid_to_string(const ncclUniqueId &id) {
   std::stringstream ss;
@@ -31,6 +23,8 @@ std::string uid_to_string(const ncclUniqueId &id) {
   }
   return ss.str();
 }
+
+}  // namespace
 
 int main(int argc, char *argv[]) {
   int nDevices;
