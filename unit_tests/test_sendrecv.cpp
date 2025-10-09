@@ -5,6 +5,9 @@
 #include <KokkosComm/KokkosComm.hpp>
 
 #include "view_builder.hpp"
+#if defined(KOKKOSCOMM_ENABLE_NCCL)
+#include "nccl/utils.hpp"
+#endif
 
 namespace {
 
@@ -23,7 +26,15 @@ void test_1d(const View1D &a) {
   static_assert(View1D::rank == 1, "");
   using Scalar = typename View1D::non_const_value_type;
 
+  // FIXME: The NCCL backend does not have a way to construct a `KokkosComm::Handle` without providing a `ncclComm_t`
+  // object (default initialization). We use the NCCL test utils to create one and construct a Handle from it.
+  // This hack will be required as long as we don't define a way to create a "default" NCCL communicator in KokkosComm.
+#if defined(KOKKOSCOMM_ENABLE_NCCL)
+  auto nccl_ctx = test_utils::nccl::Ctx::init();
+  KokkosComm::Handle<KokkosComm::Experimental::Nccl> h(nccl_ctx.comm());
+#else
   KokkosComm::Handle h;
+#end
   if (h.size() < 2) {
     GTEST_SKIP() << "Requires >= 2 ranks (" << h.size() << " provided)";
   }
