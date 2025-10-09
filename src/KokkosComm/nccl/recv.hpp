@@ -44,7 +44,7 @@ auto recv(const ExecSpace &space, RecvView &rv, int peer, ncclComm_t comm) -> Re
 namespace Impl {
 
 template <KokkosView RecvView>
-struct Recv<Kokkos::Cuda, Experimental::Nccl> {
+struct Recv<RecvView, Kokkos::Cuda, Experimental::Nccl> {
   static auto execute(Handle<Kokkos::Cuda, Experimental::Nccl> &h, RecvView sv, int peer) -> Req<Experimental::Nccl> {
     return Experimental::nccl::recv(h.space(), sv, peer, h.comm());
   }

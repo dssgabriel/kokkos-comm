@@ -42,7 +42,7 @@ auto allgather(const ExecSpace &space, const SendView &sv, const RecvView &rv, n
 namespace Impl {
 
 template <KokkosView SendView, KokkosView RecvView>
-struct AllGather<Kokkos::Cuda, Nccl> {
+struct AllGather<SendView, RecvView, Kokkos::Cuda, Nccl> {
   static auto execute(Handle<Kokkos::Cuda, Nccl> &h, const SendView sv, RecvView rv) -> Req<Nccl> {
     return nccl::allgather(h.space(), sv, rv, h.comm());
   }

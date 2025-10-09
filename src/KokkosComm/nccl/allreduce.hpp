@@ -43,7 +43,7 @@ auto allreduce(const ExecSpace &space, const SendView &sv, const RecvView &rv, n
 namespace Impl {
 
 template <KokkosView SendView, KokkosView RecvView, ReductionOperator RedOp>
-struct AllReduce<Kokkos::Cuda, Nccl> {
+struct AllReduce<SendView, RecvView, RedOp, Kokkos::Cuda, Nccl> {
   static auto execute(Handle<Kokkos::Cuda, Nccl> &h, const SendView sv, RecvView rv) -> Req<Nccl> {
     return nccl::allreduce(h.space(), sv, rv, nccl::Impl::reduction_op_v<RedOp>, h.comm());
   }

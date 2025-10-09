@@ -42,7 +42,7 @@ auto broadcast(const ExecSpace &space, const SendView &sv, const RecvView &rv, i
 namespace Impl {
 
 template <KokkosView SendView, KokkosView RecvView>
-struct Broadcast<Kokkos::Cuda, Nccl> {
+struct Broadcast<SendView, RecvView, Kokkos::Cuda, Nccl> {
   static auto execute(Handle<Kokkos::Cuda, Nccl> &h, const SendView sv, RecvView rv, int root) -> Req<Nccl> {
     return nccl::broadcast(h.space(), sv, rv, root, h.comm());
   }

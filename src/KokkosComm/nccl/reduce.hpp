@@ -66,7 +66,7 @@ auto reduce(const ExecSpace &space, const SendView sv, RecvView rv, ncclRedOp_t 
 namespace Impl {
 
 template <KokkosView SendView, KokkosView RecvView, ReductionOperator RedOp>
-struct Reduce<Kokkos::Cuda, Nccl> {
+struct Reduce<SendView, RecvView, RedOp, Kokkos::Cuda, Nccl> {
   static auto execute(Handle<Kokkos::Cuda, Nccl> &h, const SendView sv, RecvView rv, int root) -> Req<Nccl> {
     return nccl::reduce(h.space(), sv, rv, nccl::Impl::reduction_op_v<RedOp>, root, h.rank(), h.comm());
   }

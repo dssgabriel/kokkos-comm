@@ -44,7 +44,7 @@ auto send(const ExecSpace& space, const SendView& sv, int peer, ncclComm_t comm)
 namespace Impl {
 
 template <KokkosView SendView>
-struct Send<Kokkos::Cuda, Experimental::Nccl> {
+struct Send<SendView, Kokkos::Cuda, Experimental::Nccl> {
   static auto execute(Handle<Kokkos::Cuda, Experimental::Nccl>& h, SendView sv, int peer) -> Req<Experimental::Nccl> {
     return Experimental::nccl::send(h.space(), sv, peer, h.comm());
   }

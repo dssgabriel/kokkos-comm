@@ -51,7 +51,8 @@ auto alltoall(const ExecSpace &space, const SendView &sv, const RecvView &rv, in
 }  // namespace nccl
 namespace Impl {
 
-struct AllToAll<Kokkos::Cuda, Nccl> {
+template <KokkosView SendView, KokkosView RecvView>
+struct AllToAll<SendView, RecvView, Kokkos::Cuda, Nccl> {
   static auto execute(Handle<Kokkos::Cuda, Nccl> &h, const SendView sv, RecvView rv, int count) -> Req<Nccl> {
     return nccl::alltoall(h.space(), sv, rv, count, h.comm());
   }
