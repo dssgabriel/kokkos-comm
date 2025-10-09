@@ -26,27 +26,25 @@ namespace {
   do {                                                                                                     \
     if (int res = cmd; res != MPI_SUCCESS) {                                                               \
       std::cerr << std::format("KokkosComm::unit_tests: {}:{} error(MPI): {}\n", __FILE__, __LINE__, res); \
-      Kokkos::abort();                                                                                     \
+      std::exit(-1);                                                                                       \
     }                                                                                                      \
   } while (0)
 
 #define NCCL_CHECK(cmd)                                                                               \
   do {                                                                                                \
-    ncclResult_t r = cmd;                                                                             \
-    if (ncclResult_t res; res != ncclSuccess) {                                                       \
+    if (ncclResult_t res = cmd; res != ncclSuccess) {                                                 \
       std::cerr << std::format("KokkosComm::unit_tests: {}:{} error(NCCL): {}\n", __FILE__, __LINE__, \
                                ncclGetErrorString(res));                                              \
-      Kokkos::abort();                                                                                \
+      std::exit(-1);                                                                                  \
     }                                                                                                 \
   } while (0)
 
 #define CUDA_CHECK(cmd)                                                                               \
   do {                                                                                                \
-    cudaError_t e = cmd;                                                                              \
     if (cudaError_t res = cmd; res != cudaSuccess) {                                                  \
       std::cerr << std::format("KokkosComm::unit_tests: {}:{} error(CUDA): {}\n", __FILE__, __LINE__, \
                                cudaGetErrorString(res));                                              \
-      Kokkos::abort();                                                                                \
+      std::exit(-1);                                                                                  \
     }                                                                                                 \
   } while (0)
 
@@ -124,7 +122,7 @@ class Ctx {
     CUDA_CHECK(cudaSetDevice(local_rank));
 
     // Get NCCL unique ID at rank 0 and broadcast it to all others
-    ncclUniqueId_t nccl_id;
+    ncclUniqueId nccl_id;
     if (my_rank == 0) {
       ncclGetUniqueId(&nccl_id);
     }
@@ -154,7 +152,7 @@ class Ctx {
   Ctx(Ctx &&)                          = delete;
   auto operator=(Ctx &&) -> Ctx      & = delete;
 
-  auto comm() -> ncclComm_t & { return comm_ }
+  auto comm() -> ncclComm_t & { return comm_; }
   auto n_ranks() -> int { return n_ranks_; }
   auto my_rank() -> int { return my_rank_; }
 
