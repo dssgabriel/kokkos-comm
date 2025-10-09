@@ -8,7 +8,6 @@
 #include <Kokkos_Core.hpp>
 
 namespace KokkosComm {
-
 namespace Impl {
 
 /// Fallback: most types are not a KokkosComm communication space

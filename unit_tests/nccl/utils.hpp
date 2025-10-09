@@ -1,18 +1,7 @@
-//@HEADER
-// ************************************************************************
-//
-//                        Kokkos v. 4.0
-//       Copyright (2022) National Technology & Engineering
-//               Solutions of Sandia, LLC (NTESS).
-//
-// Under the terms of Contract DE-NA0003525 with NTESS,
-// the U.S. Government retains certain rights in this software.
-//
-// Part of Kokkos, under the Apache License v2.0 with LLVM Exceptions.
-// See https://kokkos.org/LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-//
-//@HEADER
+// SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
+
+#pragma once
 
 #include <unistd.h>  // gethostname
 
@@ -30,8 +19,6 @@
 #include <mpi.h>
 #include <nccl.h>
 #include <cuda_runtime.h>
-
-#pragma once
 
 namespace {
 
@@ -67,7 +54,9 @@ constexpr std::string_view HOSTID_FILE = "/proc/sys/kernel/random/boot_id";
 
 [[nodiscard]] constexpr auto get_hash(std::string_view str) noexcept -> uint64_t {
   uint64_t result = 5381;
-  for (unsigned char c : str) result = ((result << 5) + result) ^ c;  // result * 33 ^ c
+  for (unsigned char c : str) {
+    result = ((result << 5) + result) ^ c;  // result * 33 ^ c
+  }
   return result;
 }
 
@@ -149,7 +138,7 @@ class Ctx {
     nccl_cfg.blocking     = 0;
     nccl_cfg.commName     = "kokkos-comm.test.nccl-comm";
     ncclComm_t nccl_comm;
-    NCCL_CHECK(ncclCommInitRankConfig(&nccl_comm, n_ranks, id, my_rank, &nccl_cfg));
+    NCCL_CHECK(ncclCommInitRankConfig(&nccl_comm, n_ranks, nccl_id, my_rank, &nccl_cfg));
 
     return Ctx(nccl_comm, n_ranks, my_rank);
   }
