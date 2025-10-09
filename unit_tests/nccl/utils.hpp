@@ -54,13 +54,11 @@ constexpr std::string_view HOSTID_FILE = "/proc/sys/kernel/random/boot_id";
 
 [[nodiscard]] constexpr auto get_hash(std::string_view str) noexcept -> uint64_t {
   uint64_t result = 5381;
-  for (unsigned char c : str) {
-    result = ((result << 5) + result) ^ c;  // result * 33 ^ c
-  }
+  for (unsigned char c : str) result = ((result << 5) + result) ^ c;  // result * 33 ^ c
   return result;
 }
 
-/// Generate a hash of the unique identifying string for this host that will be unique for both bare-metal and
+/// Generate a hash of the unique identifying string for this host. That will be unique for both bare-metal and
 /// container instances.
 /// Equivalent of a hash of:
 /// ```sh
@@ -70,7 +68,9 @@ constexpr std::string_view HOSTID_FILE = "/proc/sys/kernel/random/boot_id";
   std::string combined{hostname};
   if (std::ifstream file{std::string{HOSTID_FILE}}; file) {
     std::string boot_id;
-    if (file >> boot_id) combined += boot_id;
+    if (file >> boot_id) {
+      combined += boot_id;
+    }
   }
   return get_hash(combined);
 }
@@ -94,11 +94,13 @@ namespace test_utils::nccl {
 class Ctx {
  public:
   static auto init() -> Ctx {
-    // Setup MPI Session and create communicator
+    // Setup MPI Session
     MPI_Session mpi_session = MPI_SESSION_NULL;
     MPI_Session_init(MPI_INFO_NULL, MPI_ERRORS_RETURN, &mpi_session);
     MPI_Group mpi_group = MPI_GROUP_NULL;
     MPI_Group_from_session_pset(mpi_session, "mpi://WORLD", &mpi_group);
+
+    // Create communicator
     MPI_Comm mpi_comm = MPI_COMM_NULL;
     MPI_Comm_create_from_group(mpi_group, "kokkos-comm.test.mpi-comm", MPI_INFO_NULL, MPI_ERRORS_RETURN, &mpi_comm);
 
@@ -115,7 +117,7 @@ class Ctx {
     MPI_CHECK(MPI_Allgather(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL, hostname_hashes.data(), sizeof(uint64_t), MPI_BYTE,
                             mpi_comm));
     for (int p = 0; p < n_ranks; ++p) {
-      if (host_hashes[p] == host_hashes[my_rank]) {
+      if (hostname_hashes[p] == hostname_hashes[my_rank]) {
         local_rank++;
       }
     }
@@ -135,13 +137,22 @@ class Ctx {
 
     // NCCL comm configuration
     ncclConfig_t nccl_cfg = NCCL_CONFIG_INITIALIZER;
-    nccl_cfg.blocking     = 0;
-    nccl_cfg.commName     = "kokkos-comm.test.nccl-comm";
+    // Always non-blocking communicator
+    nccl_cfg.blocking = 0;
+    nccl_cfg.commName = "kokkos-comm.test.nccl-comm";
+
+    // Initialize NCCL communicator
     ncclComm_t nccl_comm;
     NCCL_CHECK(ncclCommInitRankConfig(&nccl_comm, n_ranks, nccl_id, my_rank, &nccl_cfg));
 
     return Ctx(nccl_comm, n_ranks, my_rank);
   }
+
+  ~Ctx() { NCCL_CHECK(ncclCommDestroy(comm_)); }
+  Ctx(const Ctx &)                     = delete;
+  auto operator=(const Ctx &) -> Ctx & = delete;
+  Ctx(Ctx &&)                          = delete;
+  auto operator=(Ctx &&) -> Ctx      & = delete;
 
   auto comm() -> ncclComm_t & { return comm_ }
   auto n_ranks() -> int { return n_ranks_; }
@@ -149,12 +160,6 @@ class Ctx {
 
  private:
   explicit Ctx(ncclComm_t comm, int n_ranks, int my_rank) : comm_(comm), n_ranks_(n_ranks), my_rank_(my_rank) {}
-  ~Ctx() { NCCL_CHECK(ncclCommDestroy(comm_)); }
-
-  Ctx(const Ctx &)                     = delete;
-  auto operator=(const Ctx &) -> Ctx & = delete;
-  Ctx(Ctx &&)                          = delete;
-  auto operator=(Ctx &&) -> Ctx      & = delete;
 
   ncclComm_t comm_;
   int n_ranks_;
