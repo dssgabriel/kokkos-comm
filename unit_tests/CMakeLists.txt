@@ -148,6 +148,7 @@ target_sources(
     test_main.cpp
     test_sendrecv.cpp
 )
+target_compile_features(test-main PRIVATE cxx_std_20)
 
 if(KOKKOSCOMM_ENABLE_MPI)
   add_mpi_test(test-gtest-mpi       2 mpi/test_gtest_mpi.cpp) # make sure gtest is working
@@ -170,6 +171,21 @@ target_link_libraries(
     GTest::gtest_main
     KokkosComm::KokkosComm
 )
+if(KOKKOSCOMM_ENABLE_NCCL)
+  # Add `unit_tests/nccl/` to included directories
+  target_sources(
+    test-main
+    PRIVATE
+      FILE_SET HEADERS
+      BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/nccl
+  )
+  # Link against NCCL
+  target_link_libraries(
+    test-main
+    PRIVATE
+      NCCL::NCCL # Depends on raw NCCL calls, so we need to explicitly against it
+  )
+endif()
 
 if(KOKKOSCOMM_ENABLE_MPI)
   add_test(
@@ -184,6 +200,7 @@ if(KOKKOSCOMM_ENABLE_NCCL)
   # Standalone NCCL smoke tests (do not use KokkosComm)
   add_executable(test-nccl)
   target_sources(test-nccl PRIVATE nccl/test_nccl.cpp)
+  target_compile_features(test-nccl PRIVATE cxx_std_20)
   # doesn't use KokkosComm, so explicitly link with NCCL
   target_link_libraries(test-nccl PRIVATE NCCL::NCCL)
   add_test(NAME test-nccl-smoke COMMAND ./test-nccl)
