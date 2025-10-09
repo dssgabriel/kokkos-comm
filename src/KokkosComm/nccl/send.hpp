@@ -25,12 +25,12 @@ auto send(const ExecSpace& space, const SendView& sv, int peer, ncclComm_t comm)
     ncclSend(data_handle(sv), span(sv), Impl::datatype_v<T>, peer, comm, space.cuda_stream());
   } else {
     using Packer = typename Impl::PackTraits<SendView>::packer_type;
-    auto args    = Packer::pack(space(), sv);
+    auto args    = Packer::pack(space, sv);
     // TODO: Consider using a private stream pool to avoid synchronizing the underlying stream, which may not
-    // be empty and have in-flight communications we do not want to wait on.
-    space().fence();
+    // be empty and have in-flight operations we do not want to wait on.
+    space.fence();  // make sure packing is complete before sending
 
-    ncclSend(data_handle(args.view_), span(args.view_), Impl::datatype_v<T>, peer, comm, space.cuda_stream());
+    ncclSend(data_handle(args.view_), args.count_, Impl::datatype_v<T>, peer, comm, space.cuda_stream());
     Packer::unpack_into(space, sv, args.view_);
     req.extend_view_lifetime(args.view_);
   }
