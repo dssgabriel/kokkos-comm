@@ -27,23 +27,20 @@ endif()
 
 FetchContent_Declare(
   googletest
-  URL
-    https://github.com/google/googletest/archive/a7f443b80b105f940225332ed3c31f2790092f47.zip # 05-28-2024
+  GIT_REPOSITORY https://github.com/google/googletest.git
+  GIT_TAG 52eb8108c5bdec04579160ae17225d66034bd723  # v1.17.0
 )
+# Don't install googletest
+set(INSTALL_GTEST OFF)
 # For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-# FetchContent_MakeAvailable(googletest) was making install install googletest as well
-# EXCLUDE_FROM_ALL here seems to be the magic
-FetchContent_GetProperties(googletest)
-if(NOT googletest_POPULATED)
-  FetchContent_Populate(googletest)
-  add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR} EXCLUDE_FROM_ALL)
-endif()
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  target_compile_options(gtest PRIVATE -w)
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-  target_compile_options(gtest PRIVATE /w)
-endif()
+FetchContent_MakeAvailable(googletest)
+# NOTE: Temporarily silencing warnings from googletest
+# if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+#   target_compile_options(gtest PRIVATE -w)
+# elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+#   target_compile_options(gtest PRIVATE /w)
+# endif()
 
 if(KOKKOSCOMM_ENABLE_MPI)
   # Standalone MPI smoke tests (do not use KokkosComm)
