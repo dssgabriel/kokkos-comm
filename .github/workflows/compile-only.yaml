@@ -13,19 +13,17 @@ on:
     types: [opened, reopened, synchronize]
   workflow_dispatch:
 
-env:
-  KOKKOS_SRC: ${{ github.workspace }}/build/_deps/kokkos-src
-  KOKKOS_BUILD: ${{ github.workspace }}/build/_deps/kokkos-build
-  KOKKOS_INSTALL: ${{ github.workspace }}/build/_deps/kokkos-install
-  KOKKOSCOMM_SRC: ${{ github.workspace }}
-  KOKKOSCOMM_BUILD_MPI: ${{ github.workspace }}/build/mpi
-  KOKKOSCOMM_BUILD_NCCL: ${{ github.workspace }}/build/nccl
-
 jobs:
   Kokkos_master-Open_MPI_508-CUDA_1290-Release:
     runs-on: ubuntu-latest
     container:
       image: nvidia/cuda:12.9.0-devel-ubuntu24.04
+    env:
+      KOKKOS_SRC: ${{ github.workspace }}/build/_deps/kokkos-src
+      KOKKOS_BUILD: ${{ github.workspace }}/build/_deps/kokkos-build
+      KOKKOS_INSTALL: ${{ github.workspace }}/build/_deps/kokkos-install
+      KOKKOSCOMM_BUILD_MPI: ${{ github.workspace }}/build/mpi
+      KOKKOSCOMM_BUILD_NCCL: ${{ github.workspace }}/build/nccl
     timeout-minutes: 30
     steps:
       - name: Create workspace
@@ -84,7 +82,7 @@ jobs:
       - name: KokkosComm - Configure MPI backend
         run: >
           cmake
-          -S "$KOKKOSCOMM_SRC"
+          -S ${{ github.workspace }}
           -B "$KOKKOSCOMM_BUILD_MPI"
           -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_CXX_COMPILER="$KOKKOS_SRC/bin/nvcc_wrapper"
@@ -98,7 +96,7 @@ jobs:
       - name: KokkosComm - Configure NCCL backend
         run: >
           cmake
-          -S "$KOKKOSCOMM_SRC"
+          -S ${{ github.workspace }}
           -B "$KOKKOSCOMM_BUILD_NCCL"
           -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_CXX_COMPILER="$KOKKOS_SRC/bin/nvcc_wrapper"
