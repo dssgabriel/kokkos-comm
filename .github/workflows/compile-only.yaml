@@ -52,10 +52,10 @@ jobs:
           cd openmpi-5.0.8 && ./configure --prefix=/usr/local --with-cuda=/usr/local/cuda --with-cuda-libdir=/usr/local/cuda/lib64/stubs
       - name: Open MPI - Build
         run: >
-          make all -j $(nproc)
+          make -C openmpi-5.0.8 all -j $(nproc)
       - name: Open MPI - Install
         run: |
-          make install
+          make -C openmpi-5.0.8 install
           ldconfig
       - name: Open MPI - Check CUDA support
         run: |
