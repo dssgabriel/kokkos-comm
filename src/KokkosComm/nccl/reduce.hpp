@@ -15,6 +15,8 @@
 namespace KokkosComm::Experimental {
 namespace nccl {
 
+namespace KC = KokkosComm;
+
 template <KokkosExecutionSpace ExecSpace, KokkosView SendView, KokkosView RecvView>
 auto reduce(const ExecSpace &space, const SendView sv, RecvView rv, ncclRedOp_t op, int root, int rank, ncclComm_t comm)
     -> Req<Nccl> {
@@ -23,7 +25,7 @@ auto reduce(const ExecSpace &space, const SendView sv, RecvView rv, ncclRedOp_t 
   using ST         = typename SendView::non_const_value_type;
   using RT         = typename RecvView::non_const_value_type;
   static_assert(std::is_same_v<ST, RT>, "KokkosComm::Experimental::nccl::reduce: View value types must be identical");
-  static_assert(KokkosComm::rank<SendView>() == 1 and KokkosComm::rank<RecvView>() == 1,
+  static_assert(KC::rank<SendView>() == 1 and KC::rank<RecvView>() == 1,
                 "KokkosComm::Experimental::nccl::reduce: only rank-1 Views are supported");
   Kokkos::Tools::pushRegion("KokkosComm::Experimental::nccl::reduce");
 
