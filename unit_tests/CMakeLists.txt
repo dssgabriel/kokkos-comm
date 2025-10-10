@@ -47,7 +47,7 @@ if(KOKKOSCOMM_ENABLE_MPI)
   add_executable(test-mpi)
   target_sources(test-mpi PRIVATE mpi/test_mpi.cpp)
   # doesn't use KokkosComm, so explicitly link MPI
-  target_link_libraries(test-mpi MPI::MPI_CXX)
+  target_link_libraries(test-mpi PRIVATE MPI::MPI_CXX)
   add_test(
     NAME test-mpi-1
     COMMAND
@@ -63,7 +63,7 @@ if(KOKKOSCOMM_ENABLE_MPI)
   if(Kokkos_ENABLE_CUDA)
     add_executable(test-mpi-cuda-sendrecv)
     target_sources(test-mpi-cuda-sendrecv PRIVATE mpi/test_mpi_cuda_sendrecv.cpp)
-    target_link_libraries(test-mpi-cuda-sendrecv MPI::MPI_CXX)
+    target_link_libraries(test-mpi-cuda-sendrecv PRIVATE MPI::MPI_CXX)
 
     # MPICH needs dynamic cudart (we think, pmodels/mpich#7304)
     if(KOKKOSCOMM_IMPL_MPI_IS_MPICH)
@@ -90,10 +90,10 @@ if(KOKKOSCOMM_ENABLE_MPI)
   endif()
 
   if(Kokkos_ENABLE_HIP)
+    find_package(hip REQUIRED)
     add_executable(test-mpi-hip-sendrecv)
     target_sources(test-mpi-hip-sendrecv PRIVATE mpi/test_mpi_hip_sendrecv.cpp)
-    target_link_libraries(test-mpi-hip-sendrecv MPI::MPI_CXX)
-    find_package(hip REQUIRED)
+    target_link_libraries(test-mpi-hip-sendrecv PRIVATE MPI::MPI_CXX)
     target_link_libraries(test-mpi-hip-sendrecv hip::host)
     target_compile_options(
       test-mpi-hip-sendrecv
