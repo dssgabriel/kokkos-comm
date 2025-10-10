@@ -108,7 +108,7 @@ class Ctx {
     MPI_Comm_rank(mpi_comm, &my_rank);
 
     // Compute `local_rank` based on hostname which is used in selecting a GPU
-    int local_rank;
+    int local_rank = 0;
     std::vector<uint64_t> hostname_hashes(n_ranks);
     auto hostname            = get_hostname();
     hostname_hashes[my_rank] = hash_hostname(hostname);
