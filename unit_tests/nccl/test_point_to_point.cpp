@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 #include <nccl.h>
+#include <Kokkos_Core.hpp>
 
 #include <KokkosComm/KokkosComm.hpp>
 
