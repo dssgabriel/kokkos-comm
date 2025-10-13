@@ -28,7 +28,8 @@ endif()
 FetchContent_Declare(
   googletest
   GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG 52eb8108c5bdec04579160ae17225d66034bd723  # v1.17.0
+  GIT_TAG
+    52eb8108c5bdec04579160ae17225d66034bd723 # v1.17.0
 )
 # Don't install googletest
 set(INSTALL_GTEST OFF)
@@ -135,7 +136,7 @@ function(add_mpi_test test_name num_procs)
     ${test_name}
     PRIVATE
       KokkosComm::KokkosComm
-      MPI::MPI_CXX  # Explicitly link against MPI
+      MPI::MPI_CXX # Explicitly link against MPI
       gtest
   )
   add_test(
@@ -162,8 +163,8 @@ function(add_nccl_test test_name num_procs)
     PRIVATE
       KokkosComm::KokkosComm
       NCCL::NCCL
-      MPI::MPI_CXX  # Explicitly link against MPI
-      GTest::gtest_main
+      MPI::MPI_CXX # Explicitly link against MPI because it's needed to setup multi-node NCCL comms
+      gtest
   )
   add_test(
     NAME ${test_name}
