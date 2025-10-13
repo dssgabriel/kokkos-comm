@@ -102,6 +102,7 @@ jobs:
           -DCMAKE_CXX_COMPILER="$KOKKOS_SRC/bin/nvcc_wrapper"
           -DKokkos_ROOT="$KOKKOS_INSTALL"
           -DKokkosComm_ENABLE_NCCL=ON
+          -DKokkosComm_ENABLE_MPI=OFF
           -DKokkosComm_ENABLE_TESTS=ON
       - name: KokkosComm - Build NCCL backend
         run: cmake --build "$KOKKOSCOMM_BUILD_NCCL" --parallel $(nproc) --verbose
