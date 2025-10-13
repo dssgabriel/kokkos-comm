@@ -16,14 +16,14 @@ using ExecSpace = Kokkos::Cuda;
 using CommSpace = KokkosComm::Experimental::Nccl;
 
 template <typename T>
-class P2P : public testing::Test {
+class PointToPoint : public testing::Test {
  public:
   using Scalar = T;
 };
 
 using ScalarTypes = ::testing::Types<float, double, int, unsigned, int64_t, uint64_t>;
 
-TYPED_TEST_SUITE(P2P, ScalarTypes);
+TYPED_TEST_SUITE(PointToPoint, ScalarTypes);
 
 template <typename Scalar>
 auto p2p_1d_contig() -> void {
