@@ -137,7 +137,6 @@ class Ctx {
     ncclConfig_t nccl_cfg = NCCL_CONFIG_INITIALIZER;
     // Always non-blocking communicator
     nccl_cfg.blocking = 0;
-    nccl_cfg.commName = "kokkos-comm.test.nccl-comm";
 
     // Initialize NCCL communicator
     ncclComm_t nccl_comm;
