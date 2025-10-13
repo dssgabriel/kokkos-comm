@@ -218,12 +218,12 @@ if(KokkosComm_ENABLE_NCCL)
       FILE_SET HEADERS
       BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/nccl
   )
-  # Link against NCCL
-  target_link_libraries(
-    test-main
-    PRIVATE
-      NCCL::NCCL # Depends on raw NCCL calls, so we need to explicitly against it
-  )
+  # Link against NCCL because we depend on raw calls
+  target_link_libraries(test-main PRIVATE NCCL::NCCL)
 
-  add_nccl_test(test-p2p 2 nccl/test_point_to_point.cpp)
+  add_nccl_test(test-p2p       2 nccl/test_point_to_point.cpp)
+  add_nccl_test(test-broadcast 2 nccl/test_broadcast.cpp)
+  add_nccl_test(test-allgather 2 nccl/test_allgather.cpp)
+  add_nccl_test(test-allreduce 2 nccl/test_allreduce.cpp)
+  add_nccl_test(test-reduce    2 nccl/test_reduce.cpp)
 endif()
