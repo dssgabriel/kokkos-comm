@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 // SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
-#include <cstddef>
 #include <cstdint>
 
 #include <gtest/gtest.h>
@@ -14,7 +13,7 @@
 namespace {
 
 using ExecSpace = Kokkos::Cuda;
-using CommSpace = KokkosComm::Nccl;
+using CommSpace = KokkosComm::Experimental::Nccl;
 
 template <typename T>
 class P2P : public testing::Test {
@@ -22,7 +21,7 @@ class P2P : public testing::Test {
   using Scalar = T;
 };
 
-using ScalarTypes = ::testing::Types<float, double, int, unsigned, int64_t, size_t>;
+using ScalarTypes = ::testing::Types<float, double, int, unsigned, int64_t, uint64_t>;
 
 TYPED_TEST_SUITE(P2P, ScalarTypes);
 
