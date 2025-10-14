@@ -23,7 +23,7 @@ using ScalarTypes = ::testing::Types<int, int64_t, float, double>;
 TYPED_TEST_SUITE(AllToAll, ScalarTypes);
 
 template <typename Scalar>
-auto alltoall_contig_1d() {
+auto alltoall_contig_1d() -> void {
   auto nccl_ctx = test_utils::nccl::Ctx::init();
   KokkosComm::Handle<ExecSpace, CommSpace> h(ExecSpace(), nccl_ctx.comm());
   int rank = h.rank();
