@@ -54,11 +54,11 @@ struct Broadcast;
 
 template <KokkosView SendView, KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
           CommunicationSpace CommSpace = DefaultCommunicationSpace>
-struct AllToAll;
+struct AllGather;
 
 template <KokkosView SendView, KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
           CommunicationSpace CommSpace = DefaultCommunicationSpace>
-struct AllGather;
+struct AllToAll;
 
 template <KokkosView SendView, KokkosView RecvView, ReductionOperator RedOp,
           KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
