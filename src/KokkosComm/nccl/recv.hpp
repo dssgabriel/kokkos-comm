@@ -9,6 +9,7 @@
 #include <KokkosComm/concepts.hpp>
 #include <KokkosComm/traits.hpp>
 
+#include <KokkosComm/impl/contiguous.hpp>
 #include "impl/types.hpp"
 #include "impl/pack_traits.hpp"
 
@@ -27,14 +28,13 @@ auto recv(const ExecSpace &space, RecvView &rv, int peer, ncclComm_t comm) -> Re
     ncclRecv(KC::data_handle(rv), KC::span(rv), Impl::datatype_v<T>, peer, comm, space.cuda_stream());
   } else {
     using Packer = typename Impl::PackTraits<RecvView>::packer_type;
-    auto args    = Packer::pack(space, rv);
     // TODO: Consider using a private stream pool to avoid synchronizing the underlying stream, which may not
     // be empty and have in-flight operations we do not want to wait on.
     space.fence();  // make sure allocation is complete before receiving
-
-    ncclRecv(KC::data_handle(args.view_), KC::span(args.view_), Impl::datatype_v<T>, peer, comm, space.cuda_stream());
-    Packer::unpack_into(space, rv, args.view_);
-    req.extend_view_lifetime(args.view_);
+    auto pckd_rv = KC::Impl::allocate_contiguous_for(space, "KC::nccl::recv pckd_rv", rv);
+    ncclRecv(KC::data_handle(pckd_rv), KC::span(pckd_rv), Impl::datatype_v<T>, peer, comm, space.cuda_stream());
+    Packer::unpack_into(space, rv, pckd_rv);
+    req.extend_view_lifetime(pckd_rv);
   }
   req.extend_view_lifetime(rv);
 

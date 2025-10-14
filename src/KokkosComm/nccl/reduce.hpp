@@ -9,6 +9,7 @@
 #include <KokkosComm/concepts.hpp>
 #include <KokkosComm/traits.hpp>
 
+#include <KokkosComm/impl/contiguous.hpp>
 #include "impl/pack_traits.hpp"
 #include "impl/types.hpp"
 
@@ -35,12 +36,12 @@ auto reduce(const ExecSpace &space, const SendView sv, RecvView rv, ncclRedOp_t 
       ncclReduce(KC::data_handle(sv), KC::data_handle(rv), KC::span(sv), Impl::datatype_v<ST>, op, root, comm,
                  space.cuda_stream());
     } else {
-      auto recv_args = RecvPacker::pack(space, rv);
       space.fence();
-      ncclReduce(KC::data_handle(sv), KC::data_handle(recv_args.view_), KC::span(sv), Impl::datatype_v<ST>, op, root,
-                 comm, space.cuda_stream());
-      RecvPacker::unpack_into(space, rv, recv_args.view_);
-      req.extend_view_lifetime(recv_args.view_);
+      auto pckd_rv = KC::Impl::allocate_contiguous_for(space, "KC::nccl::reduce pckd_rv", rv);
+      ncclReduce(KC::data_handle(sv), KC::data_handle(pckd_rv), KC::span(sv), Impl::datatype_v<ST>, op, root, comm,
+                 space.cuda_stream());
+      RecvPacker::unpack_into(space, rv, pckd_rv);
+      req.extend_view_lifetime(pckd_rv);
     }
   } else {
     auto send_args = SendPacker::pack(space, sv);
@@ -49,12 +50,11 @@ auto reduce(const ExecSpace &space, const SendView sv, RecvView rv, ncclRedOp_t 
       ncclReduce(KC::data_handle(send_args.view_), KC::data_handle(rv), KC::span(send_args.view_), Impl::datatype_v<ST>,
                  op, root, comm, space.cuda_stream());
     } else {
-      auto recv_args = RecvPacker::pack(space, rv);
-      space.fence();
-      ncclReduce(KC::data_handle(send_args.view_), KC::data_handle(recv_args.view_), KC::span(send_args.view_),
+      auto pckd_rv = KC::Impl::allocate_contiguous_for(space, "KC::nccl::reduce pckd_rv", rv);
+      ncclReduce(KC::data_handle(send_args.view_), KC::data_handle(pckd_rv), KC::span(send_args.view_),
                  Impl::datatype_v<ST>, op, root, comm, space.cuda_stream());
-      RecvPacker::unpack_into(space, rv, recv_args.view_);
-      req.extend_view_lifetime(recv_args.view_);
+      RecvPacker::unpack_into(space, rv, pckd_rv);
+      req.extend_view_lifetime(pckd_rv);
     }
     req.extend_view_lifetime(send_args.view_);
   }
