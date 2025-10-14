@@ -21,13 +21,12 @@ class PointToPoint : public testing::Test {
  public:
   using Scalar = T;
 };
-
 using ScalarTypes = ::testing::Types<int, int64_t, float, double>;
 
 TYPED_TEST_SUITE(PointToPoint, ScalarTypes);
 
 template <typename Scalar>
-auto p2p_1d_contig() -> void {
+auto p2p_contig_1d() -> void {
   auto nccl_ctx = test_utils::nccl::Ctx::init();
   KokkosComm::Handle h(ExecSpace(), nccl_ctx.comm());
   if (h.size() < 2) {
@@ -39,14 +38,16 @@ auto p2p_1d_contig() -> void {
   Kokkos::View<Scalar *> v("v", 10'000);
 
   if (h.rank() == src) {
-    // Prepare send buffer
+    // Prepare send view
     Kokkos::parallel_for(
-        Kokkos::RangePolicy(ExecSpace(), v.extent(0)), KOKKOS_LAMBDA(int i) { v(i) = i; });
+        Kokkos::RangePolicy(ExecSpace(), 0, v.extent(0)), KOKKOS_LAMBDA(int i) { v(i) = i; });
+    // Using the same execution space for both operations lets us not need an explicit `fence`
     auto req = KokkosComm::send(h, v, dst);
     KokkosComm::wait(req);
   } else if (h.rank() == dst) {
     auto req = KokkosComm::recv(h, v, src);
     KokkosComm::wait(req);
+
     int errs;
     Kokkos::parallel_reduce(
         v.extent(0), KOKKOS_LAMBDA(int &i, int &lsum) { lsum += v(i) != Scalar(i); }, errs);
@@ -55,9 +56,9 @@ auto p2p_1d_contig() -> void {
 }
 
 template <typename Scalar>
-auto p2p_1d_noncontig() -> void {
+auto p2p_noncontig_1d() -> void {
   auto nccl_ctx = test_utils::nccl::Ctx::init();
-  KokkosComm::Handle<ExecSpace, CommSpace> h(nccl_ctx.comm());
+  KokkosComm::Handle h(ExecSpace(), nccl_ctx.comm());
   if (h.size() < 2) {
     GTEST_SKIP() << "Requires >= 2 ranks (" << h.size() << " provided)";
   }
@@ -68,13 +69,16 @@ auto p2p_1d_noncontig() -> void {
   auto sv = Kokkos::subview(v, Kokkos::ALL, 2);  // take column 2 (non-contiguous)
 
   if (h.rank() == src) {
+    // Prepare send view
     Kokkos::parallel_for(
-        Kokkos::RangePolicy(ExecSpace(), sv.extent(0)), KOKKOS_LAMBDA(int i) { sv(i) = i; });
-    KokkosComm::Req req = KokkosComm::send(h, sv, dst);
+        Kokkos::RangePolicy(ExecSpace(), 0, sv.extent(0)), KOKKOS_LAMBDA(int i) { sv(i) = i; });
+    // Using the same execution space for both operations lets us not need an explicit `fence`
+    auto req = KokkosComm::send(h, sv, dst);
     KokkosComm::wait(req);
   } else if (h.rank() == dst) {
     auto req = KokkosComm::recv(h, sv, src);
     KokkosComm::wait(req);
+
     int errs;
     Kokkos::parallel_reduce(
         sv.extent(0), KOKKOS_LAMBDA(int &i, int &lsum) { lsum += sv(i) != Scalar(i); }, errs);
@@ -82,7 +86,7 @@ auto p2p_1d_noncontig() -> void {
   }
 }
 
-TYPED_TEST(PointToPoint, Contiguous1D) { p2p_1d_contig<typename TestFixture::Scalar>(); }
-TYPED_TEST(PointToPoint, NonContiguous1D) { p2p_1d_noncontig<typename TestFixture::Scalar>(); }
+TYPED_TEST(PointToPoint, Contiguous1D) { p2p_contig_1d<typename TestFixture::Scalar>(); }
+TYPED_TEST(PointToPoint, NonContiguous1D) { p2p_noncontig_1d<typename TestFixture::Scalar>(); }
 
 }  // namespace

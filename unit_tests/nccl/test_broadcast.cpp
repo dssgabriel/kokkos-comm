@@ -17,7 +17,6 @@ class Broadcast : public testing::Test {
  public:
   using Scalar = T;
 };
-
 using ScalarTypes = ::testing::Types<int, int64_t, float, double>;
 
 TYPED_TEST_SUITE(Broadcast, ScalarTypes);
@@ -25,15 +24,18 @@ TYPED_TEST_SUITE(Broadcast, ScalarTypes);
 template <typename Scalar>
 auto broadcast_0d() -> void {
   auto nccl_ctx = test_utils::nccl::Ctx::init();
-  KokkosComm::Handle<ExecSpace, CommSpace> h(nccl_ctx.comm());
+  KokkosComm::Handle h(ExecSpace(), nccl_ctx.comm());
   int root = 0;
 
   Kokkos::View<Scalar> v("v");
   if (h.rank() == root) {
+    // Prepare broadcast view
     Kokkos::parallel_for(
-        v.extent(0), KOKKOS_LAMBDA(int) { v() = size; });
+        Kokkos::RangePolicy(ExecSpace(), 0, v.extent(0)), KOKKOS_LAMBDA(int) { v() = size; });
   }
-  KokkosComm::broadcast(h, v, 0);
+  // Using the same execution space for both operations lets us not need an explicit `fence`
+  auto req = KokkosComm::Experimental::broadcast(h, v, root);
+  KokkosComm::wait(req);
 
   int errs;
   Kokkos::parallel_reduce(
@@ -47,14 +49,15 @@ auto broadcast_inplace_contig_1d() -> void {
   KokkosComm::Handle<ExecSpace, CommSpace> h(nccl_ctx.comm());
   int root = 0;
 
-  const int n_contrib = 10;
-  Kokkos::View<Scalar *> v("v", n_contrib);
+  Kokkos::View<Scalar *> v("v", 100);
   if (rank == root) {
+    // Prepare broadcast view
     Kokkos::parallel_for(
-        v.extent(0), KOKKOS_LAMBDA(int i) { v(i) = size + i; });
+        Kokkos::RangePolicy(ExecSpace(), 0, v.extent(0)), KOKKOS_LAMBDA(int i) { v(i) = size + i; });
   }
-
-  KokkosComm::broadcast(h, v, 0);
+  // Using the same execution space for both operations lets us not need an explicit `fence`
+  auto req = KokkosComm::Experimental::broadcast(h, v, root);
+  KokkosComm::wait(req);
 
   int errs;
   Kokkos::parallel_reduce(
@@ -63,7 +66,6 @@ auto broadcast_inplace_contig_1d() -> void {
 }
 
 TYPED_TEST(Broadcast, InPlace0D) { broadcast_0d<typename TestFixture::Scalar>(); }
-
 TYPED_TEST(Broadcast, InPlaceContiguous1D) { broadcast_inplace_contig_1d<typename TestFixture::Scalar>(); }
 
 }  // namespace

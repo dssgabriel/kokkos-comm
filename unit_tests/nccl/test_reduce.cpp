@@ -10,13 +10,16 @@
 
 namespace {
 
+using ExecSpace = Kokkos::Cuda;
+using CommSpace = KokkosComm::Experimental::Nccl;
+
 template <typename T>
 class Reduce : public testing::Test {
  public:
   using Scalar = T;
 };
-
 using ScalarTypes = ::testing::Types<int, int64_t, float, double>;
+
 TYPED_TEST_SUITE(Reduce, ScalarTypes);
 
 /// Each rank fills its sendbuf[i] with `rank + i`
@@ -27,18 +30,18 @@ auto reduce_contig_1d() -> void {
   KokkosComm::Handle h(ExecSpace(), nccl_ctx.comm());
   int root = 0;
 
-  int n_contrib = 10;
+  int n_contrib = 100;
   Kokkos::View<Scalar *> sv("sv", n_contrib);
-  Kokkos::View<Scalar *> rv;
+  Kokkos::View<Scalar *> rv();
   if (h.rank() == root) {
     Kokkos::resize(rv, h.size());
   }
 
   // Prepare send buffer
   Kokkos::parallel_for(
-      Kokkos::RangePolicy(ExecSpace(), sv.extent(0)), KOKKOS_LAMBDA(int i) { sv(i) = h.rank() + i; });
+      Kokkos::RangePolicy(ExecSpace(), 0, sv.extent(0)), KOKKOS_LAMBDA(int i) { sv(i) = h.rank() + i; });
   // Using the same execution space for both operations lets us not need an explicit `fence`
-  auto req = KokkosComm::reduce(h, sv, rv, root, KokkosComm::Sum);
+  auto req = KokkosComm::Experimental::reduce(h, sv, rv, root, KokkosComm::Sum{});
   KokkosComm::wait(req);
 
   if (h.rank() == root) {
