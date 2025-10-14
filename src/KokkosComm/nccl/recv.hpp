@@ -28,9 +28,6 @@ auto recv(const ExecSpace &space, RecvView &rv, int peer, ncclComm_t comm) -> Re
     ncclRecv(KC::data_handle(rv), KC::span(rv), Impl::datatype_v<T>, peer, comm, space.cuda_stream());
   } else {
     using Packer = typename Impl::PackTraits<RecvView>::packer_type;
-    // TODO: Consider using a private stream pool to avoid synchronizing the underlying stream, which may not
-    // be empty and have in-flight operations we do not want to wait on.
-    space.fence();  // make sure allocation is complete before receiving
     auto pckd_rv = KC::Impl::allocate_contiguous_for(space, "KC::nccl::recv pckd_rv", rv);
     ncclRecv(KC::data_handle(pckd_rv), KC::span(pckd_rv), Impl::datatype_v<T>, peer, comm, space.cuda_stream());
     Packer::unpack_into(space, rv, pckd_rv);

@@ -36,7 +36,6 @@ auto reduce(const ExecSpace &space, const SendView sv, RecvView rv, ncclRedOp_t 
       ncclReduce(KC::data_handle(sv), KC::data_handle(rv), KC::span(sv), Impl::datatype_v<ST>, op, root, comm,
                  space.cuda_stream());
     } else {
-      space.fence();
       auto pckd_rv = KC::Impl::allocate_contiguous_for(space, "KC::nccl::reduce pckd_rv", rv);
       ncclReduce(KC::data_handle(sv), KC::data_handle(pckd_rv), KC::span(sv), Impl::datatype_v<ST>, op, root, comm,
                  space.cuda_stream());
@@ -45,7 +44,6 @@ auto reduce(const ExecSpace &space, const SendView sv, RecvView rv, ncclRedOp_t 
     }
   } else {
     auto send_args = SendPacker::pack(space, sv);
-    space.fence();
     if (rank != root and KC::is_contiguous(rv)) {
       ncclReduce(KC::data_handle(send_args.view_), KC::data_handle(rv), KC::span(send_args.view_), Impl::datatype_v<ST>,
                  op, root, comm, space.cuda_stream());
