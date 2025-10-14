@@ -25,34 +25,35 @@ auto reduce(const ExecSpace &space, const SendView sv, RecvView rv, ncclRedOp_t 
   using ST         = typename SendView::non_const_value_type;
   using RT         = typename RecvView::non_const_value_type;
   static_assert(std::is_same_v<ST, RT>, "KokkosComm::Experimental::nccl::reduce: View value types must be identical");
-  static_assert(KC::rank<SendView>() == 1 and KC::rank<RecvView>() == 1,
-                "KokkosComm::Experimental::nccl::reduce: only rank-1 Views are supported");
+  static_assert(KC::rank<SendView>() <= 1 and KC::rank<RecvView>() <= 1,
+                "KokkosComm::Experimental::nccl::reduce: Views with rank higher than 1 are not supported");
   Kokkos::Tools::pushRegion("KokkosComm::Experimental::nccl::reduce");
 
   Req<Nccl> req{space.cuda_stream()};
-  if (is_contiguous(sv)) {
-    if (rank != root and is_contiguous(rv)) {
-      ncclReduce(data_handle(sv), data_handle(rv), span(sv), Impl::datatype_v<ST>, op, root, comm, space.cuda_stream());
-    } else {
-      auto recv_args = RecvPacker::allocate_packed_for(space, "reduce recv", rv);
-      space.fence();
-      ncclReduce(data_handle(sv), data_handle(recv_args.view_), span(sv), Impl::datatype_v<ST>, op, root, comm,
+  if (KC::is_contiguous(sv)) {
+    if (rank != root and KC::is_contiguous(rv)) {
+      ncclReduce(KC::data_handle(sv), KC::data_handle(rv), KC::span(sv), Impl::datatype_v<ST>, op, root, comm,
                  space.cuda_stream());
+    } else {
+      auto recv_args = RecvPacker::pack(space, rv);
+      space.fence();
+      ncclReduce(KC::data_handle(sv), KC::data_handle(recv_args.view_), KC::span(sv), Impl::datatype_v<ST>, op, root,
+                 comm, space.cuda_stream());
       RecvPacker::unpack_into(space, rv, recv_args.view_);
       req.extend_view_lifetime(recv_args.view_);
     }
   } else {
     auto send_args = SendPacker::pack(space, sv);
     space.fence();
-    if (rank != root and is_contiguous(rv)) {
-      ncclReduce(data_handle(send_args.view_), data_handle(rv), span(send_args.view_), Impl::datatype_v<ST>, op, root,
-                 comm, space.cuda_stream());
+    if (rank != root and KC::is_contiguous(rv)) {
+      ncclReduce(KC::data_handle(send_args.view_), KC::data_handle(rv), KC::span(send_args.view_), Impl::datatype_v<ST>,
+                 op, root, comm, space.cuda_stream());
     } else {
-      auto recv_args = RecvPacker::allocate_packed_for(space, "reduce recv", rv);
+      auto recv_args = RecvPacker::pack(space, rv);
       space.fence();
-      ncclReduce(data_handle(send_args.view_), data_handle(recv_args.view_), span(send_args.view_),
+      ncclReduce(KC::data_handle(send_args.view_), KC::data_handle(recv_args.view_), KC::span(send_args.view_),
                  Impl::datatype_v<ST>, op, root, comm, space.cuda_stream());
-      RecvPacker::unpack_into(space, rv, recv_args.view);
+      RecvPacker::unpack_into(space, rv, recv_args.view_);
       req.extend_view_lifetime(recv_args.view_);
     }
     req.extend_view_lifetime(send_args.view_);

@@ -15,26 +15,28 @@
 namespace KokkosComm::Experimental {
 namespace nccl {
 
+namespace KC = KokkosComm;
+
 template <KokkosExecutionSpace ExecSpace, KokkosView SendView, KokkosView RecvView>
 auto alltoall(const ExecSpace &space, const SendView &sv, const RecvView &rv, int count, ncclComm_t comm) -> Req<Nccl> {
   using ST = typename SendView::non_const_value_type;
   using RT = typename RecvView::non_const_value_type;
   static_assert(std::is_same_v<ST, RT>, "KokkosComm::Experimental::nccl::alltoall: View value types must be identical");
-  static_assert(rank<SendView>() == 1 and rank<RecvView>() == 1,
-                "KokkosComm::Experimental::nccl::alltoall: only rank-1 Views are supported");
+  static_assert(KC::rank<SendView>() <= 1 and KC::rank<RecvView>() <= 1,
+                "KokkosComm::Experimental::nccl::alltoall: Views with rank higher than 1 are not supported");
   Kokkos::Tools::pushRegion("KokkosComm::Experimental::nccl::alltoall");
 
   Req<Nccl> req{space.cuda_stream()};
-  if (is_contiguous(sv) and is_contiguous(rv)) {
+  if (KC::is_contiguous(sv) and KC::is_contiguous(rv)) {
 #if NCCL_VERSION_CODE >= NCCL_VERSION(2, 28, 0)
-    ncclAlltoAll(data_handle(sv), data_handle(rv), count, Impl::datatype_v<ST>, comm, space.cuda_stream());
+    ncclAlltoAll(KC::data_handle(sv), KC::data_handle(rv), count, Impl::datatype_v<ST>, comm, space.cuda_stream());
 #else
     int n_pes;
     ncclCommCount(comm, &n_pes);
     ncclGroupStart();
     for (int r = 0; r < n_pes; ++r) {
-      ncclSend(data_handle(sv) + r * count, count, Impl::datatype_v<ST>, r, comm, space.cuda_stream());
-      ncclRecv(data_handle(rv) + r * count, count, Impl::datatype_v<ST>, r, comm, space.cuda_stream());
+      ncclSend(KC::data_handle(sv) + r * count, count, Impl::datatype_v<ST>, r, comm, space.cuda_stream());
+      ncclRecv(KC::data_handle(rv) + r * count, count, Impl::datatype_v<ST>, r, comm, space.cuda_stream());
     }
     ncclGroupEnd();
 #endif

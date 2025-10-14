@@ -15,19 +15,22 @@
 namespace KokkosComm::Experimental {
 namespace nccl {
 
+namespace KC = KokkosComm;
+
 template <KokkosExecutionSpace ExecSpace, KokkosView SendView, KokkosView RecvView>
 auto broadcast(const ExecSpace &space, const SendView &sv, const RecvView &rv, int root, ncclComm_t comm) -> Req<Nccl> {
   using ST = typename SendView::non_const_value_type;
   using RT = typename RecvView::non_const_value_type;
   static_assert(std::is_same_v<ST, RT>,
                 "KokkosComm::Experimental::nccl::broadcast: View value types must be identical");
-  static_assert(rank<SendView>() == 1 and rank<RecvView>() == 1,
-                "KokkosComm::Experimental::nccl::broadcast: only rank-1 Views are supported");
+  static_assert(KC::rank<SendView>() <= 1 and KC::rank<RecvView>() <= 1,
+                "KokkosComm::Experimental::nccl::broadcast: Views with rank higher than 1 are not supported");
   Kokkos::Tools::pushRegion("KokkosComm::Experimental::nccl::broadcast");
 
   Req<Nccl> req{space.cuda_stream()};
-  if (is_contiguous(sv) and is_contiguous(rv)) {
-    ncclBroadcast(data_handle(sv), data_handle(rv), span(sv), Impl::datatype_v<ST>, root, comm, space.cuda_stream());
+  if (KC::is_contiguous(sv) and KC::is_contiguous(rv)) {
+    ncclBroadcast(KC::data_handle(sv), KC::data_handle(rv), KC::span(sv), Impl::datatype_v<ST>, root, comm,
+                  space.cuda_stream());
   } else {
     Kokkos::abort("KokkosComm::Experimental::nccl::broadcast: unimplemented for non-contiguous views");
   }

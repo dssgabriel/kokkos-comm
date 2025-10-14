@@ -22,7 +22,7 @@ class Handle<Kokkos::Cuda, Experimental::Nccl> {
   using reduction_op_type   = ncclRedOp_t;
   using rank_type           = int;
 
-  explicit Handle(const execution_space &space, communicator_type comm) : space_(space), comm_(comm) {}
+  explicit Handle(const execution_space& space, communicator_type comm) : space_(space), comm_(comm) {}
   explicit Handle(communicator_type comm) : Handle(execution_space{}, comm) {}
 
   /// This initializes NCCL communicators for multiple GPUs within a single process.
@@ -62,10 +62,10 @@ class Handle<Kokkos::Cuda, Experimental::Nccl> {
   //   return Handle(execution_space{}, comms[0]);
   // }
 
-  auto comm() -> communicator_type & { return comm_; }
-  auto comm() const -> const communicator_type & { return comm_; }
-  auto space() -> execution_space & { return space_; }
-  auto space() const -> const execution_space & { return space_; }
+  auto comm() -> communicator_type& { return comm_; }
+  auto comm() const -> const communicator_type& { return comm_; }
+  auto space() -> execution_space& { return space_; }
+  auto space() const -> const execution_space& { return space_; }
 
   auto size() -> rank_type {
     rank_type ret;

@@ -15,14 +15,16 @@
 namespace KokkosComm {
 namespace Experimental::nccl {
 
+namespace KC = KokkosComm;
+
 template <KokkosExecutionSpace ExecSpace, KokkosView RecvView>
 auto recv(const ExecSpace &space, RecvView &rv, int peer, ncclComm_t comm) -> Req<Nccl> {
   using T = typename RecvView::non_const_value_type;
   Kokkos::Tools::pushRegion("KokkosComm::Impl::recv");
 
   Req<Nccl> req{space.cuda_stream()};
-  if (is_contiguous(rv)) {
-    ncclRecv(data_handle(rv), span(rv), Impl::datatype_v<T>, peer, comm, space.cuda_stream());
+  if (KC::is_contiguous(rv)) {
+    ncclRecv(KC::data_handle(rv), KC::span(rv), Impl::datatype_v<T>, peer, comm, space.cuda_stream());
   } else {
     using Packer = typename Impl::PackTraits<RecvView>::packer_type;
     auto args    = Packer::pack(space, rv);
@@ -30,7 +32,7 @@ auto recv(const ExecSpace &space, RecvView &rv, int peer, ncclComm_t comm) -> Re
     // be empty and have in-flight operations we do not want to wait on.
     space.fence();  // make sure allocation is complete before receiving
 
-    ncclRecv(data_handle(args.view_), span(args.view_), Impl::datatype_v<T>, peer, comm, space.cuda_stream());
+    ncclRecv(KC::data_handle(args.view_), KC::span(args.view_), Impl::datatype_v<T>, peer, comm, space.cuda_stream());
     Packer::unpack_into(space, rv, args.view_);
     req.extend_view_lifetime(args.view_);
   }

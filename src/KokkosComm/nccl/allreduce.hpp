@@ -15,6 +15,8 @@
 namespace KokkosComm::Experimental {
 namespace nccl {
 
+namespace KC = KokkosComm;
+
 template <KokkosExecutionSpace ExecSpace, KokkosView SendView, KokkosView RecvView>
 auto allreduce(const ExecSpace &space, const SendView &sv, const RecvView &rv, ncclRedOp_t op, ncclComm_t comm)
     -> Req<Nccl> {
@@ -22,13 +24,14 @@ auto allreduce(const ExecSpace &space, const SendView &sv, const RecvView &rv, n
   using RT = typename RecvView::non_const_value_type;
   static_assert(std::is_same_v<ST, RT>,
                 "KokkosComm::Experimental::nccl::allreduce: View value types must be identical");
-  static_assert(rank<SendView>() == 1 and rank<RecvView>() == 1,
-                "KokkosComm::Experimental::nccl::allreduce: only rank-1 Views are supported");
+  static_assert(KC::rank<SendView>() <= 1 and KC::rank<RecvView>() <= 1,
+                "KokkosComm::Experimental::nccl::allreduce: Views with rank higher than 1 are not supported");
   Kokkos::Tools::pushRegion("KokkosComm::Experimental::nccl::allreduce");
 
   Req<Nccl> req{space.cuda_stream()};
-  if (is_contiguous(sv) and is_contiguous(rv)) {
-    ncclAllReduce(data_handle(sv), data_handle(rv), span(sv), Impl::datatype_v<ST>, op, comm, space.cuda_stream());
+  if (KC::is_contiguous(sv) and KC::is_contiguous(rv)) {
+    ncclAllReduce(KC::data_handle(sv), KC::data_handle(rv), KC::span(sv), Impl::datatype_v<ST>, op, comm,
+                  space.cuda_stream());
   } else {
     Kokkos::abort("KokkosComm::Experimental::nccl::allreduce: unimplemented for non-contiguous Views");
   }
