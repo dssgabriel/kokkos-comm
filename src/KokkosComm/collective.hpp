@@ -22,35 +22,45 @@
 
 namespace KokkosComm::Experimental {
 
-/// Broadcast w/ explicit handle
+/// Copy the `sv` view on the `root` rank to all ranks' `rv` view.
+///
+/// The `sv` view is only used on the `root` rank and ignored for all other ranks.
 template <KokkosView SendView, KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
           CommunicationSpace CommSpace = DefaultCommunicationSpace>
 auto broadcast(Handle<ExecSpace, CommSpace>& h, const SendView sv, RecvView rv, int root) -> Req<CommSpace> {
   return Impl::Broadcast<SendView, RecvView, ExecSpace, CommSpace>::execute(h, sv, rv, root);
 }
 
-/// In-place broadcast w/ explicit handle
+/// In-place variant of `broadcast`. Copy the `v` view from the `root` rank to all ranks' `v` view.
 template <KokkosView View, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
           CommunicationSpace CommSpace = DefaultCommunicationSpace>
 auto broadcast(Handle<ExecSpace, CommSpace>& h, View v, int root) -> Req<CommSpace> {
   return Impl::Broadcast<View, View, ExecSpace, CommSpace>::execute(h, v, v, root);
 }
 
-/// All-gather w/ explicit handle
+/// Copy the `sv` view from each rank to the `rv` view, receiving data from rank `i` at offset
+/// `i * KokkosComm::span(sv)`.
+///
+/// Note: this assumes the span of the `rv` view to be `h.size() * KokkosComm::span(sv)`.
 template <KokkosView SendView, KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
           CommunicationSpace CommSpace = DefaultCommunicationSpace>
 auto allgather(Handle<ExecSpace, CommSpace>& h, const SendView sv, RecvView rv) -> Req<CommSpace> {
   return Impl::AllGather<SendView, RecvView, ExecSpace, CommSpace>::execute(h, sv, rv);
 }
 
-/// All-to-all w/ explicit handle
+/// Send `count` elements from the `sv` view, and receive `count` elements from all other ranks to the `rv` view.
+///
+/// Data to send to destination rank `i` is taken from the `sv` view at offset `i * count`.
+/// Data to receive from source rank `j` is placed into the `rv` view at offset `j * count`.
+///
+/// Note: this assumes the span of both `sv` and `rv` views to be `h.size * count`.
 template <KokkosView SendView, KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
           CommunicationSpace CommSpace = DefaultCommunicationSpace>
 auto alltoall(Handle<ExecSpace, CommSpace>& h, const SendView sv, RecvView rv, int count) -> Req<CommSpace> {
   return Impl::AllToAll<SendView, RecvView, ExecSpace, CommSpace>::execute(h, sv, rv, count);
 }
 
-/// All-reduce w/ explicit handle
+/// Reduce the `sv` view using the `RedOp` operation and copy the result to all ranks' `rv` view.
 template <KokkosView SendView, KokkosView RecvView, ReductionOperator RedOp,
           KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
           CommunicationSpace CommSpace   = DefaultCommunicationSpace>
@@ -58,7 +68,9 @@ auto allreduce(Handle<ExecSpace, CommSpace>& h, const SendView sv, RecvView rv, 
   return Impl::AllReduce<SendView, RecvView, RedOp, ExecSpace, CommSpace>::execute(h, sv, rv);
 }
 
-/// Reduce w/ explicit handle
+/// Reduce the `sv` view using the `RedOp` operation and copy the result to the `root` rank's `rv` view.
+///
+/// The `rv` view is only used on the `root` rank and ignored for all other ranks.
 template <KokkosView SendView, KokkosView RecvView, ReductionOperator RedOp,
           KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
           CommunicationSpace CommSpace   = DefaultCommunicationSpace>
