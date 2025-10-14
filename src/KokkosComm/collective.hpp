@@ -8,6 +8,7 @@
 #include <Kokkos_Core_fwd.hpp>
 
 #include "fwd.hpp"
+#include "reduction_op.hpp"
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
 #include "nccl/nccl_space.hpp"
 #include "nccl/handle.hpp"
@@ -53,7 +54,7 @@ auto alltoall(Handle<ExecSpace, CommSpace>& h, const SendView sv, RecvView rv, i
 template <KokkosView SendView, KokkosView RecvView, ReductionOperator RedOp,
           KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
           CommunicationSpace CommSpace   = DefaultCommunicationSpace>
-auto allreduce(Handle<ExecSpace, CommSpace>& h, const SendView sv, RecvView rv) -> Req<CommSpace> {
+auto allreduce(Handle<ExecSpace, CommSpace>& h, const SendView sv, RecvView rv, RedOp) -> Req<CommSpace> {
   return Impl::AllReduce<SendView, RecvView, RedOp, ExecSpace, CommSpace>::execute(h, sv, rv);
 }
 
@@ -61,7 +62,7 @@ auto allreduce(Handle<ExecSpace, CommSpace>& h, const SendView sv, RecvView rv) 
 template <KokkosView SendView, KokkosView RecvView, ReductionOperator RedOp,
           KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
           CommunicationSpace CommSpace   = DefaultCommunicationSpace>
-auto reduce(Handle<ExecSpace, CommSpace>& h, const SendView sv, RecvView rv, int root) -> Req<CommSpace> {
+auto reduce(Handle<ExecSpace, CommSpace>& h, const SendView sv, RecvView rv, int root, RedOp) -> Req<CommSpace> {
   return Impl::Reduce<SendView, RecvView, RedOp, ExecSpace, CommSpace>::execute(h, sv, rv, root);
 }
 
