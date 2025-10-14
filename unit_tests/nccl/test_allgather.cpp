@@ -25,36 +25,40 @@ TYPED_TEST_SUITE(AllGather, ScalarTypes);
 template <typename Scalar>
 auto allgather_0d() -> void {
   auto nccl_ctx = test_utils::nccl::Ctx::init();
-  KokkosComm::Handle h(ExecSpace(), nccl_ctx.comm());
+  KokkosComm::Handle<ExecSpace, CommSpace> h(ExecSpace(), nccl_ctx.comm());
+  int rank = h.rank();
+  int size = h.size();
 
   Kokkos::View<Scalar> sv("sv");
-  Kokkos::View<Scalar *> rv("rv", h.size());
+  Kokkos::View<Scalar *> rv("rv", size);
 
   // Fill send view, 1 element per sender: their rank
   Kokkos::parallel_for(
-      Kokkos::RangePolicy(ExecSpace(), 0, sv.extent(0)), KOKKOS_LAMBDA(int) { sv() = h.rank(); });
+      Kokkos::RangePolicy(ExecSpace(), 0, sv.extent(0)), KOKKOS_LAMBDA(const int) { sv() = rank; });
   // Using the same execution space for both operations lets us not need an explicit `fence`
   auto req = KokkosComm::Experimental::allgather(h, sv, rv);
   KokkosComm::wait(req);
 
   int errs;
   Kokkos::parallel_reduce(
-      rv.extent(0), KOKKOS_LAMBDA(int &src, int &lsum) { lsum += rv(src) != src; }, errs);
+      rv.extent(0), KOKKOS_LAMBDA(const int src, int &lsum) { lsum += rv(src) != src; }, errs);
   EXPECT_EQ(errs, 0);
 }
 
 template <typename Scalar>
 auto allgather_contig_1d() -> void {
   auto nccl_ctx = test_utils::nccl::Ctx::init();
-  KokkosComm::Handle h(ExecSpace(), nccl_ctx.comm());
+  KokkosComm::Handle<ExecSpace, CommSpace> h(ExecSpace(), nccl_ctx.comm());
+  int rank = h.rank();
+  int size = h.size();
 
   const int n_contrib = 100;
   Kokkos::View<Scalar *> sv("sv", n_contrib);
-  Kokkos::View<Scalar *> rv("rv", h.size() * n_contrib);
+  Kokkos::View<Scalar *> rv("rv", size * n_contrib);
 
   // Fill send buffer
   Kokkos::parallel_for(
-      sv.extent(0), KOKKOS_LAMBDA(int i) { sv(i) = h.rank() + i; });
+      sv.extent(0), KOKKOS_LAMBDA(const int i) { sv(i) = rank + i; });
   // Using the same execution space for both operations lets us not need an explicit `fence`
   auto req = KokkosComm::Experimental::allgather(h, sv, rv);
   KokkosComm::wait(req);
@@ -62,7 +66,7 @@ auto allgather_contig_1d() -> void {
   int errs;
   Kokkos::parallel_reduce(
       rv.extent(0),
-      KOKKOS_LAMBDA(int &i, int &lsum) {
+      KOKKOS_LAMBDA(const int i, int &lsum) {
         const int src = i / n_contrib;
         const int j   = i % n_contrib;
         lsum += rv(i) != src + j;

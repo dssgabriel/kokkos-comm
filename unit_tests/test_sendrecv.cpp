@@ -26,7 +26,7 @@ using ScalarTypes =
 TYPED_TEST_SUITE(SendRecv, ScalarTypes);
 
 template <KokkosComm::KokkosView View1D>
-void test_1d(const View1D &a) {
+void test_1d(const View1D &v) {
   static_assert(View1D::rank == 1, "");
   using Scalar = typename View1D::non_const_value_type;
 
@@ -35,31 +35,34 @@ void test_1d(const View1D &a) {
   // This hack will be required as long as we don't define a way to create a "default" NCCL communicator in KokkosComm.
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
   auto nccl_ctx = test_utils::nccl::Ctx::init();
-  KokkosComm::Handle h(Kokkos::Cuda(), nccl_ctx.comm());
+  KokkosComm::Handle<Kokkos::Cuda, KokkosComm::Experimental::Nccl> h(Kokkos::Cuda(), nccl_ctx.comm());
 #else
   KokkosComm::Handle h;
 #endif
-  if (h.size() < 2) {
-    GTEST_SKIP() << "Requires >= 2 ranks (" << h.size() << " provided)";
+  int rank = h.rank();
+  int size = h.size();
+  if (size < 2) {
+    GTEST_SKIP() << "Requires >= 2 ranks (" << size << " provided)";
   }
+  int src = 0;
+  int dst = 1;
 
-  if (0 == h.rank()) {
-    int dst = 1;
+  if (rank == src) {
     Kokkos::parallel_for(
-        a.extent(0), KOKKOS_LAMBDA(const int i) { a(i) = i; });
-    KokkosComm::wait(KokkosComm::send(h, a, dst));
-  } else if (1 == h.rank()) {
-    int src = 0;
-    KokkosComm::wait(KokkosComm::recv(h, a, src));
+        v.extent(0), KOKKOS_LAMBDA(const int i) { v(i) = i; });
+    KokkosComm::wait(KokkosComm::send(h, v, dst));
+  } else if (rank == dst) {
+    KokkosComm::wait(KokkosComm::recv(h, v, src));
+
     int errs;
     Kokkos::parallel_reduce(
-        a.extent(0), KOKKOS_LAMBDA(const int &i, int &lsum) { lsum += a(i) != Scalar(i); }, errs);
+        v.extent(0), KOKKOS_LAMBDA(const int i, int &lsum) { lsum += v(i) != Scalar(i); }, errs);
     ASSERT_EQ(errs, 0);
   }
 }
 
 template <KokkosComm::KokkosView View2D>
-void test_2d(const View2D &a) {
+void test_2d(const View2D &v) {
   static_assert(View2D::rank == 2, "");
   using Scalar = typename View2D::non_const_value_type;
 
@@ -69,36 +72,39 @@ void test_2d(const View2D &a) {
 #else
   KokkosComm::Handle h;
 #endif
-  if (h.size() < 2) {
-    GTEST_SKIP() << "Requires >= 2 ranks (" << h.size() << " provided)";
+  int rank = h.rank();
+  int size = h.size();
+  if (size < 2) {
+    GTEST_SKIP() << "Requires >= 2 ranks (" << size << " provided)";
   }
+  int src = 0;
+  int dst = 1;
 
   using Policy = Kokkos::MDRangePolicy<Kokkos::Rank<2>>;
-  Policy policy({0, 0}, {a.extent(0), a.extent(1)});
+  Policy policy({0, 0}, {v.extent(0), v.extent(1)});
 
-  if (0 == h.rank()) {
-    int dst = 1;
+  if (rank == src) {
     Kokkos::parallel_for(
-        policy, KOKKOS_LAMBDA(int i, int j) { a(i, j) = i * a.extent(0) + j; });
-    KokkosComm::wait(KokkosComm::send(h, a, dst));
-  } else if (1 == h.rank()) {
-    int src = 0;
-    KokkosComm::wait(KokkosComm::recv(h, a, src));
+        policy, KOKKOS_LAMBDA(const int i, const int j) { v(i, j) = i * v.extent(0) + j; });
+    KokkosComm::wait(KokkosComm::send(h, v, dst));
+  } else if (rank == dst) {
+    KokkosComm::wait(KokkosComm::recv(h, v, src));
+
     int errs;
     Kokkos::parallel_reduce(
-        policy, KOKKOS_LAMBDA(int i, int j, int &lsum) { lsum += a(i, j) != Scalar(i * a.extent(0) + j); }, errs);
+        policy, KOKKOS_LAMBDA(const int i, const int j, int &lsum) { lsum += v(i, j) != Scalar(i * v.extent(0) + j); },
+        errs);
     ASSERT_EQ(errs, 0);
   }
 }
 
 TYPED_TEST(SendRecv, 1D_contig) {
-  auto a = ViewBuilder<typename TestFixture::Scalar, 1>::view(contig{}, "a", 1013);
-  test_1d(a);
+  auto v = ViewBuilder<typename TestFixture::Scalar, 1>::view(contig{}, "v", 1013);
+  test_1d(v);
 }
-
 TYPED_TEST(SendRecv, 2D_contig) {
-  auto a = ViewBuilder<typename TestFixture::Scalar, 2>::view(contig{}, "a", 137, 17);
-  test_2d(a);
+  auto v = ViewBuilder<typename TestFixture::Scalar, 2>::view(contig{}, "v", 137, 17);
+  test_2d(v);
 }
 
 }  // namespace

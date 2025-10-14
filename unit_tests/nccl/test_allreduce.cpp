@@ -25,44 +25,48 @@ TYPED_TEST_SUITE(AllReduce, ScalarTypes);
 template <typename Scalar>
 auto allreduce_0d() -> void {
   auto nccl_ctx = test_utils::nccl::Ctx::init();
-  KokkosComm::Handle h(ExecSpace(), nccl_ctx.comm());
+  KokkosComm::Handle<ExecSpace, CommSpace> h(ExecSpace(), nccl_ctx.comm());
+  int rank = h.rank();
+  int size = h.size();
 
   Kokkos::View<Scalar> sv("sv");
-  Kokkos::View<Scalar> rv("rv", h.size());
+  Kokkos::View<Scalar> rv("rv", size);
 
   // Prepare send buffer
   Kokkos::parallel_for(
-      Kokkos::RangePolicy(ExecSpace(), 0, sv.extent(0)), KOKKOS_LAMBDA(int) { sv() = h.rank(); });
+      Kokkos::RangePolicy(ExecSpace(), 0, sv.extent(0)), KOKKOS_LAMBDA(const int) { sv() = rank; });
   // Using the same execution space for both operations lets us not need an explicit `fence`
   auto req = KokkosComm::Experimental::allreduce(h, sv, rv, KokkosComm::Sum{});
   KokkosComm::wait(req);
 
   int errs;
   Kokkos::parallel_reduce(
-      rv.extent(0), KOKKOS_LAMBDA(int, int &lsum) { lsum += (rv() != h.size() * (h.size() - 1) / 2); }, errs);
+      rv.extent(0), KOKKOS_LAMBDA(const int, int &lsum) { lsum += (rv() != size * (size - 1) / 2); }, errs);
   EXPECT_EQ(errs, 0);
 }
 
 template <typename Scalar>
 auto allreduce_contig_1d() -> void {
   auto nccl_ctx = test_utils::nccl::Ctx::init();
-  KokkosComm::Handle h(ExecSpace(), nccl_ctx.comm());
+  KokkosComm::Handle<ExecSpace, CommSpace> h(ExecSpace(), nccl_ctx.comm());
+  int rank = h.rank();
+  int size = h.size();
 
   int n_contrib = 10;
   Kokkos::View<Scalar *> sv("sv", n_contrib);
-  Kokkos::View<Scalar *> rv("rv", h.size());
+  Kokkos::View<Scalar *> rv("rv", size);
 
   // Prepare send buffer
   Kokkos::parallel_for(
-      Kokkos::RangePolicy(ExecSpace(), 0, sv.extent(0)), KOKKOS_LAMBDA(int i) { sv(i) = h.rank() + i; });
+      Kokkos::RangePolicy(ExecSpace(), 0, sv.extent(0)), KOKKOS_LAMBDA(const int i) { sv(i) = rank + i; });
   // Using the same execution space for both operations lets us not need an explicit `fence`
   auto req = KokkosComm::Experimental::allreduce(h, sv, rv, KokkosComm::Sum{});
   KokkosComm::wait(req);
 
   int errs;
   Kokkos::parallel_reduce(
-      rv.extent(0),
-      KOKKOS_LAMBDA(int i, int &lsum) { lsum += (rv(i) != h.size() * (h.size() - 1) / 2 + h.size() * i); }, errs);
+      rv.extent(0), KOKKOS_LAMBDA(const int i, int &lsum) { lsum += (rv(i) != size * (size - 1) / 2 + size * i); },
+      errs);
   EXPECT_EQ(errs, 0);
 }
 
