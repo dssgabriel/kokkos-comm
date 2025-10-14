@@ -38,7 +38,7 @@ struct DeepCopy {
   }
 
   template <KokkosExecutionSpace ExecSpace>
-  static auto unpack_into(const ExecSpace &space, const View &dst, const PackedView &src) -> void {
+  static auto unpack_into(const ExecSpace &space, View &dst, const PackedView &src) -> void {
     Kokkos::deep_copy(space, dst, src);
   }
 };
