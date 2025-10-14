@@ -3,30 +3,19 @@
 
 #pragma once
 
-#include <format>
-
 #include <cuda.h>
-#include <Kokkos_Core.hpp>
 #include <nccl.h>
+#include <Kokkos_Core.hpp>
 
 #include <KokkosComm/fwd.hpp>
 #include "nccl_space.hpp"
 
 namespace KokkosComm {
 
-/*
-- init_fence
-- allocations
-- pre_copies
-- pre_comm_fence
-- comm
-- wait
-- post-wait
-*/
-template <KokkosExecutionSpace ExecSpace>
-class Handle<ExecSpace, Experimental::Nccl> {
+template <>
+class Handle<Kokkos::Cuda, Experimental::Nccl> {
  public:
-  using execution_space     = ExecSpace;
+  using execution_space     = Kokkos::Cuda;
   using communication_space = Experimental::Nccl;
   using communicator_type   = ncclComm_t;
   using datatype_type       = ncclDataType_t;
