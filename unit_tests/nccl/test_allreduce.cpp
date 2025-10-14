@@ -28,11 +28,12 @@ auto allreduce_0d() -> void {
   Kokkos::View<Scalar> sv("sv");
   Kokkos::View<Scalar> rv("rv");
 
-  // Fill send buffer
+  // Prepare send buffer
   Kokkos::parallel_for(
-      sv.extent(0), KOKKOS_LAMBDA(int) { sv() = h.rank(); });
-
-  KokkosComm::allreduce<KokkosComm::Sum>(h, sv, rv);
+      Kokkos::RangePolicy(ExecSpace(), sv.extent(0)), KOKKOS_LAMBDA(int) { sv() = h.rank(); });
+  // Using the same execution space for both operations lets us not need an explicit `fence`
+  auto req = KokkosComm::allreduce(h, sv, rv, KokkosComm::Sum);
+  KokkosComm::wait(req);
 
   int errs;
   Kokkos::parallel_reduce(
@@ -49,11 +50,12 @@ auto allreduce_contig_1d() -> void {
   Kokkos::View<Scalar *> sv("sv", n_contrib);
   Kokkos::View<Scalar *> rv("rv", n_contrib);
 
-  // Fill send buffer
+  // Prepare send buffer
   Kokkos::parallel_for(
-      sv.extent(0), KOKKOS_LAMBDA(int i) { sv(i) = h.rank() + i; });
-
-  KokkosComm::allreduce<KokkosComm::Sum>(h, sv, rv);
+      Kokkos::RangePolicy(ExecSpace(), sv.extent(0)), KOKKOS_LAMBDA(int i) { sv(i) = h.rank() + i; });
+  // Using the same execution space for both operations lets us not need an explicit `fence`
+  auto req = KokkosComm::allreduce(h, sv, rv, KokkosComm::Sum);
+  KokkosComm::wait(req);
 
   int errs;
   Kokkos::parallel_reduce(

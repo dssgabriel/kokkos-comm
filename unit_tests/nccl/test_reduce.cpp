@@ -24,7 +24,7 @@ TYPED_TEST_SUITE(Reduce, ScalarTypes);
 template <typename Scalar>
 auto reduce_contig_1d() -> void {
   auto nccl_ctx = test_utils::nccl::Ctx::init();
-  KokkosComm::Handle<ExecSpace, CommSpace> h(nccl_ctx.comm());
+  KokkosComm::Handle h(ExecSpace(), nccl_ctx.comm());
   int root = 0;
 
   int n_contrib = 10;
@@ -34,11 +34,12 @@ auto reduce_contig_1d() -> void {
     Kokkos::resize(rv, h.size());
   }
 
-  // Fill send buffer
+  // Prepare send buffer
   Kokkos::parallel_for(
-      sv.extent(0), KOKKOS_LAMBDA(int i) { sv(i) = h.rank() + i; });
-
-  KokkosComm::reduce<KokkosComm::Sum>(h, sv, rv, root);
+      Kokkos::RangePolicy(ExecSpace(), sv.extent(0)), KOKKOS_LAMBDA(int i) { sv(i) = h.rank() + i; });
+  // Using the same execution space for both operations lets us not need an explicit `fence`
+  auto req = KokkosComm::reduce(h, sv, rv, root, KokkosComm::Sum);
+  KokkosComm::wait(req);
 
   if (h.rank() == root) {
     int errs;
