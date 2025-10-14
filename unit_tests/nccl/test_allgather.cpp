@@ -32,7 +32,7 @@ auto allgather_0d() -> void {
   Kokkos::View<Scalar> sv("sv");
   Kokkos::View<Scalar *> rv("rv", size);
 
-  // Fill send view, 1 element per sender: their rank
+  // Prepare send view, 1 element per sender: their rank
   Kokkos::parallel_for(
       Kokkos::RangePolicy(ExecSpace(), 0, sv.extent(0)), KOKKOS_LAMBDA(const int) { sv() = rank; });
   // Using the same execution space for both operations lets us not need an explicit `fence`
@@ -56,9 +56,9 @@ auto allgather_contig_1d() -> void {
   Kokkos::View<Scalar *> sv("sv", n_contrib);
   Kokkos::View<Scalar *> rv("rv", size * n_contrib);
 
-  // Fill send buffer
+  // Prepare send view
   Kokkos::parallel_for(
-      sv.extent(0), KOKKOS_LAMBDA(const int i) { sv(i) = rank + i; });
+      Kokkos::RangePolicy(ExecSpace(), 0, sv.extent(0)), KOKKOS_LAMBDA(const int i) { sv(i) = rank + i; });
   // Using the same execution space for both operations lets us not need an explicit `fence`
   auto req = KokkosComm::Experimental::allgather(h, sv, rv);
   KokkosComm::wait(req);
