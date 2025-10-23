@@ -8,7 +8,7 @@ target_sources(
     FILE_SET kokkoscomm_public_headers
     TYPE HEADERS
     BASE_DIRS ${PROJECT_SOURCE_DIR}/src
-    FILES KokkosComm.hpp collective.hpp concepts.hpp fwd.hpp point_to_point.hpp traits.hpp
+    FILES KokkosComm.hpp collective.hpp concepts.hpp fwd.hpp point_to_point.hpp traits.hpp reduction_op.hpp
 )
 
 # Implementation detail headers
@@ -40,22 +40,27 @@ if(KOKKOSCOMM_ENABLE_MPI)
       TYPE HEADERS
       BASE_DIRS ${PROJECT_SOURCE_DIR}/src
       FILES
-        mpi/allgather.hpp
-        mpi/alltoall.hpp
-        mpi/barrier.hpp
-        mpi/channel.hpp
+        # Structures
+        mpi/mpi_space.hpp
         mpi/comm_mode.hpp
         mpi/handle.hpp
+        mpi/req.hpp
+        mpi/comm_mode.hpp
+        mpi/channel.hpp
+        # P2P
         mpi/irecv.hpp
         mpi/isend.hpp
-        mpi/mpi_space.hpp
         mpi/recv.hpp
-        mpi/allreduce.hpp
-        mpi/reduce.hpp
-        mpi/req.hpp
         mpi/send.hpp
+        # Collectives
         mpi/broadcast.hpp
+        mpi/allgather.hpp
+        mpi/allreduce.hpp
+        mpi/alltoall.hpp
+        mpi/reduce.hpp
         mpi/scan.hpp
+        # Other/utilities
+        mpi/barrier.hpp
   )
 
   # Implementation detail MPI headers
@@ -74,6 +79,41 @@ if(KOKKOSCOMM_ENABLE_MPI)
   )
 endif()
 
+if(KOKKOSCOMM_ENABLE_NCCL)
+  # Public NCCL headers
+  target_sources(
+    KokkosComm
+    INTERFACE
+      FILE_SET kokkoscomm_nccl_headers
+      TYPE HEADERS
+      BASE_DIRS ${PROJECT_SOURCE_DIR}/src
+      FILES
+        # Structures
+        nccl/nccl_space.hpp
+        nccl/handle.hpp
+        nccl/req.hpp
+        # P2P
+        nccl/send.hpp
+        nccl/recv.hpp
+        # Collectives
+        nccl/broadcast.hpp
+        nccl/alltoall.hpp
+        nccl/allgather.hpp
+        nccl/allreduce.hpp
+        nccl/reduce.hpp
+  )
+
+  # Implementation detail NCCL headers
+  target_sources(
+    KokkosComm
+    INTERFACE
+      FILE_SET kokkoscomm_nccl_impl_headers
+      TYPE HEADERS
+      BASE_DIRS ${PROJECT_SOURCE_DIR}/src
+      FILES nccl/impl/pack_traits.hpp nccl/impl/packer.hpp nccl/impl/types.hpp
+  )
+endif()
+
 if(KokkosComm_ABORT_ON_ERROR)
   target_compile_definitions(KokkosComm INTERFACE KOKKOSCOMM_ABORT_ON_ERROR)
 endif()
@@ -84,7 +124,6 @@ include(CheckCXXCompilerFlag)
 macro(kokkoscomm_check_and_add_compile_options)
   set(target ${ARGV0})
   set(flag ${ARGV1})
-
   check_cxx_compiler_flag(
     ${flag}
     HAS_${flag}
@@ -112,16 +151,21 @@ kokkoscomm_check_and_add_compile_options(KokkosCommFlags -Wpedantic)
 kokkoscomm_check_and_add_compile_options(KokkosCommFlags -pedantic)
 kokkoscomm_check_and_add_compile_options(KokkosCommFlags -Wcast-align)
 kokkoscomm_check_and_add_compile_options(KokkosCommFlags -Wformat=2)
-kokkoscomm_check_and_add_compile_options(KokkosCommFlags -Wmissing-src-dirs)
+kokkoscomm_check_and_add_compile_options(KokkosCommFlags -Wmissing-include-dirs)
 kokkoscomm_check_and_add_compile_options(KokkosCommFlags -Wno-gnu-zero-variadic-macro-arguments)
 
 # Linking
-# gh/pmodels/mpich#7304: MPICH 4.2.3 and 4.3.0 (and maybe earlier) rely on being
-# linked before CUDA and friends, so link MPI before Kokkos.
-# TODO_CMAKE: in CMake 3.31, we can use LINK_LIBRARIES_STRATEGY to explicitly ask CMake not to
-# reorder how libraries are linked. In the mean time, we have to just hope (?).
+target_link_libraries(
+  KokkosComm
+  INTERFACE
+    KokkosComm::KokkosCommFlags
+    Kokkos::kokkos
+)
 if(KOKKOSCOMM_ENABLE_MPI)
   target_link_libraries(KokkosComm INTERFACE MPI::MPI_CXX)
+endif()
+if(KOKKOSCOMM_ENABLE_NCCL)
+  target_link_libraries(KokkosComm INTERFACE NCCL::NCCL)
 endif()
 target_link_libraries(
   KokkosComm
@@ -144,6 +188,10 @@ install(
   kokkoscomm_mpi_headers
   FILE_SET
   kokkoscomm_mpi_impl_headers
+  FILE_SET
+  kokkoscomm_nccl_headers
+  FILE_SET
+  kokkoscomm_nccl_impl_headers
   FILE_SET
   kokkoscomm_config_headers
 )

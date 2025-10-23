@@ -11,10 +11,12 @@ project(
 enable_testing()
 
 # Treat the unit tests as a separate project
-# If not included in the Kokkos Comm build, find Kokkos Comm to do a standalone build
+# If not included in the KokkosComm build, find KokkosComm to do a standalone build
 if(NOT TARGET KokkosComm::KokkosComm)
   find_package(KokkosComm REQUIRED)
 endif()
+# MPI is used in standalone when setting up the GTest environment.
+find_package(MPI REQUIRED)
 
 include(FetchContent)
 
@@ -25,22 +27,19 @@ endif()
 
 FetchContent_Declare(
   googletest
-  URL
-    https://github.com/google/googletest/archive/a7f443b80b105f940225332ed3c31f2790092f47.zip # 05-28-2024
+  GIT_REPOSITORY https://github.com/google/googletest.git
+  GIT_TAG
+    52eb8108c5bdec04579160ae17225d66034bd723 # v1.17.0
 )
+# Don't install googletest
+set(INSTALL_GTEST OFF)
 # For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-# FetchContent_MakeAvailable(googletest) was making install install googletest as well
-# EXCLUDE_FROM_ALL here seems to be the magic
-FetchContent_GetProperties(googletest)
-if(NOT googletest_POPULATED)
-  FetchContent_Populate(googletest)
-  add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR} EXCLUDE_FROM_ALL)
-endif()
+FetchContent_MakeAvailable(googletest)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  target_compile_options(gtest PRIVATE -w)
+  target_compile_options(gtest PUBLIC -w)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-  target_compile_options(gtest PRIVATE /w)
+  target_compile_options(gtest PUBLIC /w)
 endif()
 
 if(KOKKOSCOMM_ENABLE_MPI)
@@ -48,7 +47,7 @@ if(KOKKOSCOMM_ENABLE_MPI)
   add_executable(test-mpi)
   target_sources(test-mpi PRIVATE mpi/test_mpi.cpp)
   # doesn't use KokkosComm, so explicitly link MPI
-  target_link_libraries(test-mpi MPI::MPI_CXX)
+  target_link_libraries(test-mpi PRIVATE MPI::MPI_CXX)
   add_test(
     NAME test-mpi-1
     COMMAND
@@ -64,7 +63,7 @@ if(KOKKOSCOMM_ENABLE_MPI)
   if(Kokkos_ENABLE_CUDA)
     add_executable(test-mpi-cuda-sendrecv)
     target_sources(test-mpi-cuda-sendrecv PRIVATE mpi/test_mpi_cuda_sendrecv.cpp)
-    target_link_libraries(test-mpi-cuda-sendrecv MPI::MPI_CXX)
+    target_link_libraries(test-mpi-cuda-sendrecv PRIVATE MPI::MPI_CXX)
 
     # MPICH needs dynamic cudart (we think, pmodels/mpich#7304)
     if(KOKKOSCOMM_IMPL_MPI_IS_MPICH)
@@ -91,10 +90,10 @@ if(KOKKOSCOMM_ENABLE_MPI)
   endif()
 
   if(Kokkos_ENABLE_HIP)
+    find_package(hip REQUIRED)
     add_executable(test-mpi-hip-sendrecv)
     target_sources(test-mpi-hip-sendrecv PRIVATE mpi/test_mpi_hip_sendrecv.cpp)
-    target_link_libraries(test-mpi-hip-sendrecv MPI::MPI_CXX)
-    find_package(hip REQUIRED)
+    target_link_libraries(test-mpi-hip-sendrecv PRIVATE MPI::MPI_CXX)
     target_link_libraries(test-mpi-hip-sendrecv hip::host)
     target_compile_options(
       test-mpi-hip-sendrecv
@@ -110,27 +109,35 @@ if(KOKKOSCOMM_ENABLE_MPI)
   endif()
 endif()
 
-# Tests using the MPI communication space, but not linking with MPI itself
+if(KOKKOSCOMM_ENABLE_NCCL)
+  # Standalone NCCL smoke tests (do not use KokkosComm)
+  add_executable(test-nccl)
+  target_sources(test-nccl PRIVATE nccl/test_nccl.cpp)
+  target_compile_features(test-nccl PRIVATE cxx_std_20)
+  # doesn't use KokkosComm, so explicitly link with NCCL
+  target_link_libraries(test-nccl PRIVATE NCCL::NCCL)
+  add_test(NAME test-nccl-smoke COMMAND ./test-nccl)
+endif()
+
+# Tests using the MPI communication space
 function(add_mpi_test test_name num_procs)
   # Extract source files from remaining arguments
-  set(sources ${ARGN})
-
+  set(source_files ${ARGN})
   # Add test_main.cpp and the provided source files
   add_executable(${test_name})
   target_sources(
     ${test_name}
     PRIVATE
       test_main.cpp
-      ${sources}
+      ${source_files}
   )
-
   target_link_libraries(
     ${test_name}
     PRIVATE
       KokkosComm::KokkosComm
+      MPI::MPI_CXX # Explicitly link against MPI
       gtest
   )
-
   add_test(
     NAME ${test_name}
     COMMAND
@@ -138,15 +145,85 @@ function(add_mpi_test test_name num_procs)
   )
 endfunction()
 
-add_mpi_test(test-gtest-mpi       2 mpi/test_gtest_mpi.cpp) # make sure gtest is working
-add_mpi_test(test-mpi-view-access 2 mpi/test_mpi_view_access.cpp) # make sure MPI can access Kokkos::View data
-add_mpi_test(test-sendrecv        2 mpi/test_sendrecv.cpp)
-add_mpi_test(test-isendrecv       2 mpi/test_isendrecv.cpp)
-add_mpi_test(test-barrier         2 mpi/test_barrier.cpp)
-add_mpi_test(test-broadcast       2 mpi/test_broadcast.cpp)
-add_mpi_test(test-reduce          2 mpi/test_reduce.cpp)
-add_mpi_test(test-allreduce       2 mpi/test_allreduce.cpp)
-add_mpi_test(test-alltoall        2 mpi/test_alltoall.cpp)
-add_mpi_test(test-allgather       2 mpi/test_allgather.cpp)
-add_mpi_test(test-scan            2 mpi/test_scan.cpp)
-add_mpi_test(test-channel         2 mpi/test_channel.cpp)
+# Tests using the NCCL communication space
+function(add_nccl_test test_name num_procs)
+  # Extract source files from remaining arguments
+  set(source_files ${ARGN})
+  # Add test_main.cpp and the provided source files
+  add_executable(${test_name})
+  target_sources(
+    ${test_name}
+    PRIVATE
+      test_main.cpp
+      ${source_files}
+  )
+  target_link_libraries(
+    ${test_name}
+    PRIVATE
+      KokkosComm::KokkosComm
+      NCCL::NCCL
+      MPI::MPI_CXX # Explicitly link against MPI because it's needed to setup multi-node NCCL comms
+      gtest
+  )
+  add_test(
+    NAME ${test_name}
+    COMMAND
+      ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${num_procs} ./${test_name}
+  )
+endfunction()
+
+# General KokkosComm tests
+add_executable(test-main)
+target_sources(
+  test-main
+  PRIVATE
+    test_main.cpp
+    test_sendrecv.cpp
+)
+target_compile_features(test-main PRIVATE cxx_std_20)
+target_link_libraries(
+  test-main
+  PRIVATE
+    KokkosComm::KokkosComm
+    MPI::MPI_CXX
+    GTest::gtest_main
+)
+
+if(KokkosComm_ENABLE_MPI)
+  add_mpi_test(test-gtest-mpi       2 mpi/test_gtest_mpi.cpp) # make sure gtest is working
+  add_mpi_test(test-mpi-view-access 2 mpi/test_mpi_view_access.cpp) # make sure MPI can access Kokkos::View data
+  add_mpi_test(test-sendrecv        2 mpi/test_sendrecv.cpp)
+  add_mpi_test(test-isendrecv       2 mpi/test_isendrecv.cpp)
+  add_mpi_test(test-barrier         2 mpi/test_barrier.cpp)
+  add_mpi_test(test-broadcast       2 mpi/test_broadcast.cpp)
+  add_mpi_test(test-reduce          2 mpi/test_reduce.cpp)
+  add_mpi_test(test-allreduce       2 mpi/test_allreduce.cpp)
+  add_mpi_test(test-alltoall        2 mpi/test_alltoall.cpp)
+  add_mpi_test(test-allgather       2 mpi/test_allgather.cpp)
+  add_mpi_test(test-scan            2 mpi/test_scan.cpp)
+
+  add_test(
+    NAME test-main
+    COMMAND
+      ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} 2 ./test-main
+  )
+endif()
+
+if(KokkosComm_ENABLE_NCCL)
+  # Add `unit_tests/nccl/` to included directories
+  target_sources(
+    test-main
+    PRIVATE
+      FILE_SET HEADERS
+      BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/nccl
+  )
+  # Link against NCCL because we depend on raw calls
+  target_link_libraries(test-main PRIVATE NCCL::NCCL)
+
+  add_nccl_test(test-p2p       2 nccl/test_point_to_point.cpp)
+  add_nccl_test(test-broadcast 2 nccl/test_broadcast.cpp)
+  add_nccl_test(test-allgather 2 nccl/test_allgather.cpp)
+  add_nccl_test(test-alltoall  2 nccl/test_alltoall.cpp)
+  add_nccl_test(test-allreduce 2 nccl/test_allreduce.cpp)
+  add_nccl_test(test-reduce    2 nccl/test_reduce.cpp)
+endif()

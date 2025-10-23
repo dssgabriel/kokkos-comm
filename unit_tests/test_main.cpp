@@ -5,11 +5,12 @@
 
 #include <sstream>
 
-#include <mpi.h>
 #include <gtest/gtest.h>
-#include <Kokkos_Core.hpp>
 
 #include <KokkosComm/config.hpp>
+#include <Kokkos_Core.hpp>
+
+#include <mpi.h>
 
 class MpiEnvironment : public ::testing::Environment {
  public:
@@ -74,7 +75,7 @@ int main(int argc, char *argv[]) {
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   if (0 == rank) {
     std::cerr << argv[0] << " (KokkosComm " << KOKKOSCOMM_VERSION_MAJOR << "." << KOKKOSCOMM_VERSION_MINOR << "."
-              << KOKKOSCOMM_VERSION_PATCH << ") with " << size << " ranks\n";
+              << KOKKOSCOMM_VERSION_PATCH << ")\n";
   }
 
   Kokkos::initialize();
@@ -83,10 +84,8 @@ int main(int argc, char *argv[]) {
   ::testing::InitGoogleTest(&argc, argv);
 
   ::testing::AddGlobalTestEnvironment(new MpiEnvironment());
-
   auto &test_listeners = ::testing::UnitTest::GetInstance()->listeners();
   if (0 != rank) delete test_listeners.Release(test_listeners.default_result_printer());
-
   test_listeners.Append(new MpiListener);
 
   // run tests
@@ -94,6 +93,7 @@ int main(int argc, char *argv[]) {
 
   // Finalize MPI before exiting
   Kokkos::finalize();
+
   MPI_Finalize();
 
   return exit_code;

@@ -20,6 +20,7 @@ The error was determined to arise because CUDA was linked before the MPI librari
 implementations from being used. Also, the CUDA libraries were statically linked.
 */
 
+#include <cstdint>
 #include <iostream>
 
 #include <mpi.h>
