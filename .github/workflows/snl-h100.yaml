@@ -7,8 +7,8 @@ on:
   workflow_call:
 
 jobs:
-  PR_CUDA1262_OPENMPI505_MPI:
-    name: PR_CUDA1262_OPENMPI505_MPI
+  PR_CUDA1262_OPENMPI505:
+    name: PR_CUDA1262_OPENMPI505
 
     # this label is correct, but the underlying AT2 runner is actually
     # CUDA 12.6.2 and OpenMPI 5.0.5 <facepalm>
@@ -66,8 +66,8 @@ jobs:
         working-directory: build-mpi
         run: ctest --output-on-failure -V --timeout 1200
 
-  PR_CUDA1262_OPENMPI505_NCCL:
-    name: PR_CUDA1262_OPENMPI505_NCCL
+  PR_CUDA1262_NCCL2275:
+    name: PR_CUDA1262_NCCL2275
 
     # this label is correct, but the underlying AT2 runner is actually
     # CUDA 12.6.2 and OpenMPI 5.0.5 <facepalm>
