@@ -111,6 +111,7 @@ jobs:
           path: kokkos-comm
 
       - name: KokkosComm - Configure NCCL backend
+        # FIXME_NCCL: no performance tests on NCCL
         run: >
           cmake
           -S kokkos-comm
@@ -119,10 +120,10 @@ jobs:
           -DCMAKE_CXX_STANDARD=20
           -DCMAKE_CXX_EXTENSIONS=OFF
           -DKokkos_ROOT=kokkos/install
-          -DKokkosComm_ENABLE_MPI=OFF # Explicitly disable MPI
+          -DKokkosComm_ENABLE_MPI=OFF
           -DKokkosComm_ENABLE_NCCL=ON
           -DKokkosComm_ENABLE_TESTS=ON
-          -DKokkosComm_ENABLE_PERFTESTS=OFF # No performance tests on NCCL
+          -DKokkosComm_ENABLE_PERFTESTS=OFF
 
       - name: KokkosComm - Build NCCL backend
         run: cmake --build build-nccl --parallel $(nproc)
