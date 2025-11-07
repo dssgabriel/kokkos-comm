@@ -9,7 +9,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include <format>
 #include <fstream>
 #include <iosfwd>
 #include <string>
@@ -22,30 +21,32 @@
 
 namespace {
 
-#define MPI_CHECK(cmd)                                                                                     \
-  do {                                                                                                     \
-    if (int res = cmd; res != MPI_SUCCESS) {                                                               \
-      std::cerr << std::format("KokkosComm::unit_tests: {}:{} error(MPI): {}\n", __FILE__, __LINE__, res); \
-      std::exit(-1);                                                                                       \
-    }                                                                                                      \
+#define MPI_CHECK(cmd)                                                                                          \
+  do {                                                                                                          \
+    if (int res = cmd; res != MPI_SUCCESS) {                                                                    \
+      std::cerr << "KokkosComm::unit_tests: " << __FILE__ << ":" << __LINE__ << " error(MPI): " << res << "\n"; \
+                                                                                                                \
+      std::exit(-1);                                                                                            \
+    }                                                                                                           \
   } while (0)
 
-#define NCCL_CHECK(cmd)                                                                               \
-  do {                                                                                                \
-    if (ncclResult_t res = cmd; res != ncclSuccess) {                                                 \
-      std::cerr << std::format("KokkosComm::unit_tests: {}:{} error(NCCL): {}\n", __FILE__, __LINE__, \
-                               ncclGetErrorString(res));                                              \
-      std::exit(-1);                                                                                  \
-    }                                                                                                 \
+#define NCCL_CHECK(cmd)                                                      \
+  do {                                                                       \
+    if (ncclResult_t res = cmd; res != ncclSuccess) {                        \
+      std::cerr << "KokkosComm::unit_tests: " << __FILE__ << ":" << __LINE__ \
+                << " error(NCCL): " << ncclGetErrorString(res) << "\n";      \
+                                                                             \
+      std::exit(-1);                                                         \
+    }                                                                        \
   } while (0)
 
-#define CUDA_CHECK(cmd)                                                                               \
-  do {                                                                                                \
-    if (cudaError_t res = cmd; res != cudaSuccess) {                                                  \
-      std::cerr << std::format("KokkosComm::unit_tests: {}:{} error(CUDA): {}\n", __FILE__, __LINE__, \
-                               cudaGetErrorString(res));                                              \
-      std::exit(-1);                                                                                  \
-    }                                                                                                 \
+#define CUDA_CHECK(cmd)                                                      \
+  do {                                                                       \
+    if (cudaError_t res = cmd; res != cudaSuccess) {                         \
+      std::cerr << "KokkosComm::unit_tests: " << __FILE__ << ":" << __LINE__ \
+                << " error(CUDA): " << cudaGetErrorString(res) << "\n";      \
+      std::exit(-1);                                                         \
+    }                                                                        \
   } while (0)
 
 constexpr std::string_view HOSTID_FILE = "/proc/sys/kernel/random/boot_id";

@@ -3,7 +3,6 @@
 
 // NOTE: This file is a NCCL smoke test and does nothing related to KokkosComm.
 
-#include <format>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -14,22 +13,23 @@
 
 namespace {
 
-#define NCCL_CHECK(cmd)                                                                               \
-  do {                                                                                                \
-    if (ncclResult_t res = cmd; res != ncclSuccess) {                                                 \
-      std::cerr << std::format("KokkosComm::unit_tests: {}:{} error(NCCL): {}\n", __FILE__, __LINE__, \
-                               ncclGetErrorString(res));                                              \
-      std::exit(-1);                                                                                  \
-    }                                                                                                 \
+#define NCCL_CHECK(cmd)                                                      \
+  do {                                                                       \
+    if (ncclResult_t res = cmd; res != ncclSuccess) {                        \
+      std::cerr << "KokkosComm::unit_tests: " << __FILE__ << ":" << __LINE__ \
+                << " error(NCCL): " << ncclGetErrorString(res) << "\n";      \
+                                                                             \
+      std::exit(-1);                                                         \
+    }                                                                        \
   } while (0)
 
-#define CUDA_CHECK(cmd)                                                                               \
-  do {                                                                                                \
-    if (cudaError_t res = cmd; res != cudaSuccess) {                                                  \
-      std::cerr << std::format("KokkosComm::unit_tests: {}:{} error(CUDA): {}\n", __FILE__, __LINE__, \
-                               cudaGetErrorString(res));                                              \
-      std::exit(-1);                                                                                  \
-    }                                                                                                 \
+#define CUDA_CHECK(cmd)                                                      \
+  do {                                                                       \
+    if (cudaError_t res = cmd; res != cudaSuccess) {                         \
+      std::cerr << "KokkosComm::unit_tests: " << __FILE__ << ":" << __LINE__ \
+                << " error(CUDA): " << cudaGetErrorString(res) << "\n";      \
+      std::exit(-1);                                                         \
+    }                                                                        \
   } while (0)
 
 std::string uid_to_string(const ncclUniqueId &id) {
