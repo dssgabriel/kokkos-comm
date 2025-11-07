@@ -38,7 +38,7 @@ jobs:
       - name: Kokkos - Build
         run: cmake --build kokkos/build --parallel $(nproc)
       - name: Kokkos - Install
-        run: cmake --install kokkos/build --parallel $(nproc) --prefix kokkos/install
+        run: cmake --build kokkos/build --target install --parallel $(nproc) --prefix kokkos/install
 
       - name: NCCL - Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
