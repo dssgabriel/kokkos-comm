@@ -7,8 +7,11 @@ on:
   workflow_call:
 
 jobs:
-  PR_CUDA1250_OPENMPI504:
-    name: PR_CUDA1250_OPENMPI504
+  PR_CUDA1262_OPENMPI505:
+    name: PR_CUDA1262_OPENMPI505
+
+    # this label is correct, but the underlying AT2 runner is actually
+    # CUDA 12.6.2 and OpenMPI 5.0.5 <facepalm>
     runs-on: [cuda125-openmpi504-latest-latest]
     steps:
       - name: Check NVIDIA GPU
