@@ -39,21 +39,6 @@ jobs:
         run: cmake --build kokkos/build --parallel $(nproc)
       - name: Kokkos - Install
         run: cmake --build kokkos/build --target install --parallel $(nproc) --prefix kokkos/install
-
-      - name: NCCL - Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          repository: nvidia/nccl
-          ref: v2.28.7-1
-          path: nccl
-      - name: NCCL - Build
-        run: make -C nccl src.build NVCC_GENCODE="-gencode=arch=compute_90,code=sm_90"
-      - name: NCCL - Install
-        shell: bash
-        run: |
-          make -C nccl pkg.txz.build
-          shopt -s dotglob && tar -C /usr/local --strip-components=1 -xf nccl/build/pkg/txz/*.txz
-
       - name: KokkosComm - Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
