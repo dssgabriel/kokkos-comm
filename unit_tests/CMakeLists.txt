@@ -42,6 +42,14 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   target_compile_options(gtest PUBLIC /w)
 endif()
 
+FetchContent_Declare(
+  fmt
+  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+  GIT_TAG
+    407c905e45ad75fc29bf0f9bb7c5c2fd3475976f #v12.1.0
+)
+FetchContent_MakeAvailable(fmt)
+
 if(KOKKOSCOMM_ENABLE_MPI)
   # Standalone MPI smoke tests (do not use KokkosComm)
   add_executable(test-mpi)
@@ -137,6 +145,7 @@ function(add_mpi_test test_name num_procs)
       KokkosComm::KokkosComm
       MPI::MPI_CXX # Explicitly link against MPI
       gtest
+      fmt::fmt
   )
   add_test(
     NAME ${test_name}
@@ -164,6 +173,7 @@ function(add_nccl_test test_name num_procs)
       NCCL::NCCL
       MPI::MPI_CXX # Explicitly link against MPI because it's needed to setup multi-node NCCL comms
       gtest
+      fmt::fmt
   )
   add_test(
     NAME ${test_name}
@@ -187,6 +197,7 @@ target_link_libraries(
     KokkosComm::KokkosComm
     MPI::MPI_CXX
     GTest::gtest_main
+    fmt::fmt
 )
 
 if(KokkosComm_ENABLE_MPI)

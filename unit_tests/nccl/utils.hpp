@@ -3,8 +3,6 @@
 
 #pragma once
 
-#include <unistd.h>  // gethostname
-
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -15,6 +13,7 @@
 #include <string_view>
 #include <vector>
 
+#include <fmt/core.h>
 #include <mpi.h>
 #include <nccl.h>
 #include <cuda_runtime.h>
@@ -32,39 +31,39 @@ enum struct LogLevel {
 using namespace std::string_view_literals;
 constexpr std::array level_txt{"FATAL"sv, "ERROR"sv, "WARNING"sv, "INFO"sv, "TRACE"sv};
 
-#define KC_LOG(lvl, fmt, ...) \
-  std::printf("[%s] %s:%d: " fmt "\n", level_txt[static_cast<int>(lvl)], __FILE__, __LINE__ __VA_OPT(, ) __VA_ARGS__)
+#define KC_LOG(lvl, ...) \
+  fmt::println("[{}] {}:{}: {}", level_txt[static_cast<int>(lvl)], __FILE__, __LINE__, fmt::format(__VA_ARGS__))
 
-#define KC_FATAL(fmt, ...) (KC_LOG(LogLevel::FATAL, fmt __VA_OPT__(, ) __VA_ARGS__), std::exit(EXIT_FAILURE))
+#define KC_FATAL(...) (KC_LOG(LogLevel::FATAL, __VA_ARGS__), std::exit(EXIT_FAILURE))
 
-#define KC_ERROR(fmt, ...) KC_LOG(LogLevel::ERROR, fmt __VA_OPT(, ) __VA_ARGS__)
+#define KC_ERROR(...) KC_LOG(LogLevel::ERROR, __VA_ARGS__)
 
-#define KC_WARN(fmt, ...) KC_LOG(LogLevel::WARN, fmt __VA_OPT(, ) __VA_ARGS__)
+#define KC_WARN(...) KC_LOG(LogLevel::WARN, __VA_ARGS__)
 
-#define KC_INFO(fmt, ...) KC_LOG(LogLevel::INFO, fmt __VA_OPT(, ) __VA_ARGS__)
+#define KC_INFO(...) KC_LOG(LogLevel::INFO, __VA_ARGS__)
 
-#define KC_TRACE(fmt, ...) KC_LOG(LogLevel::TRACE, fmt __VA_OPT(, ) __VA_ARGS__)
+#define KC_TRACE(...) KC_LOG(LogLevel::TRACE, __VA_ARGS__)
 
-#define KC_CHECK(expr, fmt, ...) ((expr) ? void(0) : KC_FATAL(fmt __VA_OPT__(, ) __VA_ARGS__))
+#define KC_CHECK(expr, ...) ((expr) ? void(0) : KC_FATAL(__VA_ARGS__))
 
 #define KC_MPI_CHECK(expr)                                                                            \
   ([&]() {                                                                                            \
     int kc_res_ = (expr);                                                                             \
-    return kc_res_ == MPI_SUCCESS ? void(0) : KC_FATAL("MPI check failed: `" #expr "`: %d", kc_res_); \
+    return kc_res_ == MPI_SUCCESS ? void(0) : KC_FATAL("MPI check failed: `" #expr "`: {}", kc_res_); \
   }())
 
 #define KC_NCCL_CHECK(expr)                                                                                      \
   ([&]() {                                                                                                       \
     ncclResult_t kc_res_ = (expr);                                                                               \
     return kc_res_ == ncclSuccess ? void(0)                                                                      \
-                                  : KC_FATAL("NCCL check failed: `" #expr "`: %s", ncclGetErrorString(kc_res_)); \
+                                  : KC_FATAL("NCCL check failed: `" #expr "`: {}", ncclGetErrorString(kc_res_)); \
   }())
 
 #define KC_CUDA_CHECK(expr)                                                                                      \
   ([&]() {                                                                                                       \
     cudaError_t kc_res_ = (expr);                                                                                \
     return kc_res_ == cudaSuccess ? void(0)                                                                      \
-                                  : KC_FATAL("CUDA check failed: `" #expr "`: %s", cudaGetErrorString(kc_res_)); \
+                                  : KC_FATAL("CUDA check failed: `" #expr "`: {}", cudaGetErrorString(kc_res_)); \
   }())
 
 [[nodiscard]] auto get_local_rank(MPI_Comm comm, int my_rank) -> int {
