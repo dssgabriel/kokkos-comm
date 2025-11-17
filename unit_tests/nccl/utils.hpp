@@ -8,9 +8,9 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <fstream>
-#include <iosfwd>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -21,69 +21,61 @@
 
 namespace {
 
-#define MPI_CHECK(cmd)                                                                                          \
-  do {                                                                                                          \
-    if (int res = cmd; res != MPI_SUCCESS) {                                                                    \
-      std::cerr << "KokkosComm::unit_tests: " << __FILE__ << ":" << __LINE__ << " error(MPI): " << res << "\n"; \
-                                                                                                                \
-      std::exit(-1);                                                                                            \
-    }                                                                                                           \
-  } while (0)
+enum struct LogLevel {
+  FATAL,
+  ERROR,
+  WARN,
+  INFO,
+  TRACE,
+};
 
-#define NCCL_CHECK(cmd)                                                      \
-  do {                                                                       \
-    if (ncclResult_t res = cmd; res != ncclSuccess) {                        \
-      std::cerr << "KokkosComm::unit_tests: " << __FILE__ << ":" << __LINE__ \
-                << " error(NCCL): " << ncclGetErrorString(res) << "\n";      \
-                                                                             \
-      std::exit(-1);                                                         \
-    }                                                                        \
-  } while (0)
+using namespace std::string_view_literals;
+constexpr std::array level_txt{"FATAL"sv, "ERROR"sv, "WARNING"sv, "INFO"sv, "TRACE"sv};
 
-#define CUDA_CHECK(cmd)                                                      \
-  do {                                                                       \
-    if (cudaError_t res = cmd; res != cudaSuccess) {                         \
-      std::cerr << "KokkosComm::unit_tests: " << __FILE__ << ":" << __LINE__ \
-                << " error(CUDA): " << cudaGetErrorString(res) << "\n";      \
-      std::exit(-1);                                                         \
-    }                                                                        \
-  } while (0)
+#define KC_LOG(lvl, fmt, ...) \
+  std::printf("[%s] %s:%d: " fmt "\n", level_txt[static_cast<int>(lvl)], __FILE__, __LINE__ __VA_OPT(, ) __VA_ARGS__)
 
-constexpr std::string_view HOSTID_FILE = "/proc/sys/kernel/random/boot_id";
+#define KC_FATAL(fmt, ...) (KC_LOG(LogLevel::FATAL, fmt __VA_OPT__(, ) __VA_ARGS__), std::exit(EXIT_FAILURE))
 
-[[nodiscard]] constexpr auto get_hash(std::string_view str) noexcept -> uint64_t {
-  uint64_t result = 5381;
-  for (unsigned char c : str) result = ((result << 5) + result) ^ c;  // result * 33 ^ c
-  return result;
-}
+#define KC_ERROR(fmt, ...) KC_LOG(LogLevel::ERROR, fmt __VA_OPT(, ) __VA_ARGS__)
 
-/// Generate a hash of the unique identifying string for this host. That will be unique for both bare-metal and
-/// container instances.
-/// Equivalent of a hash of:
-/// ```sh
-/// $(hostname)$(cat /proc/sys/kernel/random/boot_id)
-/// ```
-[[nodiscard]] auto hash_hostname(std::string_view hostname) -> uint64_t {
-  std::string combined{hostname};
-  if (std::ifstream file{std::string{HOSTID_FILE}}; file) {
-    std::string boot_id;
-    if (file >> boot_id) {
-      combined += boot_id;
-    }
-  }
-  return get_hash(combined);
-}
+#define KC_WARN(fmt, ...) KC_LOG(LogLevel::WARN, fmt __VA_OPT(, ) __VA_ARGS__)
 
-[[nodiscard]] auto get_hostname() -> std::string {
-  std::array<char, 256> buf{};
-  if (::gethostname(buf.data(), buf.size()) != 0) {
-    return "hostname";
-  }
-  std::string hostname{buf.data()};
-  if (auto dot_pos = hostname.find('.'); dot_pos != std::string::npos) {
-    hostname.resize(dot_pos);
-  }
-  return hostname;
+#define KC_INFO(fmt, ...) KC_LOG(LogLevel::INFO, fmt __VA_OPT(, ) __VA_ARGS__)
+
+#define KC_TRACE(fmt, ...) KC_LOG(LogLevel::TRACE, fmt __VA_OPT(, ) __VA_ARGS__)
+
+#define KC_CHECK(expr, fmt, ...) ((expr) ? void(0) : KC_FATAL(fmt __VA_OPT__(, ) __VA_ARGS__))
+
+#define KC_MPI_CHECK(expr)                                                                            \
+  ([&]() {                                                                                            \
+    int kc_res_ = (expr);                                                                             \
+    return kc_res_ == MPI_SUCCESS ? void(0) : KC_FATAL("MPI check failed: `" #expr "`: %d", kc_res_); \
+  }())
+
+#define KC_NCCL_CHECK(expr)                                                                                      \
+  ([&]() {                                                                                                       \
+    ncclResult_t kc_res_ = (expr);                                                                               \
+    return kc_res_ == ncclSuccess ? void(0)                                                                      \
+                                  : KC_FATAL("NCCL check failed: `" #expr "`: %s", ncclGetErrorString(kc_res_)); \
+  }())
+
+#define KC_CUDA_CHECK(expr)                                                                                      \
+  ([&]() {                                                                                                       \
+    cudaError_t kc_res_ = (expr);                                                                                \
+    return kc_res_ == cudaSuccess ? void(0)                                                                      \
+                                  : KC_FATAL("CUDA check failed: `" #expr "`: %s", cudaGetErrorString(kc_res_)); \
+  }())
+
+[[nodiscard]] auto get_local_rank(MPI_Comm comm, int my_rank) -> int {
+  MPI_Comm node_comm;
+  MPI_Comm_split_type(comm, MPI_COMM_TYPE_SHARED, my_rank, MPI_INFO_NULL, &node_comm);
+
+  int node_rank;
+  MPI_Comm_rank(node_comm, &node_rank);
+
+  MPI_Comm_free(&node_comm);
+  return node_rank;
 }
 
 }  // namespace
@@ -93,46 +85,33 @@ namespace test_utils::nccl {
 class Ctx {
  public:
   static auto init() -> Ctx {
-    // Setup MPI Session
-    MPI_Session mpi_session = MPI_SESSION_NULL;
-    MPI_Session_init(MPI_INFO_NULL, MPI_ERRORS_RETURN, &mpi_session);
-    MPI_Group mpi_group = MPI_GROUP_NULL;
-    MPI_Group_from_session_pset(mpi_session, "mpi://WORLD", &mpi_group);
+    int flag;
+    MPI_Initialized(&flag);
+    KC_CHECK(flag == true, "MPI is not initialized");
 
-    // Create communicator
-    MPI_Comm mpi_comm = MPI_COMM_NULL;
-    MPI_Comm_create_from_group(mpi_group, "kokkos-comm.test.mpi-comm", MPI_INFO_NULL, MPI_ERRORS_RETURN, &mpi_comm);
+    MPI_Comm mpi_comm = MPI_COMM_WORLD;
 
     // Retrieve rank info
     int n_ranks, my_rank;
     MPI_Comm_size(mpi_comm, &n_ranks);
     MPI_Comm_rank(mpi_comm, &my_rank);
+    KC_INFO("P%d/%d - MPI initialized", n_ranks, my_rank);
+    int local_rank = get_local_rank(mpi_comm, my_rank);
 
-    // Compute `local_rank` based on hostname which is used in selecting a GPU
-    int local_rank = 0;
-    std::vector<uint64_t> hostname_hashes(n_ranks);
-    auto hostname            = get_hostname();
-    hostname_hashes[my_rank] = hash_hostname(hostname);
-    MPI_CHECK(MPI_Allgather(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL, hostname_hashes.data(), sizeof(uint64_t), MPI_BYTE,
-                            mpi_comm));
-    for (int p = 0; p < n_ranks; ++p) {
-      if (hostname_hashes[p] == hostname_hashes[my_rank]) {
-        local_rank++;
-      }
-    }
-    CUDA_CHECK(cudaSetDevice(local_rank));
+    int n_gpus;
+    KC_CUDA_CHECK(cudaGetDeviceCount(&n_gpus));
+    KC_INFO("P%d found %d CUDA devices", my_rank, n_gpus);
+
+    KC_CHECK(local_rank <= n_gpus, "P%d needs GPU %d but only %d devices available", my_rank, local_rank, n_gpus);
+    KC_CUDA_CHECK(cudaSetDevice(local_rank));
+    KC_INFO("P%d assigned to CUDA device %d", my_rank, local_rank);
 
     // Get NCCL unique ID at rank 0 and broadcast it to all others
     ncclUniqueId nccl_id;
     if (my_rank == 0) {
       ncclGetUniqueId(&nccl_id);
     }
-    MPI_CHECK(MPI_Bcast(static_cast<void *>(&nccl_id), sizeof(nccl_id), MPI_BYTE, 0, mpi_comm));
-
-    // Don't need MPI anymore past this point
-    MPI_Comm_free(&mpi_comm);
-    MPI_Group_free(&mpi_group);
-    MPI_Session_finalize(&mpi_session);
+    KC_MPI_CHECK(MPI_Bcast(&nccl_id, NCCL_UNIQUE_ID_BYTES, MPI_CHAR, 0, mpi_comm));
 
     // NCCL comm configuration
     ncclConfig_t nccl_cfg = NCCL_CONFIG_INITIALIZER;
@@ -141,12 +120,12 @@ class Ctx {
 
     // Initialize NCCL communicator
     ncclComm_t nccl_comm;
-    NCCL_CHECK(ncclCommInitRankConfig(&nccl_comm, n_ranks, nccl_id, my_rank, &nccl_cfg));
+    KC_NCCL_CHECK(ncclCommInitRankConfig(&nccl_comm, n_ranks, nccl_id, my_rank, &nccl_cfg));
 
     return Ctx(nccl_comm, n_ranks, my_rank);
   }
 
-  ~Ctx() { NCCL_CHECK(ncclCommDestroy(comm_)); }
+  ~Ctx() { KC_NCCL_CHECK(ncclCommDestroy(comm_)); }
   Ctx(const Ctx &)                     = delete;
   auto operator=(const Ctx &) -> Ctx & = delete;
   Ctx(Ctx &&)                          = delete;
