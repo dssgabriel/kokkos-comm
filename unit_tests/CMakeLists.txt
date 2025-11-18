@@ -182,14 +182,18 @@ target_sources(
   PRIVATE
     test_main.cpp
     test_sendrecv.cpp
+  PRIVATE
+    FILE_SET HEADERS
+    BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
+    FILES logging.hpp
 )
 target_compile_features(test-main PRIVATE cxx_std_20)
 target_link_libraries(
   test-main
   PRIVATE
+    GTest::gtest_main
     KokkosComm::KokkosComm
     MPI::MPI_CXX
-    GTest::gtest_main
     fmt::fmt
 )
 
@@ -219,7 +223,8 @@ if(KokkosComm_ENABLE_NCCL)
     test-main
     PRIVATE
       FILE_SET HEADERS
-      BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/nccl
+      BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
+      FILES nccl/utils.hpp
   )
   # Link against NCCL because we depend on raw calls
   target_link_libraries(test-main PRIVATE NCCL::NCCL)

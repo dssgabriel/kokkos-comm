@@ -3,68 +3,17 @@
 
 #pragma once
 
-#include <array>
-#include <cstddef>
-#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <fstream>
-#include <string>
-#include <string_view>
-#include <vector>
 
 #include <fmt/core.h>
 #include <mpi.h>
 #include <nccl.h>
 #include <cuda_runtime.h>
 
+#include "../logging.hpp"
+
 namespace {
-
-enum struct LogLevel {
-  FATAL,
-  ERROR,
-  WARN,
-  INFO,
-  TRACE,
-};
-
-using namespace std::string_view_literals;
-constexpr std::array level_txt{"FATAL"sv, "ERROR"sv, "WARNING"sv, "INFO"sv, "TRACE"sv};
-
-#define KC_LOG(lvl, ...) \
-  fmt::println("[{}] {}:{}: {}", level_txt[static_cast<int>(lvl)], __FILE__, __LINE__, fmt::format(__VA_ARGS__))
-
-#define KC_FATAL(...) (KC_LOG(LogLevel::FATAL, __VA_ARGS__), std::exit(EXIT_FAILURE))
-
-#define KC_ERROR(...) KC_LOG(LogLevel::ERROR, __VA_ARGS__)
-
-#define KC_WARN(...) KC_LOG(LogLevel::WARN, __VA_ARGS__)
-
-#define KC_INFO(...) KC_LOG(LogLevel::INFO, __VA_ARGS__)
-
-#define KC_TRACE(...) KC_LOG(LogLevel::TRACE, __VA_ARGS__)
-
-#define KC_CHECK(expr, ...) ((expr) ? void(0) : KC_FATAL(__VA_ARGS__))
-
-#define KC_MPI_CHECK(expr)                                                                            \
-  ([&]() {                                                                                            \
-    int kc_res_ = (expr);                                                                             \
-    return kc_res_ == MPI_SUCCESS ? void(0) : KC_FATAL("MPI check failed: `" #expr "`: {}", kc_res_); \
-  }())
-
-#define KC_NCCL_CHECK(expr)                                                                                      \
-  ([&]() {                                                                                                       \
-    ncclResult_t kc_res_ = (expr);                                                                               \
-    return kc_res_ == ncclSuccess ? void(0)                                                                      \
-                                  : KC_FATAL("NCCL check failed: `" #expr "`: {}", ncclGetErrorString(kc_res_)); \
-  }())
-
-#define KC_CUDA_CHECK(expr)                                                                                      \
-  ([&]() {                                                                                                       \
-    cudaError_t kc_res_ = (expr);                                                                                \
-    return kc_res_ == cudaSuccess ? void(0)                                                                      \
-                                  : KC_FATAL("CUDA check failed: `" #expr "`: {}", cudaGetErrorString(kc_res_)); \
-  }())
 
 [[nodiscard]] auto get_local_rank(MPI_Comm comm, int my_rank) -> int {
   MPI_Comm node_comm;
@@ -94,16 +43,15 @@ class Ctx {
     int n_ranks, my_rank;
     MPI_Comm_size(mpi_comm, &n_ranks);
     MPI_Comm_rank(mpi_comm, &my_rank);
-    KC_INFO("P%d/%d - MPI initialized", n_ranks, my_rank);
     int local_rank = get_local_rank(mpi_comm, my_rank);
 
     int n_gpus;
     KC_CUDA_CHECK(cudaGetDeviceCount(&n_gpus));
-    KC_INFO("P%d found %d CUDA devices", my_rank, n_gpus);
+    KC_INFO("P{} found {} CUDA devices", my_rank, n_gpus);
 
-    KC_CHECK(local_rank <= n_gpus, "P%d needs GPU %d but only %d devices available", my_rank, local_rank, n_gpus);
+    KC_CHECK(local_rank <= n_gpus, "P{} needs device #{} but only {} devices available", my_rank, local_rank, n_gpus);
     KC_CUDA_CHECK(cudaSetDevice(local_rank));
-    KC_INFO("P%d assigned to CUDA device %d", my_rank, local_rank);
+    KC_INFO("P{} assigned to CUDA device #{}", my_rank, local_rank);
 
     // Get NCCL unique ID at rank 0 and broadcast it to all others
     ncclUniqueId nccl_id;
@@ -125,6 +73,7 @@ class Ctx {
   }
 
   ~Ctx() { KC_NCCL_CHECK(ncclCommDestroy(comm_)); }
+  // Forbid copies and moves
   Ctx(const Ctx &)                     = delete;
   auto operator=(const Ctx &) -> Ctx & = delete;
   Ctx(Ctx &&)                          = delete;
