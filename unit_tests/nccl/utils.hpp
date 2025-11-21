@@ -60,14 +60,10 @@ class Ctx {
     }
     KC_MPI_CHECK(MPI_Bcast(&nccl_id, NCCL_UNIQUE_ID_BYTES, MPI_CHAR, 0, mpi_comm));
 
-    // NCCL comm configuration
-    ncclConfig_t nccl_cfg = NCCL_CONFIG_INITIALIZER;
-    // Always non-blocking communicator
-    nccl_cfg.blocking = 0;
 
     // Initialize NCCL communicator
     ncclComm_t nccl_comm;
-    KC_NCCL_CHECK(ncclCommInitRankConfig(&nccl_comm, n_ranks, nccl_id, my_rank, &nccl_cfg));
+    KC_NCCL_CHECK(ncclCommInitRank(&nccl_comm, n_ranks, nccl_id, my_rank));
 
     return Ctx(nccl_comm, n_ranks, my_rank);
   }
