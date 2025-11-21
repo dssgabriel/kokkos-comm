@@ -14,6 +14,8 @@
 #include <KokkosComm/fwd.hpp>
 #include "nccl_space.hpp"
 
+#include "impl/cuda_check.hpp"
+
 namespace KokkosComm {
 
 template <>
@@ -62,7 +64,7 @@ class Req<Experimental::Nccl> {
 };
 
 inline auto wait(Req<Experimental::Nccl> &req) -> void {
-  cudaStreamSynchronize(req.get_inner());
+  KC_CUDA_CHECK(cudaStreamSynchronize(req.get_inner()));
   for (auto &f : req.record_->postWaits_) {
     f();
   }
@@ -81,12 +83,16 @@ inline auto wait_any(std::span<Req<Experimental::Nccl>> reqs) -> int {
   // Loop while we don't have at least one completed request.
   while (true) {
     for (size_t r = 0; r < reqs.size(); ++r) {
-      auto res = cudaStreamQuery(reqs[r].get_inner());
+      cudaError_t res = cudaStreamQuery(reqs[r].get_inner());
       // If the current request has completed, we must make sure the post-wait callbacks run and are cleared.
       // Calling `wait` should be a no-op if the request has no callback to execute.
       if (res == cudaSuccess) {
         wait(reqs[r]);
         return static_cast<int>(r);
+      } else if (res == cudaErrorNotReady) {
+        continue;
+      } else {
+        throw std::runtime_error(cudaGetErrorString(res));
       }
     }
   }

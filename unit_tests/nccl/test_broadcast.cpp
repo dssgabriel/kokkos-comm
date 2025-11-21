@@ -24,7 +24,8 @@ TYPED_TEST_SUITE(Broadcast, ScalarTypes);
 template <typename Scalar>
 auto broadcast_0d() -> void {
   auto nccl_ctx = test_utils::nccl::Ctx::init();
-  KokkosComm::Handle<ExecSpace, CommSpace> h(ExecSpace(), nccl_ctx.comm());
+  ExecSpace space(nccl_ctx.stream());
+  KokkosComm::Handle<ExecSpace, CommSpace> h(space, nccl_ctx.comm());
   int rank = h.rank();
   int size = h.size();
   int root = 0;
@@ -33,7 +34,7 @@ auto broadcast_0d() -> void {
   if (rank == root) {
     // Prepare broadcast view
     Kokkos::parallel_for(
-        Kokkos::RangePolicy(ExecSpace(), 0, v.extent(0)), KOKKOS_LAMBDA(const int) { v() = size; });
+        Kokkos::RangePolicy(space, 0, v.extent(0)), KOKKOS_LAMBDA(const int) { v() = size; });
   }
   // Using the same execution space for both operations lets us not need an explicit `fence`
   auto req = KokkosComm::Experimental::broadcast(h, v, root);
@@ -48,7 +49,8 @@ auto broadcast_0d() -> void {
 template <typename Scalar>
 auto broadcast_inplace_contig_1d() -> void {
   auto nccl_ctx = test_utils::nccl::Ctx::init();
-  KokkosComm::Handle<ExecSpace, CommSpace> h(ExecSpace(), nccl_ctx.comm());
+  ExecSpace space(nccl_ctx.stream());
+  KokkosComm::Handle<ExecSpace, CommSpace> h(space, nccl_ctx.comm());
   int rank = h.rank();
   int size = h.size();
   int root = 0;
@@ -57,7 +59,7 @@ auto broadcast_inplace_contig_1d() -> void {
   if (rank == root) {
     // Prepare broadcast view
     Kokkos::parallel_for(
-        Kokkos::RangePolicy(ExecSpace(), 0, v.extent(0)), KOKKOS_LAMBDA(const int i) { v(i) = size + i; });
+        Kokkos::RangePolicy(space, 0, v.extent(0)), KOKKOS_LAMBDA(const int i) { v(i) = size + i; });
   }
   // Using the same execution space for both operations lets us not need an explicit `fence`
   auto req = KokkosComm::Experimental::broadcast(h, v, root);
