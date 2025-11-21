@@ -11,6 +11,7 @@
 
 #include "impl/types.hpp"
 #include "impl/pack_traits.hpp"
+#include "impl/nccl_check.hpp"
 
 namespace KokkosComm {
 namespace Experimental::nccl {
@@ -24,11 +25,11 @@ auto send(const ExecSpace& space, const SendView& sv, int peer, ncclComm_t comm)
 
   Req<Nccl> req{space.cuda_stream()};
   if (KC::is_contiguous(sv)) {
-    ncclSend(KC::data_handle(sv), KC::span(sv), Impl::datatype_v<T>, peer, comm, space.cuda_stream());
+    KC_NCCL_CHECK(ncclSend(KC::data_handle(sv), KC::span(sv), Impl::datatype_v<T>, peer, comm, space.cuda_stream()));
   } else {
     using Packer = typename Impl::PackTraits<SendView>::packer_type;
     auto args    = Packer::pack(space, sv);
-    ncclSend(KC::data_handle(args.view_), args.count_, Impl::datatype_v<T>, peer, comm, space.cuda_stream());
+    KC_NCCL_CHECK(ncclSend(KC::data_handle(args.view_), args.count_, Impl::datatype_v<T>, peer, comm, space.cuda_stream()));
     req.extend_view_lifetime(args.view_);
   }
   req.extend_view_lifetime(sv);
