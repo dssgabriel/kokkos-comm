@@ -28,7 +28,8 @@ TYPED_TEST_SUITE(PointToPoint, ScalarTypes);
 template <typename Scalar>
 auto p2p_contig_1d() -> void {
   auto nccl_ctx = test_utils::nccl::Ctx::init();
-  KokkosComm::Handle<ExecSpace, CommSpace> h(ExecSpace(), nccl_ctx.comm());
+  ExecSpace space(nccl_ctx.stream());
+  KokkosComm::Handle<ExecSpace, CommSpace> h(space, nccl_ctx.comm());
   int rank = h.rank();
   int size = h.size();
   if (size < 2) {
@@ -39,13 +40,15 @@ auto p2p_contig_1d() -> void {
 
   Kokkos::View<Scalar *> v("v", 10'000);
   if (rank == src) {
+    
     // Prepare send view
     Kokkos::parallel_for(
-        Kokkos::RangePolicy(ExecSpace(), 0, v.extent(0)), KOKKOS_LAMBDA(const int i) { v(i) = i; });
+        Kokkos::RangePolicy(space, 0, v.extent(0)), KOKKOS_LAMBDA(const int i) { v(i) = i; });
     // Using the same execution space for both operations lets us not need an explicit `fence`
     auto req = KokkosComm::send(h, v, dst);
     KokkosComm::wait(req);
   } else if (rank == dst) {
+    
     auto req = KokkosComm::recv(h, v, src);
     KokkosComm::wait(req);
 
@@ -59,7 +62,8 @@ auto p2p_contig_1d() -> void {
 template <typename Scalar>
 auto p2p_noncontig_1d() -> void {
   auto nccl_ctx = test_utils::nccl::Ctx::init();
-  KokkosComm::Handle<ExecSpace, CommSpace> h(ExecSpace(), nccl_ctx.comm());
+  ExecSpace space(nccl_ctx.stream());
+  KokkosComm::Handle<ExecSpace, CommSpace> h(space, nccl_ctx.comm());
   int rank = h.rank();
   int size = h.size();
   if (size < 2) {
@@ -73,7 +77,7 @@ auto p2p_noncontig_1d() -> void {
   if (rank == src) {
     // Prepare send view
     Kokkos::parallel_for(
-        Kokkos::RangePolicy(ExecSpace(), 0, sv.extent(0)), KOKKOS_LAMBDA(const int i) { sv(i) = i; });
+        Kokkos::RangePolicy(space, 0, sv.extent(0)), KOKKOS_LAMBDA(const int i) { sv(i) = i; });
     // Using the same execution space for both operations lets us not need an explicit `fence`
     auto req = KokkosComm::send(h, sv, dst);
     KokkosComm::wait(req);

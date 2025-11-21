@@ -65,10 +65,15 @@ class Ctx {
     ncclComm_t nccl_comm;
     KC_NCCL_CHECK(ncclCommInitRank(&nccl_comm, n_ranks, nccl_id, my_rank));
 
-    return Ctx(nccl_comm, n_ranks, my_rank);
+    cudaStream_t stream;
+    KC_CUDA_CHECK(cudaStreamCreate(&stream));
+    return Ctx(nccl_comm, stream, local_rank, n_ranks, my_rank);
   }
 
-  ~Ctx() { KC_NCCL_CHECK(ncclCommDestroy(comm_)); }
+  ~Ctx() { 
+    KC_NCCL_CHECK(ncclCommDestroy(comm_));
+    KC_CUDA_CHECK(cudaStreamDestroy(stream_));
+  }
   // Forbid copies and moves
   Ctx(const Ctx &)                     = delete;
   auto operator=(const Ctx &) -> Ctx & = delete;
@@ -76,13 +81,16 @@ class Ctx {
   auto operator=(Ctx &&) -> Ctx      & = delete;
 
   auto comm() -> ncclComm_t & { return comm_; }
+  cudaStream_t stream() const { return stream_; }
   auto n_ranks() -> int { return n_ranks_; }
   auto my_rank() -> int { return my_rank_; }
 
  private:
-  explicit Ctx(ncclComm_t comm, int n_ranks, int my_rank) : comm_(comm), n_ranks_(n_ranks), my_rank_(my_rank) {}
+  explicit Ctx(ncclComm_t comm, cudaStream_t stream, int dev, int n_ranks, int my_rank) : comm_(comm), stream_(stream), dev_(dev), n_ranks_(n_ranks), my_rank_(my_rank) {}
 
   ncclComm_t comm_;
+  cudaStream_t stream_; // my CUDA stream (associated with dev_)
+  int dev_; // my cuda device
   int n_ranks_;
   int my_rank_;
 };
