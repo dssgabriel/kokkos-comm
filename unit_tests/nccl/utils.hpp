@@ -60,7 +60,6 @@ class Ctx {
     }
     KC_MPI_CHECK(MPI_Bcast(&nccl_id, NCCL_UNIQUE_ID_BYTES, MPI_CHAR, 0, mpi_comm));
 
-
     // Initialize NCCL communicator
     ncclComm_t nccl_comm;
     KC_NCCL_CHECK(ncclCommInitRank(&nccl_comm, n_ranks, nccl_id, my_rank));
@@ -70,7 +69,7 @@ class Ctx {
     return Ctx(nccl_comm, stream, local_rank, n_ranks, my_rank);
   }
 
-  ~Ctx() { 
+  ~Ctx() {
     KC_NCCL_CHECK(ncclCommDestroy(comm_));
     KC_CUDA_CHECK(cudaStreamDestroy(stream_));
   }
@@ -86,11 +85,12 @@ class Ctx {
   auto my_rank() -> int { return my_rank_; }
 
  private:
-  explicit Ctx(ncclComm_t comm, cudaStream_t stream, int dev, int n_ranks, int my_rank) : comm_(comm), stream_(stream), dev_(dev), n_ranks_(n_ranks), my_rank_(my_rank) {}
+  explicit Ctx(ncclComm_t comm, cudaStream_t stream, int dev, int n_ranks, int my_rank)
+      : comm_(comm), stream_(stream), dev_(dev), n_ranks_(n_ranks), my_rank_(my_rank) {}
 
   ncclComm_t comm_;
-  cudaStream_t stream_; // my CUDA stream (associated with dev_)
-  int dev_; // my cuda device
+  cudaStream_t stream_;  // my CUDA stream (associated with dev_)
+  int dev_;              // my cuda device
   int n_ranks_;
   int my_rank_;
 };

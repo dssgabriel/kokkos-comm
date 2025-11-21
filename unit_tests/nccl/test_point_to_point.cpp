@@ -40,7 +40,6 @@ auto p2p_contig_1d() -> void {
 
   Kokkos::View<Scalar *> v("v", 10'000);
   if (rank == src) {
-    
     // Prepare send view
     Kokkos::parallel_for(
         Kokkos::RangePolicy(space, 0, v.extent(0)), KOKKOS_LAMBDA(const int i) { v(i) = i; });
@@ -48,7 +47,6 @@ auto p2p_contig_1d() -> void {
     auto req = KokkosComm::send(h, v, dst);
     KokkosComm::wait(req);
   } else if (rank == dst) {
-    
     auto req = KokkosComm::recv(h, v, src);
     KokkosComm::wait(req);
 

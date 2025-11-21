@@ -4,11 +4,11 @@
 #pragma once
 
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
-#define KC_NCCL_CHECK(expr)                                                                                      \
-  ([&]() {                                                                                                       \
-    ncclResult_t kcRes = (expr);                                                                               \
-    if (ncclSuccess != kcRes) { \
+#define KC_NCCL_CHECK(expr)                                                                      \
+  ([&]() {                                                                                       \
+    ncclResult_t kcRes = (expr);                                                                 \
+    if (ncclSuccess != kcRes) {                                                                  \
       std::cerr << __FILE__ << ":" << __LINE__ << ": NCCL Error: " << ncclGetErrorString(kcRes); \
-    } \
+    }                                                                                            \
   }())
 #endif
