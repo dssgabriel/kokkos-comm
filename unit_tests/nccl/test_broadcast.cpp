@@ -42,12 +42,12 @@ auto broadcast_0d() -> void {
 
   int errs;
   Kokkos::parallel_reduce(
-      v.extent(0), KOKKOS_LAMBDA(const int, int &lsum) { lsum += v() != size; }, errs);
+      v.extent(0), KOKKOS_LAMBDA(const int, int& lsum) { lsum += v() != size; }, errs);
   EXPECT_EQ(errs, 0);
 }
 
 template <typename Scalar>
-auto broadcast_inplace_contig_1d() -> void {
+auto broadcast_contig_1d() -> void {
   auto nccl_ctx = test_utils::nccl::Ctx::init();
   ExecSpace space(nccl_ctx.stream());
   KokkosComm::Handle<ExecSpace, CommSpace> h(space, nccl_ctx.comm());
@@ -55,7 +55,7 @@ auto broadcast_inplace_contig_1d() -> void {
   int size = h.size();
   int root = 0;
 
-  Kokkos::View<Scalar *> v("v", 100);
+  Kokkos::View<Scalar*> v("v", 100);
   if (rank == root) {
     // Prepare broadcast view
     Kokkos::parallel_for(
@@ -67,11 +67,11 @@ auto broadcast_inplace_contig_1d() -> void {
 
   int errs;
   Kokkos::parallel_reduce(
-      v.extent(0), KOKKOS_LAMBDA(const int i, int &lsum) { lsum += (v(i) != size + i); }, errs);
+      v.extent(0), KOKKOS_LAMBDA(const int i, int& lsum) { lsum += (v(i) != size + i); }, errs);
   EXPECT_EQ(errs, 0);
 }
 
-TYPED_TEST(Broadcast, InPlace0D) { broadcast_0d<typename TestFixture::Scalar>(); }
-TYPED_TEST(Broadcast, InPlaceContiguous1D) { broadcast_inplace_contig_1d<typename TestFixture::Scalar>(); }
+TYPED_TEST(Broadcast, 0D) { broadcast_0d<typename TestFixture::Scalar>(); }
+TYPED_TEST(Broadcast, Contiguous1D) { broadcast_contig_1d<typename TestFixture::Scalar>(); }
 
 }  // namespace
