@@ -15,16 +15,9 @@ inline constexpr bool needs_staging_v =
 
 /// Stage view on the host for non-GPU-aware communications.
 /// No-op if `view` is device-accessible from the host.
-template <KokkosExecutionSpace E, KokkosView V>
-auto stage_for(const E& space, const V& view) -> typename V::host_mirror_type {
-  if constexpr (needs_staging_v<V>) {
-    return Kokkos::create_mirror_view_and_copy(space, view);
-  } else {
-    // For views already in the host memory space, this only creates a reference.
-    // For views in a device memory space that is accessible from the host (e.g. UVM), this should not allocate any
-    // memory, only create a reference cast to the `HostMirror` view type.
-    return typename V::host_mirror_type(view);
-  }
+template <KokkosView V>
+auto stage_for(const V& view) {
+  return Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace{}, view);
 }
 
 /// Copy back to device (e.g. for receive operations).
