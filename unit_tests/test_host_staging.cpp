@@ -22,11 +22,10 @@ auto test_stage_for_returns_host_accessible_view() -> void {
       "fill", Kokkos::RangePolicy(space, 0, N), KOKKOS_LAMBDA(int i) { view(i) = i; });
   space.fence();
 
-  auto staged = KokkosComm::Impl::stage_for(space, view);
+  auto staged = KokkosComm::Impl::stage_for(view);
   space.fence();
 
-  static_assert(std::is_same_v<decltype(staged), typename decltype(view)::host_mirror_type>);
-  EXPECT_TRUE((Kokkos::SpaceAccessibility<Kokkos::HostSpace, typename decltype(staged)::memory_space>::accessible));
+  static_assert(Kokkos::SpaceAccessibility<Kokkos::HostSpace, typename decltype(staged)::memory_space>::accessible);
 
   for (int i = 0; i < N; ++i) {
     EXPECT_EQ(staged(i), i);
@@ -56,23 +55,23 @@ TEST(StagingTest, StageForPreservesDataPointerForHostViews) {
   auto space = Kokkos::DefaultHostExecutionSpace{};
 
   constexpr int N = 100;
-  Kokkos::View<int*, Kokkos::HostSpace> host_view("v", N);
+  Kokkos::View<int*, typename decltype(space)::memory_space> host_view("v", N);
 
-  auto staged = KokkosComm::Impl::stage_for(space, host_view);
+  auto staged = KokkosComm::Impl::stage_for(host_view);
   space.fence();
   EXPECT_EQ(staged.data(), host_view.data());
 }
 
 TEST(StagingTest, StageForCreatesIndependentCopyForDeviceViews) {
-  if constexpr (Kokkos::DefaultExecutionSpace == Kokkos::DefaultHostExecutionSpace) {
-    GTEST_SKIP("Default exec space is not a device space");
+  if constexpr (std::is_same_v<Kokkos::DefaultExecutionSpace, Kokkos::DefaultHostExecutionSpace>) {
+    GTEST_SKIP() << "Default execution space is on host";
   } else {
     auto space = Kokkos::DefaultExecutionSpace{};
 
     constexpr int N = 100;
-    Kokkos::View<int*, typename Kokkos::DefaultExecutionSpace::memory_space> device_view("v", N);
+    Kokkos::View<int*, typename decltype(space)::memory_space> device_view("v", N);
 
-    auto staged = KokkosComm::Impl::stage_for(space, device_view);
+    auto staged = KokkosComm::Impl::stage_for(device_view);
     space.fence();
     EXPECT_NE(reinterpret_cast<void*>(staged.data()), reinterpret_cast<void*>(device_view.data()));
   }
@@ -82,10 +81,11 @@ TEST(StagingTest, CopyBackTransfersData) {
   auto space = Kokkos::DefaultExecutionSpace{};
 
   constexpr int N = 100;
-  Kokkos::View<int*, typename Kokkos::DefaultExecutionSpace::memory_space> device_view("v", N);
+  Kokkos::View<int*, typename decltype(space)::memory_space> device_view("v", N);
 
-  auto staged = KokkosComm::Impl::stage_for(space, device_view);
   space.fence();
+  auto staged = KokkosComm::Impl::stage_for(device_view);
+  Kokkos::DefaultHostExecutionSpace().fence();
   for (int i = 0; i < N; ++i) {
     staged(i) = 2 * i;
   }
