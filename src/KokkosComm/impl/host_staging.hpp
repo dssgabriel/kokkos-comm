@@ -22,9 +22,9 @@ auto stage_for(const V& view) {
 
 /// Copy back to device (e.g. for receive operations).
 /// No-op if `dst` is device-accessible from the host.
-template <KokkosExecutionSpace E, KokkosView V>
-auto copy_back(const E& space, const V& dst, const typename V::host_mirror_type& src) -> void {
-  if constexpr (needs_staging_v<V>) {
+template <KokkosExecutionSpace E, KokkosView Dst, KokkosView Src>
+auto copy_back(const E& space, Dst& dst, const Src& src) -> void {
+  if constexpr (needs_staging_v<Dst>) {
     Kokkos::deep_copy(space, dst, src);
   }
 }
