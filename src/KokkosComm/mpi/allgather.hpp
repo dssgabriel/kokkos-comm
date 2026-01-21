@@ -19,7 +19,7 @@ namespace KokkosComm {
 namespace mpi {
 
 template <KokkosExecutionSpace E, KokkosView SV, KokkosView RV>
-auto iallgather(const E& space, const SV& send_view, RV& recv_view, MPI_Comm comm) -> Req<MpiSpace> {
+auto iallgather(const E& space, const SV& sv, RV& rv, MPI_Comm comm) -> Req<MpiSpace> {
   using ST = typename SV::non_const_value_type;
   using RT = typename RV::non_const_value_type;
   static_assert(std::is_same_v<ST, RT>, "KokkosComm::mpi::iallgather: View value types must be identical");
