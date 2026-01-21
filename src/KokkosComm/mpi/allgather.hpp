@@ -12,30 +12,46 @@
 #include "mpi_space.hpp"
 #include "req.hpp"
 
+#include <KokkosComm/impl/host_staging.hpp>
 #include "impl/error_handling.hpp"
 
 namespace KokkosComm {
 namespace mpi {
 
-template <KokkosExecutionSpace ExecSpace, KokkosView SView, KokkosView RView>
-auto iallgather(const ExecSpace &space, const SView sv, RView rv, MPI_Comm comm) -> Req<MpiSpace> {
-  using ST = typename SView::non_const_value_type;
-  using RT = typename RView::non_const_value_type;
+template <KokkosExecutionSpace E, KokkosView SV, KokkosView RV>
+auto iallgather(const E& space, const SV& send_view, RV& recv_view, MPI_Comm comm) -> Req<MpiSpace> {
+  using ST = typename SV::non_const_value_type;
+  using RT = typename RV::non_const_value_type;
   static_assert(std::is_same_v<ST, RT>, "KokkosComm::mpi::iallgather: View value types must be identical");
   Kokkos::Tools::pushRegion("KokkosComm::mpi::iallgather");
-
   fail_if(!is_contiguous(sv) || !is_contiguous(rv),
           "KokkosComm::mpi::iallgather: unimplemented for non-contiguous views");
 
-  // Sync: Work in space may have been used to produce view data.
-  space.fence("fence before non-blocking all-gather");
+  fail_if(span(sv) == span(rv), "KokkosComm::mpi::iallgather: all ranks must send & receive the same count");
+  const int cnt = span(sv);
 
   Req<MpiSpace> req;
-  // All ranks send/recv same count
-  MPI_Iallgather(data_handle(sv), span(sv), datatype<MpiSpace, ST>, data_handle(rv), span(sv), datatype<MpiSpace, RT>,
-                 comm, &req.mpi_request());
+#if defined(KOKKOSCOMM_ENABLE_GPU_AWARE_MPI)
+  // Sync: Work in space may have been used to produce view data.
+  space.fence("fence before GPU-aware `MPI_Iallgather`");
+  MPI_Iallgather(data_handle(sv), cnt, datatype<MpiSpace, ST>, data_handle(rv), cnt, datatype<MpiSpace, RT>, comm,
+                 &req.mpi_request());
   req.extend_view_lifetime(sv);
   req.extend_view_lifetime(rv);
+#else
+  auto host_sv = KokkosComm::Impl::stage_for(sv);
+  auto host_rv = KokkosComm::Impl::stage_for(rv);
+  space.fence("fence host staging before `MPI_Iallgather`");
+  MPI_Iallgather(data_handle(host_sv), cnt, datatype<MpiSpace, ST>, data_handle(host_rv), cnt, datatype<MpiSpace, RT>,
+                 comm, &req.mpi_request());
+  // Implicitly extends lifetimes of `host_rv` and `rv` due to lambda capture
+  req.call_after_mpi_wait([=]() {
+    KokkosComm::Impl::copy_back(space, rv, host_rv);
+    space.fence("fence copy back after `MPI_Iallgather`");
+  });
+  req.extend_view_lifetime(host_sv);
+  req.extend_view_lifetime(sv);
+#endif
 
   Kokkos::Tools::popRegion();
   return req;
@@ -53,9 +69,19 @@ void allgather(const ExecSpace& space, const SendView& sv, const RecvView& rv, M
   fail_if(span(sv) == span(rv), "KokkosComm::mpi::allgather: all ranks must send & receive the same count");
   const int cnt = span(sv);
 
+#if defined(KOKKOSCOMM_ENABLE_GPU_AWARE_MPI)
   // Sync: Work in space may have been used to produce send view data
-  space.fence("fence before `MPI_Allgather`");
+  space.fence("fence before GPU-aware `MPI_Allgather`");
   MPI_Allgather(data_handle(sv), cnt, datatype<MpiSpace, ST>(), data_handle(rv), cnt, datatype<MpiSpace, RT>(), comm);
+#else
+  auto host_sv = KokkosComm::Impl::stage_for(sv);
+  auto host_rv = KokkosComm::Impl::stage_for(rv);
+  space.fence("fence host staging before `MPI_Allgather`");
+  MPI_Allgather(data_handle(host_sv), cnt, datatype<MpiSpace, ST>(), data_handle(host_rv), cnt,
+                datatype<MpiSpace, RT>(), comm);
+  KokkosComm::Impl::copy_back(space, rv, host_rv);
+  space.fence("fence copy back after `MPI_Allgather`");
+#endif
 
   Kokkos::Tools::popRegion();
 }
@@ -72,9 +98,17 @@ void allgather(const ExecSpace& space, View& v, size_t cnt, MPI_Comm comm) {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::allgather");
   fail_if(!is_contiguous(v), "KokkosComm::mpi::allgather: unimplemented for non-contiguous view");
 
+#if defined(KOKKOSCOMM_ENABLE_GPU_AWARE_MPI)
   // Sync: Work in space may have been used to produce send view data
-  space.fence("fence before `MPI_Allgather`");
+  space.fence("fence before GPU-aware in-place `MPI_Allgather`");
   MPI_Allgather(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL, data_handle(v), cnt, datatype<MpiSpace, T>(), comm);
+#else
+  auto host_v = KokkosComm::Impl::stage_for(v);
+  space.fence("fence host staging before in-place `MPI_Allgather`");
+  MPI_Allgather(MPI_IN_PLACE, 0, MPI_DATATYPE_NULL, data_handle(host_v), cnt, datatype<MpiSpace, T>(), comm);
+  KokkosComm::Impl::copy_back(space, v, host_v);
+  space.fence("fence copy back after in-place `MPI_Allgather`");
+#endif
 
   Kokkos::Tools::popRegion();
 }
@@ -90,7 +124,7 @@ namespace Experimental::Impl {
 
 template <KokkosView SendView, KokkosView RecvView, KokkosExecutionSpace ExecSpace>
 struct AllGather<SendView, RecvView, ExecSpace, MpiSpace> {
-  static auto execute(Handle<ExecSpace, MpiSpace> &h, const SendView sv, RecvView rv) -> Req<MpiSpace> {
+  static auto execute(Handle<ExecSpace, MpiSpace>& h, const SendView sv, RecvView rv) -> Req<MpiSpace> {
     return mpi::iallgather(h.space(), sv, rv, h.comm());
   }
 };
