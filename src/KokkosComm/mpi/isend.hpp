@@ -58,7 +58,7 @@ Req<MpiSpace> isend_impl(Handle<ExecSpace, MpiSpace>& h, const SendView& sv, int
     mpi_isend_fn(data_handle(host_sv), span(host_sv), datatype<MpiSpace, T>(), dest, tag, h.mpi_comm(),
                  &req.mpi_request());
   } else {
-    using Packer = typename KokkosComm::PackTraits<typename decltype(host_sv)>::packer_type;
+    using Packer = typename KokkosComm::PackTraits<decltype(host_sv)>::packer_type;
     auto args    = Packer::pack(h.space(), host_sv);
     h.space().fence("fence packing before `MPI_Isend`");
     mpi_isend_fn(data_handle(args.view), args.count, args.datatype, dest, tag, h.mpi_comm(), &req.mpi_request());
