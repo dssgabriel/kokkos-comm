@@ -24,7 +24,6 @@ namespace Impl {
 template <KokkosExecutionSpace ExecSpace, KokkosView SendView, mpi::CommunicationMode SendMode>
 Req<MpiSpace> isend_impl(Handle<ExecSpace, MpiSpace> &h, const SendView &sv, int dest, int tag, SendMode) {
   using T      = typename SendView::non_const_value_type;
-  using Packer = typename KokkosComm::PackTraits<SendView>::packer_type;
 
   auto mpi_isend_fn = [](void *mpi_view, int mpi_count, MPI_Datatype mpi_datatype, int mpi_dest, int mpi_tag,
                          MPI_Comm mpi_comm, MPI_Request *mpi_req) {
@@ -45,7 +44,8 @@ Req<MpiSpace> isend_impl(Handle<ExecSpace, MpiSpace> &h, const SendView &sv, int
     h.space().fence("fence before GPU-aware `MPI_Isend`");
     mpi_isend_fn(data_handle(sv), span(sv), datatype<MpiSpace, T>(), dest, tag, h.mpi_comm(), &req.mpi_request());
   } else {
-    auto args = Packer::pack(h.space(), sv);
+    using Packer = typename KokkosComm::PackTraits<SendView>::packer_type;
+    auto args    = Packer::pack(h.space(), sv);
     h.space().fence("fence packing before GPU-aware `MPI_Isend`");
     mpi_isend_fn(data_handle(args.view), args.count, args.datatype, dest, tag, h.mpi_comm(), &req.mpi_request());
     req.extend_view_lifetime(args.view);
@@ -58,7 +58,8 @@ Req<MpiSpace> isend_impl(Handle<ExecSpace, MpiSpace> &h, const SendView &sv, int
     mpi_isend_fn(data_handle(host_sv), span(host_sv), datatype<MpiSpace, T>(), dest, tag, h.mpi_comm(),
                  &req.mpi_request());
   } else {
-    auto args = Packer::pack(h.space(), host_sv);
+    using Packer = typename KokkosComm::PackTraits<typename decltype(host_sv)>::packer_type;
+    auto args    = Packer::pack(h.space(), host_sv);
     h.space().fence("fence packing before `MPI_Isend`");
     mpi_isend_fn(data_handle(args.view), args.count, args.datatype, dest, tag, h.mpi_comm(), &req.mpi_request());
     req.extend_view_lifetime(args.view);
