@@ -33,10 +33,13 @@ auto ibroadcast(const ExecSpace& space, View& v, int root, MPI_Comm comm) -> Req
 #else
   auto host_v = KokkosComm::Impl::stage_for(v);
   // Sync: Ensure that `host_v` is done being copied on the host
-  space.fence("fence before non-blocking broadcast");
+  space.fence("fence host staging before `MPI_Ibcast`");
   MPI_Ibcast(data_handle(host_v), span(host_v), datatype<MpiSpace, T>(), root, comm, &req.mpi_request());
   // Implicitly extends lifetimes of `host_v` and `v` due to lambda capture
-  req.call_after_mpi_wait([=]() { KokkosComm::Impl::copy_back(space, v, host_v); });
+  req.call_after_mpi_wait([=]() {
+    KokkosComm::Impl::copy_back(space, v, host_v);
+    space.fence("fence copy back after `MPI_Ibcast`");
+  });
 #endif
 
   Kokkos::Tools::popRegion();
@@ -55,10 +58,10 @@ void broadcast(ExecSpace const& space, View const& v, int root, MPI_Comm comm) {
   MPI_Bcast(data_handle(v), span(v), datatype<MpiSpace, T>(), root, comm);
 #else
   auto host_v = KokkosComm::Impl::stage_for(v);
-  // Sync: Ensure that `host_v` is done being copied on the host
-  space.fence("fence before non-blocking broadcast");
+  space.fence("fence host staging before `MPI_Bcast`");
   MPI_Bcast(data_handle(host_v), span(host_v), datatype<MpiSpace, T>(), root, comm);
   KokkosComm::Impl::copy_back(space, v, host_v);
+  space.fence("fence copy back after `MPI_Bcast`");
 #endif
 
   Kokkos::Tools::popRegion();
