@@ -1,16 +1,16 @@
-cmake_minimum_required(VERSION 3.23) # same as KokkosComm
+cmake_minimum_required(VERSION 3.25)
 
 project(
   KokkosCommUnitTests
   VERSION 0.2.0
   LANGUAGES CXX
-  DESCRIPTION "Unit tests for the KokkosComm experimental communication interfaces"
+  DESCRIPTION "Unit tests for the Kokkos Comm experimental explicit communication interfaces"
 )
 
 enable_testing()
 
 # Treat the unit tests as a separate project
-# If not included in the KokkosComm build, find KokkosComm to do a standalone build
+# If not included in the Kokkos Comm build, find Kokkos Comm to do a standalone build
 if(NOT TARGET KokkosComm::KokkosComm)
   find_package(KokkosComm REQUIRED)
 endif()
@@ -53,7 +53,7 @@ kc_add_unit_test(test.core.alltoall CORE NUM_PES 2 FILES test_main.cpp test_allt
 kc_add_unit_test(test.core.red_op_conv CORE NUM_PES 1 FILES test_main.cpp test_red_op_conversion.cpp)
 
 # --- MPI backend unit tests --- #
-if(KOKKOSCOMM_ENABLE_MPI)
+if(KokkosComm_ENABLE_MPI)
   # Standalone MPI smoke tests (do not use KokkosComm)
   kc_add_unit_test(smoke.mpi.1pe MPI NUM_PES 1 FILES mpi/test_mpi.cpp)
   kc_add_unit_test(smoke.mpi.2pes MPI NUM_PES 2 FILES mpi/test_mpi.cpp)
