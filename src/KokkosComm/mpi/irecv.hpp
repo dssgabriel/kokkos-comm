@@ -8,6 +8,7 @@
 #include <KokkosComm/datatype.hpp>
 #include "mpi_space.hpp"
 #include "handle.hpp"
+#include "req.hpp"
 
 #include "impl/pack_traits.hpp"
 #include "impl/tags.hpp"
@@ -20,9 +21,7 @@ namespace Impl {
 template <KokkosExecutionSpace ExecSpace, KokkosView RecvView>
 struct Recv<RecvView, ExecSpace, MpiSpace> {
   static Req<MpiSpace> execute(Handle<ExecSpace, MpiSpace> &h, const RecvView &rv, int src) {
-    using KCPT   = KokkosComm::PackTraits<RecvView>;
-    using Packer = typename KCPT::packer_type;
-    using Args   = typename Packer::args_type;
+    using Packer = typename mpi::Impl::PackTraits<RecvView>::packer_type;
 
     const ExecSpace &space = h.space();
 
@@ -33,7 +32,7 @@ struct Recv<RecvView, ExecSpace, MpiSpace> {
                 src, POINTTOPOINT_TAG, h.mpi_comm(), &req.mpi_request());
       req.extend_view_lifetime(rv);
     } else {
-      Args args = Packer::allocate_packed_for(space, "TODO", rv);
+      auto args = Packer::allocate_packed_for(space, "TODO", rv);
       space.fence("fence before irecv");
       MPI_Irecv(args.view.data(), args.count, args.datatype, src, POINTTOPOINT_TAG, h.mpi_comm(), &req.mpi_request());
       // implicitly extends args.view and rv lifetime due to lambda capture
