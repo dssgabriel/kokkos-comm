@@ -281,3 +281,44 @@ NCCL specialization
 
         Both ``wait_all`` and ``wait_any`` use active polling loops rather than blocking synchronization. While this
         increases CPU utilization, it avoids the overhead of spawning threads or completing requests sequentially.
+
+Utility
+=======
+
+.. cpp:namespace:: KokkosComm
+
+.. warning::
+
+    Non-system data types (i.e. the data types not natively supported by the communication space) are not convertible.
+    This notably includes user-defined types.
+
+.. cpp:function:: template <CommunicationSpace C, typename T>\
+                  auto datatype() -> C::datatype_type
+
+    Converts a type ``T`` to its communication space ``C`` equivalent representation.
+
+    When ``C`` is:
+
+    * ``MpiSpace``, returns the corresponding ``MPI_Datatype`` type.
+    * ``NcclSpace``, returns the corresponding ``ncclDataType_t`` type.
+
+    :tparam C: The target communication space backend to use for data type conversion.
+    :tparam T: The C++-native data type to convert from.
+    :returns: The communication space representation of the C++-native data type.
+
+.. cpp:function:: template <CommunicationSpace C, KokkosView V>\
+                  auto datatype_for([[maybe_unused]] const V& view) -> C::datatype_type
+
+    :tparam C: The target communication space backend to use for data type conversion.
+    :tparam V: A Kokkos View type.
+    :param view: The Kokkos View to convert the value type from.
+    :returns: The communication space representation of the Kokkos View value type.
+
+.. cpp:function:: template <CommunicationSpace C, KokkosView V>\
+                  auto datatype_for([[maybe_unused]] C&& comm, [[maybe_unused]] const V& view) -> C::datatype_type
+
+    :tparam C: The target communication space backend to use for data type conversion.
+    :tparam V: A Kokkos View type.
+    :param comm: A communication space object, immediately consumed.
+    :param view: The Kokkos View to convert the value type from.
+    :returns: The communication space representation of the Kokkos View value type.
