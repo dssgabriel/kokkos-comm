@@ -7,7 +7,7 @@
 #include <KokkosComm/traits.hpp>
 #include <KokkosComm/datatype.hpp>
 #include "mpi_space.hpp"
-#include "handle.hpp"
+#include "communicator.hpp"
 #include "request.hpp"
 
 #include "impl/pack_traits.hpp"

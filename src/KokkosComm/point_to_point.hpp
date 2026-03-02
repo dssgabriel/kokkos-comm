@@ -8,14 +8,14 @@
 #include "fwd.hpp"
 #if defined(KOKKOSCOMM_ENABLE_MPI)
 #include "mpi/mpi_space.hpp"
-#include "mpi/handle.hpp"
+#include "mpi/communicator.hpp"
 #include "mpi/request.hpp"
 #include "mpi/isend.hpp"
 #include "mpi/irecv.hpp"
 #endif
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
 #include "nccl/nccl_space.hpp"
-#include "nccl/handle.hpp"
+#include "nccl/communicator.hpp"
 #include "nccl/request.hpp"
 #include "nccl/send.hpp"
 #include "nccl/recv.hpp"

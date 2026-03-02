@@ -7,7 +7,7 @@ target_sources(
       FILES
         # Objects
         nccl_space.hpp
-        handle.hpp
+        communicator.hpp
         request.hpp
         # Point-to-point
         send.hpp

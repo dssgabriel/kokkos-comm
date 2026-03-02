@@ -9,7 +9,7 @@
 #include "reduction_op.hpp"
 #if defined(KOKKOSCOMM_ENABLE_MPI)
 #include "mpi/mpi_space.hpp"
-#include "mpi/handle.hpp"
+#include "mpi/communicator.hpp"
 #include "mpi/request.hpp"
 #include "mpi/broadcast.hpp"
 #include "mpi/allgather.hpp"
@@ -19,7 +19,7 @@
 #endif
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
 #include "nccl/nccl_space.hpp"
-#include "nccl/handle.hpp"
+#include "nccl/communicator.hpp"
 #include "nccl/request.hpp"
 #include "nccl/broadcast.hpp"
 #include "nccl/allgather.hpp"

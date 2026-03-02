@@ -13,7 +13,7 @@
 #include <KokkosComm/datatype.hpp>
 #include <KokkosComm/reduction_op.hpp>
 #include "mpi_space.hpp"
-#include "handle.hpp"
+#include "communicator.hpp"
 #include "request.hpp"
 
 #include "impl/error_handling.hpp"

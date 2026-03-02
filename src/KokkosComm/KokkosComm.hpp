@@ -14,7 +14,7 @@
 
 #include "mpi/channel.hpp"
 #include "mpi/comm_mode.hpp"
-#include "mpi/handle.hpp"
+#include "mpi/communicator.hpp"
 #include "mpi/request.hpp"
 
 #include "mpi/irecv.hpp"
@@ -35,7 +35,7 @@
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
 #include "nccl/nccl_space.hpp"
 
-#include "nccl/handle.hpp"
+#include "nccl/communicator.hpp"
 #include "nccl/request.hpp"
 
 #include "nccl/recv.hpp"
@@ -47,9 +47,3 @@
 #include "nccl/allreduce.hpp"
 #include "nccl/reduce.hpp"
 #endif
-
-#if !defined(KOKKOSCOMM_ENABLE_MPI) && !defined(KOKKOSCOMM_ENABLE_NCCL)
-static_assert(false, "KokkosComm: at least one communication space must be defined");
-#endif
-
-namespace KokkosComm {}  // namespace KokkosComm
