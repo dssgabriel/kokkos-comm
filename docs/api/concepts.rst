@@ -15,7 +15,7 @@ Kokkos Comm-specific concepts
 
     .. cpp:type:: T::communication_space
 
-    .. cpp:type:: T::handle_type
+    .. cpp:type:: T::communicator_type
 
     .. cpp:type:: T::request_type
 
@@ -23,7 +23,7 @@ Kokkos Comm-specific concepts
 
     .. cpp:type:: T::reduction_op_type
 
-    .. cpp:type:: T::rank_type
+    .. cpp:type:: T::size_type
 
 Types implementing the ``CommunicationSpace`` concept
 -----------------------------------------------------
@@ -32,7 +32,7 @@ Types implementing the ``CommunicationSpace`` concept
 
     .. cpp:type:: communication_space = MpiSpace
 
-    .. cpp:type:: handle_type = MPI_Comm
+    .. cpp:type:: communicator_type = MPI_Comm
 
     .. cpp:type:: request_type = MPI_Request
 
@@ -40,13 +40,13 @@ Types implementing the ``CommunicationSpace`` concept
 
     .. cpp:type:: reduction_op_type = MPI_Op
 
-    .. cpp:type:: rank_type = int
+    .. cpp:type:: size_type = int
 
 .. cpp:class:: Experimental::NcclSpace
 
     .. cpp:type:: communication_space = NcclSpace
 
-    .. cpp:type:: handle_type = ncclComm_t
+    .. cpp:type:: communicator_type = ncclComm_t
 
     .. cpp:type:: request_type = cudaEvent_t
 
@@ -54,7 +54,7 @@ Types implementing the ``CommunicationSpace`` concept
 
     .. cpp:type:: reduction_op_type = ncclRedOp_t
 
-    .. cpp:type:: rank_type = int
+    .. cpp:type:: size_type = int
 
 
 .. cpp:concept:: template <typename T> ReductionOperator
