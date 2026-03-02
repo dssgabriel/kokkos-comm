@@ -10,6 +10,7 @@ target_sources(
         collective.hpp
         concepts.hpp
         fwd.hpp
+        rank.hpp
         point_to_point.hpp
         traits.hpp
         datatype.hpp
