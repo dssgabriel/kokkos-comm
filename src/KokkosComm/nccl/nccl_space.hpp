@@ -16,11 +16,11 @@ namespace Experimental {
 /// The NCCL communication space.
 struct NcclSpace {
   using communication_space = NcclSpace;
-  using handle_type         = ncclComm_t;
+  using communicator_type   = ncclComm_t;
   using request_type        = cudaEvent_t;
   using datatype_type       = ncclDataType_t;
   using reduction_op_type   = ncclRedOp_t;
-  using rank_type           = int;
+  using size_type           = int;
 };
 
 }  // namespace Experimental

@@ -7,42 +7,49 @@
 #include "concepts.hpp"
 #include "datatype.hpp"
 #include "reduction_op.hpp"
+#include "rank.hpp"
 
 namespace KokkosComm {
+
+#if defined(KOKKOSCOMM_ENABLE_MPI)
+struct MpiSpace;
+using DefaultCommunicationSpace = MpiSpace;
+#endif
 
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
 namespace Experimental {
 struct NcclSpace;
 }
-// NCCL backend also declares the MPI space as fallback
-struct MpiSpace;
-
-using DefaultCommunicationSpace  = Experimental::NcclSpace;
-using FallbackCommunicationSpace = MpiSpace;
-#elif defined(KOKKOSCOMM_ENABLE_MPI)
-struct MpiSpace;
-using DefaultCommunicationSpace  = MpiSpace;
-using FallbackCommunicationSpace = MpiSpace;
-#else
-#error at least one communication space must be enabled
+using DefaultCommunicationSpace = Experimental::NcclSpace;
 #endif
+
+#if !defined(KOKKOSCOMM_ENABLE_MPI) && !defined(KOKKOSCOMM_ENABLE_NCCL)
+static_assert(false, "KokkosComm: at least one communication space must be defined");
+#endif
+
+/// @brief Template class for communicator wrappers.
+template <KokkosExecutionSpace Ex, CommunicationSpace Co>
+class Communicator;
+
+using Color = int;
+using Key   = int;
 
 /// @brief Template class for request wrappers.
 template <CommunicationSpace CommSpace = DefaultCommunicationSpace>
 class Request;
 
-template <KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
-          CommunicationSpace CommSpace   = DefaultCommunicationSpace>
-class Handle;
-
 namespace Impl {
 
-template <KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
-          CommunicationSpace CommSpace = DefaultCommunicationSpace>
+template <
+    KokkosView RecvView,
+    KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
+    CommunicationSpace CommSpace   = DefaultCommunicationSpace>
 struct Recv;
 
-template <KokkosView SendView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
-          CommunicationSpace CommSpace = DefaultCommunicationSpace>
+template <
+    KokkosView SendView,
+    KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
+    CommunicationSpace CommSpace   = DefaultCommunicationSpace>
 struct Send;
 
 }  // namespace Impl
@@ -50,26 +57,40 @@ struct Send;
 // Collectives are currently experimental functions
 namespace Experimental::Impl {
 
-template <KokkosView View, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
-          CommunicationSpace CommSpace = DefaultCommunicationSpace>
+template <
+    KokkosView View,
+    KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
+    CommunicationSpace CommSpace   = DefaultCommunicationSpace>
 struct Broadcast;
 
-template <KokkosView SendView, KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
-          CommunicationSpace CommSpace = DefaultCommunicationSpace>
+template <
+    KokkosView SendView,
+    KokkosView RecvView,
+    KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
+    CommunicationSpace CommSpace   = DefaultCommunicationSpace>
 struct AllGather;
 
-template <KokkosView SendView, KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
-          CommunicationSpace CommSpace = DefaultCommunicationSpace>
+template <
+    KokkosView SendView,
+    KokkosView RecvView,
+    KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
+    CommunicationSpace CommSpace   = DefaultCommunicationSpace>
 struct AllToAll;
 
-template <KokkosView SendView, KokkosView RecvView, ReductionOperator RedOp,
-          KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
-          CommunicationSpace CommSpace   = DefaultCommunicationSpace>
+template <
+    KokkosView SendView,
+    KokkosView RecvView,
+    ReductionOperator RedOp,
+    KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
+    CommunicationSpace CommSpace   = DefaultCommunicationSpace>
 struct AllReduce;
 
-template <KokkosView SendView, KokkosView RecvView, ReductionOperator RedOp,
-          KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
-          CommunicationSpace CommSpace   = DefaultCommunicationSpace>
+template <
+    KokkosView SendView,
+    KokkosView RecvView,
+    ReductionOperator RedOp,
+    KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
+    CommunicationSpace CommSpace   = DefaultCommunicationSpace>
 struct Reduce;
 
 }  // namespace Experimental::Impl
