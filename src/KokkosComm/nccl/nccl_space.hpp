@@ -21,6 +21,7 @@ struct NcclSpace {
   using datatype_type       = ncclDataType_t;
   using reduction_op_type   = ncclRedOp_t;
   using size_type           = int;
+  using rank_type           = int;
 };
 
 }  // namespace Experimental

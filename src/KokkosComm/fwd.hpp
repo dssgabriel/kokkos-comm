@@ -7,7 +7,6 @@
 #include "concepts.hpp"
 #include "datatype.hpp"
 #include "reduction_op.hpp"
-#include "rank.hpp"
 
 namespace KokkosComm {
 
@@ -30,9 +29,6 @@ static_assert(false, "KokkosComm: at least one communication space must be defin
 /// @brief Template class for communicator wrappers.
 template <KokkosExecutionSpace Ex, CommunicationSpace Co>
 class Communicator;
-
-using Color = int;
-using Key   = int;
 
 /// @brief Template class for request wrappers.
 template <CommunicationSpace CommSpace = DefaultCommunicationSpace>

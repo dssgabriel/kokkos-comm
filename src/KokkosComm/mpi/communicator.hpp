@@ -10,7 +10,6 @@
 
 #include <KokkosComm/fwd.hpp>
 #include <KokkosComm/concepts.hpp>
-#include <KokkosComm/rank.hpp>
 #include "mpi_space.hpp"
 
 namespace KokkosComm {

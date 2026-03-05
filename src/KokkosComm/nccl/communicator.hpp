@@ -11,7 +11,6 @@
 
 #include <KokkosComm/fwd.hpp>
 #include <KokkosComm/concepts.hpp>
-#include <KokkosComm/rank.hpp>
 #include "nccl_space.hpp"
 
 namespace KokkosComm {

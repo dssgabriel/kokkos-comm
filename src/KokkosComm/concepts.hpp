@@ -35,6 +35,7 @@ concept CommunicationSpace = requires {
   typename T::datatype_type;
   typename T::reduction_op_type;
   typename T::size_type;
+  typename T::rank_type;
 };
 
 template <typename T>
