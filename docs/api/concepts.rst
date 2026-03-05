@@ -25,8 +25,10 @@ Kokkos Comm-specific concepts
 
     .. cpp:type:: T::size_type
 
+    .. cpp:type:: T::rank_type
+
 Types implementing the ``CommunicationSpace`` concept
------------------------------------------------------
+"""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 .. cpp:class:: MpiSpace
 
@@ -42,6 +44,8 @@ Types implementing the ``CommunicationSpace`` concept
 
     .. cpp:type:: size_type = int
 
+    .. cpp:type:: rank_type = int
+
 .. cpp:class:: Experimental::NcclSpace
 
     .. cpp:type:: communication_space = NcclSpace
@@ -56,13 +60,15 @@ Types implementing the ``CommunicationSpace`` concept
 
     .. cpp:type:: size_type = int
 
+    .. cpp:type:: rank_type = int
+
 
 .. cpp:concept:: template <typename T> ReductionOperator
 
     Specifies that a type ``T`` is a Kokkos Comm reduction operator.
 
 Types implementing the ``ReductionOperator`` concept
-----------------------------------------------------
+""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 .. cpp:class:: BAnd
 

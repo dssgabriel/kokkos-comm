@@ -2,115 +2,177 @@
 Core
 ****
 
-Point-to-point
-==============
-
 .. cpp:namespace:: KokkosComm
 
-Send
-----
+Data Structures
+===============
 
-.. warning:: This is not a blocking operation despite being named like ``MPI_Send``.
+Communicators
+-------------
 
-.. cpp:function:: template <KokkosView SendView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace, CommunicationSpace CommSpace = DefaultCommunicationSpace> auto send(Handle<ExecSpace, CommSpace> &h, SendView &sv, int dest) -> Request<CommSpace>
+.. cpp:class:: template <CommunicationSpace Co = DefaultCommunicationSpace, KokkosExecutionSpace Ex = Kokkos::DefaultExecutionSpace>\
+               Communicator
 
-    Initiates a non-blocking send operation.
+    Template class for communicator wrappers of different communication space types.
 
-    :tparam SendView: The type of the Kokkos view to send.
-    :tparam ExecSpace: The execution space to use. Defaults to ``Kokkos::DefaultExecutionSpace``.
-    :tparam CommSpace: The communication backend to use. Defaults to ``DefaultCommunicationSpace``.
+    Communicators wrap a communication library-specific communicator (e.g. ``MPI_Comm``) and a Kokkos execution space, tightly coupling the two.
 
-    :param h: A handle to the execution space and transport mechanism.
-    :param sv: The Kokkos view to send.
-    :param dest: The destination rank.
+    ``Communicator`` objects are constructed via factory member functions. The parameterized constructor is private, and no default constructor is defined.
+    They are move-only objects: copy construction and copy assignment are explicitly deleted. Use the ``duplicate`` member functions to create equivalent "copies" of communicators.
+    There is always exactly one owner of a ``Communicator``.
 
-    :return: A request object of type ``Request<CommSpace>`` representing the non-blocking send operation.
+    :tparam Co: The communication space (transport backend) to use. Defaults to ``DefaultCommunicationSpace``.
+    :tparam Ex: The Kokkos execution space to use. Defaults to ``Kokkos::DefaultExecutionSpace``.
+
+    .. cpp:type:: execution_space = Ex
+    .. cpp:type:: communication_space = Co
+    .. cpp:type:: communicator_type = Co::communicator_type
+    .. cpp:type:: size_type = Co::size_type
+    .. cpp:type:: rank_type = Co::rank_type
+
+Common interfaces
+^^^^^^^^^^^^^^^^^
+
+Both specializations share the following interface:
+
+.. cpp:function:: ~Communicator() noexcept
+
+    Destructor.
+
+.. cpp:function:: Communicator(const Communicator&) = delete
+
+    Copy constructor is deleted because a ``Communicator`` cannot be implicitly copied. Use ``duplicate`` instead.
+
+.. cpp:function:: auto operator=(const Communicator&) -> Communicator& = delete
+
+    Copy assignment operator is deleted because a ``Communicator`` cannot be implicitly copied. Use ``duplicate`` instead.
+
+.. cpp:function:: Communicator(Communicator&&) noexcept
+
+    Move-constructs a ``Communicator``.
+
+.. cpp:function:: auto operator=(Communicator&&) noexcept -> Communicator&
+
+    Move-assigns a ``Communicator``.
+
+.. cpp:function:: [[nodiscard]] constexpr auto size() const noexcept -> size_type
+
+    :returns: The size (i.e., number of processes) in the communicator.
+
+.. cpp:function:: [[nodiscard]] constexpr auto rank() const noexcept -> rank_type
+
+    :returns: The rank that identifies the calling process within the communicator.
+
+.. cpp:function:: [[nodiscard]] auto split(int color, int key) noexcept -> std::optional<Communicator<Co, Ex>>
+
+    Splits a ``Communicator``.
+
+    Given a color and a key, creates as many new communicators as distinct values of ``color`` are given, ordering processes according to the value of ``key``.
+    All processes with the same color join the same communicator.
+
+    :param color: A value controlling in which split communicator the calling process should be in.
+    :param key: A value ordering the calling process within the split communicator.
+    :returns: A communicator if the calling process is part of one of the split communicators, ``nullopt`` if the color is a special value excluding the process at this rank or on error.
+
+.. cpp:function:: [[nodiscard]] auto duplicate() noexcept -> std::optional<Communicator<Co, Ex>>
+
+    Duplicates a ``Communicator``.
+
+    :returns: A communicator on success, ``std::nullopt`` on error.
+
+MPI specialization
+^^^^^^^^^^^^^^^^^^
+
+.. cpp:class:: template <KokkosExecutionSpace Ex> Communicator<MpiSpace, Ex>
+
+    Communicator specialization for the :cpp:class:`MpiSpace` communication space.
+    Wraps an ``MPI_Comm`` handle.
+
+    .. cpp:type:: execution_space = Ex
+    .. cpp:type:: communication_space = MpiSpace
+    .. cpp:type:: communicator_type = MPI_Comm
+    .. cpp:type:: size_type = int
+    .. cpp:type:: rank_type = int
+
+.. cpp:function:: [[nodiscard]] static auto from_raw(MPI_Comm comm, const Ex& exec = Kokkos::DefaultExecutionSpace{}) noexcept -> std::optional<Communicator<MpiSpace, Ex>>
+
+    Constructs a ``Communicator`` from a raw ``MPI_Comm`` handle and a Kokkos execution space instance. Defaults ``exec`` to ``Kokkos::DefaultExecutionSpace``.
+    The passed handle must be a valid handle and must not be an inter-communicator parent handle.
+    The returned communicator does not own the underlying handle, and the user may be responsible for destroying it.
+    Therefore, ``MPI_COMM_WORLD``, ``MPI_COMM_SELF`` and ``MPI_COMM_NULL`` are valid communicator handles to pass.
+
+    :param comm: A valid communicator handle.
+    :param exec: A Kokkos execution space instance. Defaults to ``Kokkos::DefaultExecutionSpace``.
+    :returns: A communicator on success, ``std::nullopt`` if the passed handle was ``MPI_COMM_NULL``.
+
+.. cpp:function:: [[nodiscard]] static auto split(const MPI_Comm comm, int color, int key, const Ex& exec = Kokkos::DefaultExecutionSpace{}) noexcept -> std::optional<Communicator<MpiSpace, Ex>>
+
+    Splits a communicator and associates it to a Kokkos execution space instance. Defaults ``exec`` to ``Kokkos::DefaultExecutionSpace``.
+
+    Creates as many new communicators as distinct values of ``color`` are given, and orders processes according to the value of ``key``. All processes with the same value of ``color`` join the same communicator.
+    A process that passes ``MPI_UNDEFINED`` as ``color`` will not join a new communicator.
+
+    :param comm: A valid communicator handle.
+    :param color: A value controlling in which split communicator the calling process should be in.
+    :param key: A value ordering the calling process within the split communicator.
+    :param exec: A Kokkos execution space instance. Defaults to ``Kokkos::DefaultExecutionSpace``.
+    :returns: A split communicator on success, ``std::nullopt`` if the passed color was ``MPI_UNDEFINED`` or on error.
+
+.. cpp:function:: [[nodiscard]] static auto duplicate(const MPI_Comm comm, const Ex& exec = Kokkos::DefaultExecutionSpace{}) noexcept -> std::optional<Communicator<MpiSpace, Ex>>
+
+    Duplicates a ``Communicator``.
+
+    :param comm: A valid communicator handle.
+    :param exec: A Kokkos execution space instance. Defaults to ``Kokkos::DefaultExecutionSpace``.
+    :returns: A communicator on success, ``std::nullopt`` on error.
+
+NCCL specialization
+^^^^^^^^^^^^^^^^^^^
+
+.. cpp:class:: template <> Communicator<MpiSpace, Kokkos::Cuda>
+
+    Communicator specialization for the :cpp:class:`Experimental::NcclSpace` communication space.
+    Wraps an ``ncclComm_t`` handle.
+
+    .. cpp:type:: execution_space = Kokkos::Cuda
+    .. cpp:type:: communication_space = Experimental::NcclSpace
+    .. cpp:type:: communicator_type = ncclComm_t
+    .. cpp:type:: size_type = int
+    .. cpp:type:: rank_type = int
+
+.. cpp:function:: [[nodiscard]] static auto from_raw(ncclComm_t comm, const Kokkos::Cuda& exec = Kokkos::Cuda{}) noexcept -> std::optional<Communicator<Experimental::NcclSpace, Kokkos::Cuda>>
+
+    Constructs a `Communicator` from a raw `ncclComm_t` handle and a Kokkos CUDA execution space instance. Defaults ``exec`` to ``Kokkos::Cuda``.
+    The returned communicator does not own the underlying handle, and the user is responsible for destroying it.
+
+    :param comm: A valid communicator handle.
+    :param exec: A Kokkos CUDA execution space instance. Defaults to ``Kokkos::Cuda``.
+    :returns: A communicator on success, ``std::nullopt`` if the passed handle was ``nullptr``.
+
+.. cpp:function:: [[nodiscard]] static auto split(const ncclComm_t comm, int color, int key, const Kokkos::Cuda& exec = Kokkos::Cuda{}) noexcept -> std::optional<Communicator<Experimental::NcclSpace, Kokkos::Cuda>>
+
+    Splits a communicator and associates it to a Kokkos CUDA, tion space instanc and ``MPI_COMM_NULL``. Defaults ``exec`` to ``Kokkos::Cuda``.
+
+    Creates as many new communicators as distinct values of ``color`` are given, and orders processes according to the value of ``key``. All processes with the same value of ``color`` join the same communicator.
+    A process that passes ``NCCL_SPLIT_NOCOLOR`` as ``color`` will not join a new communicator.
+
+    :param comm: A valid communicator handle.
+    :param color: A value controlling in which split communicator the calling process should be in.
+    :param key: A value ordering the calling process within the split communicator.
+    :param exec: A Kokkos CUDA execution space instance. Defaults to ``Kokkos::Cuda``.
+    :returns: A split communicator on success, ``std::nullopt`` if the passed color was ``NCCL_SPLIT_NOCOLOR`` or on error.
+
+.. cpp:function:: [[nodiscard]] static auto duplicate(const ncclComm_t comm, const Kokkos::Cuda& exec = Kokkos::Cuda{}) noexcept -> std::optional<Communicator<Experimental::NcclSpace, Kokkos::Cuda>>
+
+    Duplicates a ``Communicator``.
+
+    :param comm: A valid communicator handle.
+    :param exec: A Kokkos CUDA execution space instance. Defaults to ``Kokkos::Cuda``.
+    :returns: A communicator on success, ``std::nullopt`` on error.
 
 
-.. cpp:function:: template <KokkosView SendView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace, CommunicationSpace CommSpace = DefaultCommunicationSpace> auto send(SendView &sv, int dest) -> Request<CommSpace>
-
-    Initiates a non-blocking send operation using a default handle.
-
-    :tparam SendView: The type of the Kokkos view to send.
-    :tparam ExecSpace: The execution space to use. Defaults to ``Kokkos::DefaultExecutionSpace``.
-    :tparam CommSpace: The communication backend to use. Defaults to ``DefaultCommunicationSpace``.
-
-    :param sv: The Kokkos view to send.
-    :param dest: The destination rank.
-
-    :return: A request object of type ``Request<CommSpace>`` representing the non-blocking send operation.
-
-**Example usage:**
-
-.. literalinclude:: core_send.cpp
-    :language: cpp
-
-Receive
--------
-
-.. warning:: This is not a blocking operation despite being named like ``MPI_Recv``.
-
-.. cpp:function:: template <KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace, CommunicationSpace CommSpace = DefaultCommunicationSpace> auto recv(Handle<ExecSpace, CommSpace> &h, RecvView &sv, int dest) -> Request<CommSpace>
-
-    Initiates a non-blocking receive operation.
-
-    :tparam RecvView: The type of the Kokkos view for receiving data.
-    :tparam ExecSpace: The execution space where the operation will be performed. Defaults to ``Kokkos::DefaultExecutionSpace``.
-    :tparam CommSpace: The communication backend to use. Defaults to ``DefaultCommunicationSpace``.
-
-    :param h: A handle to the execution space and transport mechanism.
-    :param rv: The Kokkos view where the received data will be stored.
-    :param src: The source rank from which to receive data.
-
-    :return: A request object of type ``Request<CommSpace>`` representing the non-blocking receive operation.
-
-    This function initiates a non-blocking receive operation using the specified execution space and transport mechanism. The data will be received into the provided view from the specified source rank and message tag. The function returns a request object that can be used to check the status of the receive operation or to wait for its completion.
-
-
-.. cpp:function:: template <KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace, CommunicationSpace CommSpace = DefaultCommunicationSpace> auto recv(RecvView &sv, int dest) -> Request<CommSpace>
-
-    Initiates a non-blocking receive operation using a default handle.
-
-    :tparam RecvView: The type of the Kokkos view for receiving data.
-    :tparam ExecSpace: The execution space where the operation will be performed. Defaults to `Kokkos::DefaultExecutionSpace`.
-    :tparam CommSpace: The communication backend to use. Defaults to ``DefaultCommunicationSpace``.
-
-    :param rv: The Kokkos view where the received data will be stored.
-    :param src: The source rank from which to receive data.
-
-    :return: A request object of type ``Request<CommSpace>`` representing the non-blocking receive operation.
-
-**Example usage:**
-
-.. literalinclude:: core_recv.cpp
-   :language: cpp
-
-
-Collectives
-===========
-
-.. important::
-
-    Collective operations act **element-wise** on the input Views. Multi-dimensional Views are treated as a **logically flattened** sequence of values, and the reduction is applied over that sequence. All participating Views must have **identical extents**; mismatched shapes result in undefined behavior.
-
-    The reduction operator must be **associative**, but ordering of partial combinations is **not guaranteed**, and the operation is not required to be commutative.
-
-.. cpp:namespace:: KokkosComm
-
-.. cpp:function:: template <KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace, CommunicationSpace CommSpace = DefaultCommunicationSpace> auto barrier(Handle<ExecSpace, CommSpace> &&h) -> void
-
-    A function to create a barrier using the given execution space and transport handle.
-
-    :tparam ExecSpace: The execution space where the operation will be performed. Defaults to ``Kokkos::DefaultExecutionSpace``.
-    :tparam CommSpace: The communication backend to use. Defaults to ``DefaultCommunicationSpace``.
-
-    :param h: A handle of type ``Handle<ExecSpace, CommSpace>`` to be forwarded to the barrier implementation.
-
-
-Related types
-=============
-
-.. cpp:namespace:: KokkosComm
+Requests
+--------
 
 .. cpp:class:: template <CommunicationSpace C = DefaultCommSpace> Request
 
@@ -129,9 +191,9 @@ Related types
     .. cpp:type:: rank_type = C::rank_type
 
 Common interfaces
------------------
+^^^^^^^^^^^^^^^^^
 
-Both specializations share the following interface:
+Both specializations share the, llowing interface and ``MPI_COMM_NULL``:
 
 .. cpp:function:: Request(const Request&) = delete
 
@@ -208,7 +270,7 @@ Both specializations share the following interface:
     :returns: ``true`` if the request has completed, ``false`` otherwise.
 
 MPI specialization
-------------------
+^^^^^^^^^^^^^^^^^^
 
 .. cpp:class:: template <> Request<MpiSpace>
 
@@ -241,7 +303,7 @@ MPI specialization
         before calling ``MPI_Waitall`` and ``MPI_Waitany``, respectively, which incurs an allocation overhead.
 
 NCCL specialization
--------------------
+^^^^^^^^^^^^^^^^^^^
 
 .. cpp:class:: template <> Request<Experimental::NcclSpace>
 
@@ -282,8 +344,112 @@ NCCL specialization
         Both ``wait_all`` and ``wait_any`` use active polling loops rather than blocking synchronization. While this
         increases CPU utilization, it avoids the overhead of spawning threads or completing requests sequentially.
 
-Utility
-=======
+
+Communication Primitives
+========================
+
+Point-to-point
+--------------
+
+Send
+^^^^
+
+.. warning:: This is not a blocking operation despite being named like ``MPI_Send``.
+
+.. cpp:function:: template <KokkosView SendView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace, CommunicationSpace CommSpace = DefaultCommunicationSpace> auto send(Handle<ExecSpace, CommSpace> &h, SendView &sv, int dest) -> Request<CommSpace>
+
+    Initiates a non-blocking send operation.
+
+    :tparam SendView: The type of the Kokkos view to send.
+    :tparam ExecSpace: The execution space to use. Defaults to ``Kokkos::DefaultExecutionSpace``.
+    :tparam CommSpace: The communication backend to use. Defaults to ``DefaultCommunicationSpace``.
+
+    :param h: A handle to the execution space and transport mechanism.
+    :param sv: The Kokkos view to send.
+    :param dest: The destination rank.
+
+    :return: A request object of type ``Request<CommSpace>`` representing the non-blocking send operation.
+
+
+.. cpp:function:: template <KokkosView SendView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace, CommunicationSpace CommSpace = DefaultCommunicationSpace> auto send(SendView &sv, int dest) -> Request<CommSpace>
+
+    Initiates a non-blocking send operation using a default handle.
+
+    :tparam SendView: The type of the Kokkos view to send.
+    :tparam ExecSpace: The execution space to use. Defaults to ``Kokkos::DefaultExecutionSpace``.
+    :tparam CommSpace: The communication backend to use. Defaults to ``DefaultCommunicationSpace``.
+
+    :param sv: The Kokkos view to send.
+    :param dest: The destination rank.
+
+    :return: A request object of type ``Request<CommSpace>`` representing the non-blocking send operation.
+
+**Example usage:**
+
+.. literalinclude:: core_send.cpp
+    :language: cpp
+
+Receive
+^^^^^^^
+
+.. warning:: This is not a blocking operation despite being named like ``MPI_Recv``.
+
+.. cpp:function:: template <KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace, CommunicationSpace CommSpace = DefaultCommunicationSpace> auto recv(Handle<ExecSpace, CommSpace> &h, RecvView &sv, int dest) -> Request<CommSpace>
+
+    Initiates a non-blocking receive operation.
+
+    :tparam RecvView: The type of the Kokkos view for receiving data.
+    :tparam ExecSpace: The execution space where the operation will be performed. Defaults to ``Kokkos::DefaultExecutionSpace``.
+    :tparam CommSpace: The communication backend to use. Defaults to ``DefaultCommunicationSpace``.
+
+    :param h: A handle to the execution space and transport mechanism.
+    :param rv: The Kokkos view where the received data will be stored.
+    :param src: The source rank from which to receive data.
+
+    :return: A request object of type ``Request<CommSpace>`` representing the non-blocking receive operation.
+
+    This function initiates a non-blocking receive operation using the specified execution space and transport mechanism. The data will be received into the provided view from the specified source rank and message tag. The function returns a request object that can be used to check the status of the receive operation or to wait for its completion.
+
+
+.. cpp:function:: template <KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace, CommunicationSpace CommSpace = DefaultCommunicationSpace> auto recv(RecvView &sv, int dest) -> Request<CommSpace>
+
+    Initiates a non-blocking receive operation using a default handle.
+
+    :tparam RecvView: The type of the Kokkos view for receiving data.
+    :tparam ExecSpace: The execution space where the operation will be performed. Defaults to `Kokkos::DefaultExecutionSpace`.
+    :tparam CommSpace: The communication backend to use. Defaults to ``DefaultCommunicationSpace``.
+
+    :param rv: The Kokkos view where the received data will be stored.
+    :param src: The source rank from which to receive data.
+
+    :return: A request object of type ``Request<CommSpace>`` representing the non-blocking receive operation.
+
+**Example usage:**
+
+.. literalinclude:: core_recv.cpp
+   :language: cpp
+
+
+Collectives
+-----------
+
+.. important::
+
+    Collective operations act **element-wise** on the input Views. Multi-dimensional Views are treated as a **logically flattened** sequence of values, and the reduction is applied over that sequence. All participating Views must have **identical extents**; mismatched shapes result in undefined behavior.
+
+    The reduction operator must be **associative**, but ordering of partial combinations is **not guaranteed**, and the operation is not required to be commutative.
+
+.. cpp:function:: template <KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace, CommunicationSpace CommSpace = DefaultCommunicationSpace> auto barrier(Handle<ExecSpace, CommSpace> &&h) -> void
+
+    A function to create a barrier using the given execution space and transport handle.
+
+    :tparam ExecSpace: The execution space where the operation will be performed. Defaults to ``Kokkos::DefaultExecutionSpace``.
+    :tparam CommSpace: The communication backend to use. Defaults to ``DefaultCommunicationSpace``.
+
+    :param h: A handle of type ``Handle<ExecSpace, CommSpace>`` to be forwarded to the barrier implementation.
+
+Utilities
+---------
 
 .. cpp:namespace:: KokkosComm
 
