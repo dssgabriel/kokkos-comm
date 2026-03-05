@@ -15,89 +15,130 @@
 namespace KokkosComm {
 
 template <KokkosExecutionSpace Ex>
-class Communicator<Ex, MpiSpace> {
+class Communicator<MpiSpace, Ex> {
  public:
   using execution_space     = Ex;
   using communication_space = MpiSpace;
   using communicator_type   = communication_space::communicator_type;
-  using size_type           = int;
+  using size_type           = communication_space::size_type;
+  using rank_type           = communication_space::rank_type;
 
-  [[nodiscard]] static auto world(const execution_space& exec = Kokkos::DefaultExecutionSpace{}, Rank root = 0_rank)
-      -> Communicator<execution_space, MpiSpace> {
-    return Communicator<MpiSpace>(exec, MPI_COMM_WORLD, root, false);
-  }
-
-  [[nodiscard]] static auto duplicate(
-      const communicator_type comm, const execution_space& exec = Kokkos::DefaultExecutionSpace{}, Rank root = 0_rank
-  ) -> Communicator<execution_space, MpiSpace> {
-    communicator_type new_comm;
-    MPI_Comm_dup(comm, &new_comm);
-    return Communicator<MpiSpace>(exec, new_comm, root, true);
-  }
-
-  [[nodiscard]] static auto split(
-      const communicator_type comm,
-      const execution_space& exec = Kokkos::DefaultExecutionSpace{},
-      Color color,
-      Key key,
-      Rank root = 0_rank
-  ) -> std::optional<Communicator<execution_space, MpiSpace>> {
-    communicator_type new_comm;
-    MPI_Comm_split(comm, color, key, &new_comm);
-    if (color == MPI_UNDEFINED) {
-      return std::nullopt;
-    }
-    return Communicator<MpiSpace>(exec, new_comm, root, true);
-  }
-
-  [[nodiscard]] static auto try_from_raw(
-      communicator_type comm,
-      const execution_space& exec = Kokkos::DefaultExecutionSpace{},
-      Rank root                   = 0_rank,
-      bool is_owning              = false
-  ) -> std::optional<Communicator<execution_space, MpiSpace>> {
+  /// @brief Constructs a `Communicator` from a raw `MPI_Comm` handle and a Kokkos execution space instance.
+  /// Defaults `exec` to `Kokkos::DefaultExecutionSpace`.
+  /// Passing `MPI_COMM_NULL` returns `nullopt`.
+  ///
+  /// The passed `comm` must be a valid handle and must not be an inter-communicator parent handle.
+  /// The returned communicator does not own the underlying handle, and the user may be responsible for destroying it.
+  /// Therefore, `MPI_COMM_WORLD` and `MPI_COMM_SELF` are valid communicator handles to pass.
+  [[nodiscard]] static auto from_raw(
+      communicator_type comm, const execution_space& exec = Kokkos::DefaultExecutionSpace{}
+  ) noexcept -> std::optional<Communicator<communication_space, execution_space>> {
     if (comm == MPI_COMM_NULL) {
       return std::nullopt;
     }
-    return Communicator<MpiSpace>(exec, comm, root, is_owning);
+    return Communicator<communication_space, execution_space>(comm, exec, false);
   }
 
-  ~Communicator() {
-    // Free the underlying `MPI_Comm` if it is marked as owning, and is not `MPI_COMM_WORLD`, nor `MPI_COMM_SELF`
-    if (is_owning && !is_world() && !is_self()) {
-      MPI_Comm_free(comm_);
+  /// @brief Splits a communicator.
+  ///
+  /// Creates as many new communicators as distinct values of color are given, and orders processes according to the
+  /// value of `key`. All processes with the same value of `color` join the same communicator.
+  /// A process that passes `MPI_UNDEFINED` as `color` will not join a new communicator and `nullopt` is returned.
+  [[nodiscard]] static auto split(
+      const communicator_type comm, int color, int key, const execution_space& exec = Kokkos::DefaultExecutionSpace{}
+  ) noexcept -> std::optional<Communicator<execution_space, communication_space>> {
+    communicator_type new_comm;
+    MPI_Comm_split(comm, color, key, &new_comm);
+    // Something may have failed, but `color` may be `MPI_UNDEFINED` and we are now outside the split communicator
+    if (new_comm == MPI_COMM_NULL) {
+      return std::nullopt;
     }
+    return Communicator<communication_space, execution_space>(new_comm, exec, true);
+  }
+  [[nodiscard]] auto split(int color, int key) -> std::optional<Communicator<execution_space, communication_space>> {
+    return Communicator::split(comm_, color, key, exec_);
+  }
+
+  /// @brief Duplicates a communicator.
+  ///
+  /// If `MPI_Comm_dup` fails, returns `nullopt`.
+  [[nodiscard]] static auto duplicate(
+      const communicator_type comm, const execution_space& exec = Kokkos::DefaultExecutionSpace{}
+  ) noexcept -> std::optional<Communicator<communication_space, execution_space>> {
+    communicator_type new_comm;
+    MPI_Comm_dup(comm, &new_comm);
+    // Something failed, but we don't have proper error handling yet :(
+    if (new_comm == MPI_COMM_NULL) {
+      return std::nullopt;
+    }
+    return Communicator<communication_space, execution_space>(new_comm, exec, true);
+  }
+  [[nodiscard]] auto duplicate() -> std::optional<Communicator<execution_space, communication_space>> {
+    return Communicator::duplicate(comm_, exec_);
+  }
+
+  /// @brief Destructor.
+  ~Communicator() noexcept {
+    // Free the underlying `MPI_Comm` if it is owned, and is not `MPI_COMM_WORLD`, nor `MPI_COMM_SELF`.
+    // NOTE: `MPI_COMM_WORLD` and `MPI_COMM_SELF` are predefined communicators that shall not be passed to
+    // `MPI_Comm_free` from user code.
+    if (owned_ && comm_ != MPI_COMM_WORLD && comm_ != MPI_COMM_SELF) {
+      MPI_Comm_free(&comm_);
+    }
+  }
+  /// @brief Copy constructor is deleted because a `Communicator` cannot be implicitly copied.
+  /// Use `duplicate` instead.
+  Communicator(const Communicator&) = delete;
+  /// @brief Copy assignment operator is deleted because a `Communicator` cannot be implicitly copied.
+  /// Use `duplicate` instead.
+  auto operator=(const Communicator&) -> Communicator& = delete;
+  /// @brief Move constructor.
+  Communicator(Communicator&& other) noexcept
+      : comm_(std::exchange(other.comm_, MPI_COMM_NULL)),
+        exec_(std::move(other.exec_)),
+        size_(std::exchange(other.size_, 0)),
+        rank_(std::exchange(other.rank_, 0)),
+        owned_(std::exchange(other.owned_, false)) {}
+  /// @brief Move assignment operator.
+  auto operator=(Communicator&& other) noexcept -> Communicator& {
+    // Self-assignment guard is necessary here since the move assignment operator can be called on an already
+    // initialized object, and we must prevent self-move from calling `MPI_Comm_free`.
+    if (this != &other) {
+      // Run destructor logic on current state before overwriting (if `this` is already initialized)
+      if (owned_ && comm_ != MPI_COMM_WORLD && comm_ != MPI_COMM_SELF) {
+        MPI_Comm_free(&comm_);
+      }
+      comm_  = std::exchange(other.comm_, MPI_COMM_NULL);
+      exec_  = std::move(other.exec_);
+      size_  = std::exchange(other.size_, 0);
+      rank_  = std::exchange(other.rank_, 0);
+      owned_ = std::exchange(other.owned_, false);
+    }
+    return *this;
   }
 
   [[nodiscard]] constexpr auto exec() const noexcept -> const execution_space& { return exec_; }
-  [[nodiscard]] constexpr auto exec() noexcept -> execution_space& { return exec_; }
   [[nodiscard]] constexpr auto comm() const noexcept -> const communicator_type& { return comm_; }
+  // Non-const overload required because most MPI communication primitives take `MPI_Comm` by value
   [[nodiscard]] constexpr auto comm() noexcept -> communicator_type& { return comm_; }
   [[nodiscard]] constexpr auto size() const noexcept -> size_type { return size_; }
-  [[nodiscard]] constexpr auto rank() const noexcept -> Rank { return rank_; }
-  [[nodiscard]] constexpr auto root() const noexcept -> Rank { return rank_; }
-
-  constexpr auto set_root(Rank root) noexcept -> void { root_ = root; }
+  [[nodiscard]] constexpr auto rank() const noexcept -> rank_type { return rank_; }
 
  private:
-  explicit Communicator(const execution_space& exec, communicator_type comm, Rank root, bool is_owning)
-      : exec_(exec), comm_(comm), root_(root), is_owning_(is_owning) {
+  explicit Communicator(communicator_type comm, const execution_space& exec, bool owned)
+      : comm_(comm), exec_(exec), size_(0), rank_(0), owned_(owned) {
     set_size();
     set_rank();
   }
 
-  auto is_world() const noexcept -> bool { return comm_ == MPI_COMM_WORLD; }
-  auto is_self() const noexcept -> bool { return comm_ == MPI_COMM_SELF; }
-
   auto set_size() noexcept -> void { MPI_Comm_size(comm_, &size_); }
-  auto set_rank() noexcept -> void { MPI_Comm_rank(comm_, &rank_.value); }
+  auto set_rank() noexcept -> void { MPI_Comm_rank(comm_, &rank_); }
 
-  execution_space exec_;
   communicator_type comm_;
+  execution_space exec_;
   size_type size_;
-  Rank rank_;
-  Rank root_;
-  bool is_owning_;
+  rank_type rank_;
+  bool owned_;
 };
 
 }  // namespace KokkosComm
