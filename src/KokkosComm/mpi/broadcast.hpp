@@ -28,7 +28,7 @@ auto ibroadcast(const ExecSpace& space, View& v, int root, MPI_Comm comm) -> Req
   space.fence("fence before non-blocking broadcast");
 
   Request<MpiSpace> req;
-  MPI_Ibcast(data_handle(v), span(v), datatype<MpiSpace, T>, root, comm, req.request_ptr());
+  MPI_Ibcast(data_handle(v), span(v), datatype_for<MpiSpace>(v), root, comm, req.request_ptr());
   req.extend_view_lifetime(v);
 
   Kokkos::Tools::popRegion();
@@ -63,8 +63,8 @@ namespace Experimental::Impl {
 
 template <KokkosView View, KokkosExecutionSpace ExecSpace>
 struct Broadcast<View, ExecSpace, MpiSpace> {
-  static auto execute(Handle<ExecSpace, MpiSpace>& h, View& v, int root) -> Request<MpiSpace> {
-    return KokkosComm::mpi::ibroadcast(h.space(), v, root, h.comm());
+  static auto execute(Communicator<MpiSpace, ExecSpace>& h, View& v, int root) -> Request<MpiSpace> {
+    return KokkosComm::mpi::ibroadcast(h.exec(), v, root, h.comm());
   }
 };
 

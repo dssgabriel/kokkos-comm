@@ -46,7 +46,7 @@ class Communicator<MpiSpace, Ex> {
   /// A process that passes `MPI_UNDEFINED` as `color` will not join a new communicator and `nullopt` is returned.
   [[nodiscard]] static auto split(
       const communicator_type comm, int color, int key, const execution_space& exec = Kokkos::DefaultExecutionSpace{}
-  ) noexcept -> std::optional<Communicator<execution_space, communication_space>> {
+  ) noexcept -> std::optional<Communicator<communication_space, execution_space>> {
     communicator_type new_comm;
     MPI_Comm_split(comm, color, key, &new_comm);
     // Something may have failed, but `color` may be `MPI_UNDEFINED` and we are now outside the split communicator
@@ -55,7 +55,7 @@ class Communicator<MpiSpace, Ex> {
     }
     return Communicator<communication_space, execution_space>(new_comm, exec, true);
   }
-  [[nodiscard]] auto split(int color, int key) -> std::optional<Communicator<execution_space, communication_space>> {
+  [[nodiscard]] auto split(int color, int key) -> std::optional<Communicator<communication_space, execution_space>> {
     return Communicator::split(comm_, color, key, exec_);
   }
 
@@ -73,7 +73,7 @@ class Communicator<MpiSpace, Ex> {
     }
     return Communicator<communication_space, execution_space>(new_comm, exec, true);
   }
-  [[nodiscard]] auto duplicate() -> std::optional<Communicator<execution_space, communication_space>> {
+  [[nodiscard]] auto duplicate() -> std::optional<Communicator<communication_space, execution_space>> {
     return Communicator::duplicate(comm_, exec_);
   }
 
