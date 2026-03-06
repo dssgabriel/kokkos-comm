@@ -28,7 +28,7 @@ class Communicator<Experimental::NcclSpace, Kokkos::Cuda> {
   /// Defaults `exec` to `Kokkos::Cuda`.
   ///
   /// The returned communicator does not own the underlying handle, and the user is responsible for destroying it.
-  [[nodiscard]] static auto from_raw(communicator_type comm, const execution_space& exec = execution_space{}, ) noexcept
+  [[nodiscard]] static auto from_raw(communicator_type comm, const execution_space& exec = execution_space{}) noexcept
       -> std::optional<Communicator<communication_space, execution_space>> {
     if (comm == nullptr) {
       return std::nullopt;
@@ -42,8 +42,8 @@ class Communicator<Experimental::NcclSpace, Kokkos::Cuda> {
   /// value of `key`. All processes with the same value of `color` join the same communicator.
   /// A process that passes `NCCL_SPLIT_NOCOLOR` as `color` will not join a new communicator and `nullopt` is returned.
   [[nodiscard]] static auto split(
-      const communicator_type comm, int color, int key, const execution_space& exec = execution_space{},
-  ) -> std::optional<Communicator<communication_space, execution_space>> {
+      const communicator_type comm, int color, int key, const execution_space& exec = execution_space{}
+  ) noexcept -> std::optional<Communicator<communication_space, execution_space>> {
     communicator_type new_comm;
     ncclCommSplit(comm, color, key, &new_comm, nullptr);
     if (new_comm == nullptr) {
@@ -51,7 +51,8 @@ class Communicator<Experimental::NcclSpace, Kokkos::Cuda> {
     }
     return Communicator<communication_space, execution_space>(new_comm, exec, true);
   }
-  [[nodiscard]] auto split(int color, int key) -> std::optional<Communicator<execution_space, communication_space>> {
+  [[nodiscard]] auto split(int color, int key) noexcept
+      -> std::optional<Communicator<communication_space, execution_space>> {
     return Communicator::split(comm_, color, key, exec_);
   }
 
@@ -64,7 +65,7 @@ class Communicator<Experimental::NcclSpace, Kokkos::Cuda> {
     ncclCommUserRank(comm, &rank);
     return Communicator::split(comm, 0, rank, exec_);
   }
-  [[nodiscard]] auto duplicate() -> std::optional<Communicator<execution_space, communication_space>> {
+  [[nodiscard]] auto duplicate() noexcept -> std::optional<Communicator<communication_space, execution_space>> {
     return Communicator::duplicate(comm_, exec_);
   }
 

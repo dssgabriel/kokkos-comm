@@ -31,7 +31,8 @@ auto send(const ExecSpace& space, const SendView& sv, int peer, ncclComm_t comm)
     using Packer = typename Impl::PackTraits<SendView>::packer_type;
     auto pckd_sv = Packer::pack(space, "pckd_sv", sv);
     KC_NCCL_CHECK(
-        ncclSend(data_handle(pckd_sv.view_), pckd_sv.count_, pckd_sv.datatype_, peer, comm, space.cuda_stream()));
+        ncclSend(data_handle(pckd_sv.view_), pckd_sv.count_, pckd_sv.datatype_, peer, comm, space.cuda_stream())
+    );
     req.capture_stream_state(space.cuda_stream());
     req.extend_view_lifetime(pckd_sv.view_);
   }
@@ -46,9 +47,9 @@ namespace Impl {
 
 template <KokkosView SendView>
 struct Send<SendView, Kokkos::Cuda, Experimental::NcclSpace> {
-  static auto execute(Handle<Kokkos::Cuda, Experimental::NcclSpace>& h, SendView sv, int peer)
+  static auto execute(Communicator<Experimental::NcclSpace, Kokkos::Cuda>& h, SendView sv, int peer)
       -> Request<Experimental::NcclSpace> {
-    return Experimental::nccl::send(h.space(), sv, peer, h.comm());
+    return Experimental::nccl::send(h.exec(), sv, peer, h.comm());
   }
 };
 

@@ -31,7 +31,8 @@ auto recv(const ExecSpace& space, RecvView& rv, int peer, ncclComm_t comm) -> Re
     using Packer = typename Impl::PackTraits<RecvView>::packer_type;
     auto pckd_rv = Packer::allocate_packed_for(space, "pckd_rv", rv);
     KC_NCCL_CHECK(
-        ncclRecv(data_handle(pckd_rv.view_), pckd_rv.count_, pckd_rv.datatype_, peer, comm, space.cuda_stream()));
+        ncclRecv(data_handle(pckd_rv.view_), pckd_rv.count_, pckd_rv.datatype_, peer, comm, space.cuda_stream())
+    );
     req.capture_stream_state(space.cuda_stream());
     req.add_callback([space, rv, pckd_rv]() {
       Packer::unpack_into(space, rv, pckd_rv.view_);
@@ -49,9 +50,9 @@ namespace Impl {
 
 template <KokkosView RecvView>
 struct Recv<RecvView, Kokkos::Cuda, Experimental::NcclSpace> {
-  static auto execute(Handle<Kokkos::Cuda, Experimental::NcclSpace>& h, RecvView sv, int peer)
+  static auto execute(Communicator<Experimental::NcclSpace, Kokkos::Cuda>& h, RecvView sv, int peer)
       -> Request<Experimental::NcclSpace> {
-    return Experimental::nccl::recv(h.space(), sv, peer, h.comm());
+    return Experimental::nccl::recv(h.exec(), sv, peer, h.comm());
   }
 };
 

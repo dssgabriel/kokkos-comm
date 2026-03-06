@@ -23,8 +23,10 @@ namespace KC = KokkosComm;
 template <KokkosView View>
 auto broadcast(const Kokkos::Cuda& space, View& v, int root, ncclComm_t comm) -> Request<NcclSpace> {
   using T = typename View::non_const_value_type;
-  static_assert(KC::rank<View>() <= 1,
-                "KokkosComm::Experimental::nccl::broadcast: Views with rank higher than 1 are not supported");
+  static_assert(
+      KC::rank<View>() <= 1,
+      "KokkosComm::Experimental::nccl::broadcast: Views with rank higher than 1 are not supported"
+  );
   Kokkos::Tools::pushRegion("KokkosComm::Experimental::nccl::broadcast");
 
   Request<NcclSpace> req;
@@ -45,8 +47,8 @@ namespace Impl {
 
 template <KokkosView View>
 struct Broadcast<View, Kokkos::Cuda, NcclSpace> {
-  static auto execute(Handle<Kokkos::Cuda, NcclSpace>& h, View v, int root) -> Request<NcclSpace> {
-    return nccl::broadcast(h.space(), v, root, h.comm());
+  static auto execute(Communicator<NcclSpace, Kokkos::Cuda>& h, View v, int root) -> Request<NcclSpace> {
+    return nccl::broadcast(h.exec(), v, root, h.comm());
   }
 };
 
