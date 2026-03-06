@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 // SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
+#include "KokkosComm/fwd.hpp"
+#include "KokkosComm/mpi/mpi_space.hpp"
 #include "test_utils.hpp"
 
 #include <iostream>
@@ -10,9 +12,10 @@
 void noop(benchmark::State, MPI_Comm) {}
 
 template <typename Space, typename View>
-void send_recv(benchmark::State&, MPI_Comm comm, const Space& space, int nx, int ny, int rx, int ry, int rs,
-               const View& v) {
-  KokkosComm::Handle<> h{space, comm};
+void send_recv(
+    benchmark::State&, MPI_Comm comm, const Space& space, int nx, int ny, int rx, int ry, int rs, const View& v
+) {
+  auto h = KokkosComm::Communicator<KokkosComm::MpiSpace, Space>::from_raw(comm, space).value();
 
   // 2D index of nbrs in minus and plus direction (periodic)
   const int xm1 = (rx + rs - 1) % rs;
@@ -73,8 +76,9 @@ void benchmark_2dhalo(benchmark::State& state) {
     // grid of elements, each with 3 properties, and a radius-1 halo
     grid_type grid("", nx + 2, ny + 2, nprops);
     while (state.KeepRunning()) {
-      do_iteration(state, MPI_COMM_WORLD, send_recv<Kokkos::DefaultExecutionSpace, grid_type>, space, nx, ny, rx, ry,
-                   rs, grid);
+      do_iteration(
+          state, MPI_COMM_WORLD, send_recv<Kokkos::DefaultExecutionSpace, grid_type>, space, nx, ny, rx, ry, rs, grid
+      );
     }
   } else {
     while (state.KeepRunning()) {
