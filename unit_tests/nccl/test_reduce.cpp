@@ -31,8 +31,8 @@ auto reduce_contig_1d() -> void {
   const int root  = 0;
 
   const int n_contrib = 100;
-  Kokkos::View<Scalar *> sv("sv", n_contrib);
-  Kokkos::View<Scalar *> rv("rv", 0);
+  Kokkos::View<Scalar*> sv("sv", n_contrib);
+  Kokkos::View<Scalar*> rv("rv", 0);
   if (rank == root) {
     Kokkos::resize(rv, n_contrib);
   }
@@ -43,13 +43,13 @@ auto reduce_contig_1d() -> void {
   );
 
   // Using the same execution space for both operations lets us not need an explicit `fence`
-  KokkosComm::Experimental::nccl::reduce(exec, sv, rv, root, rank, ncclSum, comm).wait();
+  KokkosComm::Experimental::nccl::reduce(exec, sv, rv, ncclSum, root, rank, comm).wait();
 
   if (rank == root) {
     int errs;
     Kokkos::parallel_reduce(
         rv.extent(0),
-        KOKKOS_LAMBDA(const int i, int &lsum) {
+        KOKKOS_LAMBDA(const int i, int& lsum) {
           Scalar acc = 0;
           for (int r = 0; r < size; ++r) {
             acc += r + i;

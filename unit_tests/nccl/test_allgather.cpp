@@ -29,7 +29,7 @@ auto allgather_0d() -> void {
   const int root  = 0;
 
   Kokkos::View<Scalar> sv("sv");
-  Kokkos::View<Scalar *> rv("rv", size);
+  Kokkos::View<Scalar*> rv("rv", size);
 
   // Prepare send view, 1 element per sender: their rank
   Kokkos::parallel_for(
@@ -41,7 +41,7 @@ auto allgather_0d() -> void {
 
   int errs;
   Kokkos::parallel_reduce(
-      rv.extent(0), KOKKOS_LAMBDA(const int src, int &lsum) { lsum += rv(src) != src; }, errs
+      rv.extent(0), KOKKOS_LAMBDA(const int src, int& lsum) { lsum += rv(src) != src; }, errs
   );
   EXPECT_EQ(errs, 0);
 }
@@ -56,8 +56,8 @@ auto allgather_contig_1d() -> void {
   const int root  = 0;
 
   const int n_contrib = 100;
-  Kokkos::View<Scalar *> sv("sv", n_contrib);
-  Kokkos::View<Scalar *> rv("rv", size * n_contrib);
+  Kokkos::View<Scalar*> sv("sv", n_contrib);
+  Kokkos::View<Scalar*> rv("rv", size * n_contrib);
 
   // Prepare send view
   Kokkos::parallel_for(
@@ -65,12 +65,12 @@ auto allgather_contig_1d() -> void {
   );
 
   // Using the same execution space for both operations lets us not need an explicit `fence`
-  KokkosComm::Experimental::allgather(exec, sv, rv, comm).wait();
+  KokkosComm::Experimental::nccl::allgather(exec, sv, rv, comm).wait();
 
   int errs;
   Kokkos::parallel_reduce(
       rv.extent(0),
-      KOKKOS_LAMBDA(const int i, int &lsum) {
+      KOKKOS_LAMBDA(const int i, int& lsum) {
         const int src = i / n_contrib;
         const int j   = i % n_contrib;
         lsum += rv(i) != src + j;
