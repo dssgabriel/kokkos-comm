@@ -66,7 +66,7 @@ class Communicator<Experimental::NcclSpace, Kokkos::Cuda> {
     return Communicator::split(comm, 0, rank, exec);
   }
   [[nodiscard]] auto duplicate() noexcept -> std::optional<Communicator<communication_space, execution_space>> {
-    return Communicator::duplicate(comm_, exec_);
+    return Communicator::split(comm_, 0, rank_, exec_);
   }
 
   /// @brief Destructor.
