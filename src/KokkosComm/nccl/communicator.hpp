@@ -63,7 +63,7 @@ class Communicator<Experimental::NcclSpace, Kokkos::Cuda> {
     communicator_type new_comm;
     int rank;
     ncclCommUserRank(comm, &rank);
-    return Communicator::split(comm, 0, rank, exec_);
+    return Communicator::split(comm, 0, rank, exec);
   }
   [[nodiscard]] auto duplicate() noexcept -> std::optional<Communicator<communication_space, execution_space>> {
     return Communicator::duplicate(comm_, exec_);
