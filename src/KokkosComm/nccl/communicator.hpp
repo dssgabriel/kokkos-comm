@@ -20,7 +20,7 @@ class Communicator<Experimental::NcclSpace, Kokkos::Cuda> {
  public:
   using execution_space     = Kokkos::Cuda;
   using communication_space = Experimental::NcclSpace;
-  using communicator_type   = communication_space::handle_type;
+  using communicator_type   = communication_space::communicator_type;
   using size_type           = communication_space::size_type;
   using rank_type           = communication_space::rank_type;
 
