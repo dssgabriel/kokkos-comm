@@ -53,6 +53,7 @@ kc_add_unit_test(test.core.reduce CORE NUM_PES 2 FILES test_main.cpp test_reduce
 kc_add_unit_test(test.core.all-reduce CORE NUM_PES 2 FILES test_main.cpp test_allreduce.cpp)
 kc_add_unit_test(test.core.all-to-all CORE NUM_PES 2 FILES test_main.cpp test_alltoall.cpp)
 
+kc_add_unit_test(test.core.communicator CORE NUM_PES 2 FILES test_main.cpp test_communicator.cpp)
 kc_add_unit_test(test.core.datatype-conv CORE NUM_PES 1 FILES test_main.cpp test_datatype_conversion.cpp)
 kc_add_unit_test(test.core.red-op-conv CORE NUM_PES 1 FILES test_main.cpp test_red_op_conversion.cpp)
 
