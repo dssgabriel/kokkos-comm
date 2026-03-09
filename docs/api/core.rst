@@ -126,6 +126,15 @@ MPI specialization
     :param exec: A Kokkos execution space instance. Defaults to ``Kokkos::DefaultExecutionSpace``.
     :returns: A communicator on success, ``std::nullopt`` on error.
 
+.. cpp:function:: [[nodiscard]] auto comm() const noexcept -> const MPI_Comm&
+                  [[nodiscard]] auto comm() noexcept -> MPI_Comm&
+
+    :returns: A reference to the underlying ``MPI_Comm`` object.
+
+.. cpp:function:: [[nodiscard]] auto exec() const noexcept -> const execution_space&
+
+    :returns: A const reference to the associated execution space instance.
+
 NCCL specialization
 ^^^^^^^^^^^^^^^^^^^
 
@@ -169,6 +178,15 @@ NCCL specialization
     :param comm: A valid communicator handle.
     :param exec: A Kokkos CUDA execution space instance. Defaults to ``Kokkos::Cuda``.
     :returns: A communicator on success, ``std::nullopt`` on error.
+
+.. cpp:function:: [[nodiscard]] auto comm() const noexcept -> const ncclComm_t&
+                  [[nodiscard]] auto comm() noexcept -> ncclComm_t&
+
+    :returns: A reference to the underlying ``ncclComm_t`` object.
+
+.. cpp:function:: [[nodiscard]] auto exec() const noexcept -> const Kokkos::Cuda&
+
+    :returns: A const reference to the associated ``Kokkos::Cuda`` execution space instance.
 
 
 Requests
