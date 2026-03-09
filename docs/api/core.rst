@@ -374,7 +374,7 @@ Send
 
 .. warning:: This is not a blocking operation despite being named like ``MPI_Send``.
 
-.. cpp:function:: template <KokkosView SendView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace, CommunicationSpace CommSpace = DefaultCommunicationSpace> auto send(Handle<ExecSpace, CommSpace> &h, SendView &sv, int dest) -> Request<CommSpace>
+.. cpp:function:: template <KokkosView SendView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace, CommunicationSpace CommSpace = DefaultCommunicationSpace> auto send(Communicator<CommSpace, ExecSpace> &h, SendView &sv, int dest) -> Request<CommSpace>
 
     Initiates a non-blocking send operation.
 
@@ -412,7 +412,7 @@ Receive
 
 .. warning:: This is not a blocking operation despite being named like ``MPI_Recv``.
 
-.. cpp:function:: template <KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace, CommunicationSpace CommSpace = DefaultCommunicationSpace> auto recv(Handle<ExecSpace, CommSpace> &h, RecvView &sv, int dest) -> Request<CommSpace>
+.. cpp:function:: template <KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace, CommunicationSpace CommSpace = DefaultCommunicationSpace> auto recv(Communicator<CommSpace, ExecSpace> &h, RecvView &sv, int dest) -> Request<CommSpace>
 
     Initiates a non-blocking receive operation.
 
@@ -456,15 +456,6 @@ Collectives
     Collective operations act **element-wise** on the input Views. Multi-dimensional Views are treated as a **logically flattened** sequence of values, and the reduction is applied over that sequence. All participating Views must have **identical extents**; mismatched shapes result in undefined behavior.
 
     The reduction operator must be **associative**, but ordering of partial combinations is **not guaranteed**, and the operation is not required to be commutative.
-
-.. cpp:function:: template <KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace, CommunicationSpace CommSpace = DefaultCommunicationSpace> auto barrier(Handle<ExecSpace, CommSpace> &&h) -> void
-
-    A function to create a barrier using the given execution space and transport handle.
-
-    :tparam ExecSpace: The execution space where the operation will be performed. Defaults to ``Kokkos::DefaultExecutionSpace``.
-    :tparam CommSpace: The communication backend to use. Defaults to ``DefaultCommunicationSpace``.
-
-    :param h: A handle of type ``Handle<ExecSpace, CommSpace>`` to be forwarded to the barrier implementation.
 
 Utilities
 ---------
