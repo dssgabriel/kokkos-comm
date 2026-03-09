@@ -34,7 +34,7 @@ To let core API functions know that your communication space is something Kokkos
 
 
 Partial specialization of ``Communicator``
-=====================================
+==========================================
 
 .. attention:: Section in construction...
 
@@ -55,7 +55,7 @@ For example, for the MPI communication space handle, we define the following:
 
 
 Partial specialization of ``Request``
-===================================
+=====================================
 
 .. attention:: Section in construction...
 
