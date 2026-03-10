@@ -32,17 +32,19 @@ void isend_comm_mode_1d_contig() {
 
   Kokkos::View<Scalar*> a("a", 1000);
 
-  auto h = KokkosComm::Communicator<Co, Ex>::from_raw(MPI_COMM_WORLD, Ex()).value();
-  if (h.size() < 2) {
-    GTEST_SKIP() << "Requires >= 2 ranks (" << h.size() << " provided)";
+  int rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  if (size < 2) {
+    GTEST_SKIP() << "Requires >= 2 ranks (" << size << " provided)";
   }
 
-  if (0 == h.rank()) {
+  if (0 == rank) {
     int dst = 1;
     Kokkos::parallel_for(
         a.extent(0), KOKKOS_LAMBDA(const int i) { a(i) = i; }
     );
-    KokkosComm::mpi::isend(h, a, dst, 0, IsendMode{}).wait();
+    KokkosComm::mpi::isend(, a, dst, 0, IsendMode{}).wait();
   } else if (1 == h.rank()) {
     int src = 0;
     KokkosComm::mpi::recv(h.exec(), a, src, 0, h.comm());
