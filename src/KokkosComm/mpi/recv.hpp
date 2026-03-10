@@ -18,9 +18,29 @@
 
 namespace KokkosComm::mpi {
 
+template <KokkosExecutionSpace Ex, KokkosView RecvV>
+auto irecv(const Ex& exec, const RecvV& rv, int src, int tag, MPI_Comm comm) -> Request<MpiSpace> {
+  Kokkos::Tools::pushRegion("KokkosComm::mpi::irecv");
 
+  Request<MpiSpace> req;
+  if (is_contiguous(rv)) {
+    exec.fence("fence before MPI_Irecv");
+    MPI_Irecv(data_handle(rv), span(rv), datatype_for<MpiSpace>(rv), src, tag, comm, req.request_ptr());
+    req.extend_view_lifetime(rv);
+  } else {
+    using Packer = typename mpi::Impl::PackTraits<RecvV>::packer_type;
+    auto pckd_rv = Packer::allocate_packed_for(exec, "pckd_rv", rv);
+    exec.fence("fence packed allocation before MPI_Irecv");
+    MPI_Irecv(data_handle(pckd_rv.view), pckd_rv.count, pckd_rv.datatype, src, tag, comm, req.request_ptr());
+    // Implicitly extends `pckd_rv.view` and `rv` lifetime due to lambda capture
+    req.add_callback([exec, rv, pckd_rv]() {
+      Packer::unpack_into(exec, rv, pckd_rv.view);
+      exec.fence("fence unpacking after MPI_Irecv");
+    });
+  }
 
   Kokkos::Tools::popRegion();
+  return req;
 }
 
 template <KokkosExecutionSpace Ex, KokkosView RecvV>
