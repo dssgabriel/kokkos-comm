@@ -20,6 +20,43 @@
 namespace KokkosComm::mpi {
 
 template <KokkosExecutionSpace Ex, KokkosView SendV, CommunicationMode SendMode>
+auto isend(const Ex& exec, const SendV& sv, int dst, int tag, MPI_Comm comm, SendMode) -> Request<MpiSpace> {
+  Kokkos::Tools::pushRegion("KokkosComm::mpi::isend");
+
+  auto mpi_isend_fn = [dst, tag, comm](void* buf, int count, MPI_Datatype dtype, MPI_Request* req_ptr) {
+    if constexpr (std::is_same_v<SendMode, mpi::CommModeStandard>) {
+      MPI_Isend(buf, count, dtype, dst, tag, comm, req_ptr);
+    } else if constexpr (std::is_same_v<SendMode, mpi::CommModeReady>) {
+      MPI_Irsend(buf, count, dtype, dst, tag, comm, req_ptr);
+    } else if constexpr (std::is_same_v<SendMode, mpi::CommModeSynchronous>) {
+      MPI_Issend(buf, count, dtype, dst, tag, comm, req_ptr);
+    } else {
+      static_assert(std::is_void_v<SendMode>, "unexpected communication mode");
+    }
+  };
+
+  Request<MpiSpace> req;
+  if (is_contiguous(sv)) {
+    exec.fence("fence before MPI_Isend");
+    mpi_isend_fn(data_handle(sv), span(sv), datatype_for<MpiSpace>(sv), dst, tag, comm, req.request_ptr());
+  } else {
+    using Packer = typename Impl::PackTraits<SendV>::packer_type;
+    auto pckd_sv = Packer::pack(exec, "pckd_sv", sv);
+    exec.fence("fence packed allocation before MPI_Isend");
+    mpi_isend_fn(data_handle(pckd_sv.view), pckd_sv.count, pckd_sv.datatype, dst, tag, comm, req.request_ptr());
+    req.extend_view_lifetime(pckd_sv.view);
+  }
+  req.extend_view_lifetime(sv);
+
+  Kokkos::Tools::popRegion();
+  return req;
+}
+template <KokkosExecutionSpace Ex, KokkosView SendV>
+auto isend(const Ex& exec, const SendV& sv, int dst, int tag, MPI_Comm comm) -> void {
+  isend(exec, sv, dst, tag, comm, DefaultCommMode{});
+}
+
+template <KokkosExecutionSpace Ex, KokkosView SendV, CommunicationMode SendMode>
 auto send(const Ex& exec, const SendV& sv, int dst, int tag, MPI_Comm comm, SendMode) -> void {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::send");
 
