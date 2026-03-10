@@ -10,16 +10,20 @@
 
 namespace KokkosComm {
 
-#if defined(KOKKOSCOMM_ENABLE_MPI)
-struct MpiSpace;
-using DefaultCommunicationSpace = MpiSpace;
-#endif
-
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
 namespace Experimental {
 struct NcclSpace;
 }
 using DefaultCommunicationSpace = Experimental::NcclSpace;
+#endif
+
+#if defined(KOKKOSCOMM_ENABLE_MPI)
+struct MpiSpace;
+
+// Only declare MpiSpace as default if NCCL isn't enabled
+#if !defined(KOKKOSCOMM_ENABLE_NCCL)
+using DefaultCommunicationSpace = MpiSpace;
+#endif
 #endif
 
 #if !defined(KOKKOSCOMM_ENABLE_MPI) && !defined(KOKKOSCOMM_ENABLE_NCCL)
@@ -31,22 +35,16 @@ template <CommunicationSpace Co, KokkosExecutionSpace Ex>
 class Communicator;
 
 /// @brief Template class for request wrappers.
-template <CommunicationSpace CommSpace = DefaultCommunicationSpace>
+template <CommunicationSpace Co>
 class Request;
 
 namespace Impl {
 
-template <
-    KokkosView RecvView,
-    KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
-    CommunicationSpace CommSpace   = DefaultCommunicationSpace>
-struct Recv;
-
-template <
-    KokkosView SendView,
-    KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
-    CommunicationSpace CommSpace   = DefaultCommunicationSpace>
+template <CommunicationSpace Co, KokkosExecutionSpace Ex, KokkosView SendV>
 struct Send;
+
+template <CommunicationSpace Co, KokkosExecutionSpace Ex, KokkosView RecvV>
+struct Recv;
 
 }  // namespace Impl
 

@@ -5,13 +5,14 @@
 
 #include <Kokkos_Core_fwd.hpp>
 
+#include "concepts.hpp"
 #include "fwd.hpp"
 #if defined(KOKKOSCOMM_ENABLE_MPI)
 #include "mpi/mpi_space.hpp"
 #include "mpi/communicator.hpp"
 #include "mpi/request.hpp"
-#include "mpi/isend.hpp"
-#include "mpi/irecv.hpp"
+#include "mpi/send.hpp"
+#include "mpi/recv.hpp"
 #endif
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
 #include "nccl/nccl_space.hpp"
@@ -22,23 +23,50 @@
 #endif
 
 namespace KokkosComm {
+namespace Impl {
 
-/// Send w/ explicit handle
-template <
-    KokkosView SendView,
-    KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
-    CommunicationSpace CommSpace   = DefaultCommunicationSpace>
-auto send(Communicator<CommSpace, ExecSpace>& h, SendView& sv, int peer) -> Request<CommSpace> {
-  return Impl::Send<SendView, ExecSpace, CommSpace>::execute(h, sv, peer);
+#if defined(KOKKOSCOMM_ENABLE_MPI)
+template <KokkosExecutionSpace Ex, KokkosView SendV>
+struct Send<MpiSpace, Ex, SendV> {
+  static auto execute(Communicator<MpiSpace, Ex>& comm, const SendV& sv, int dst) -> Request<MpiSpace> {
+    return mpi::isend(comm.exec(), sv, dst, mpi::Impl::P2P_TAG, comm.comm());
+  }
+};
+template <KokkosExecutionSpace Ex, KokkosView RecvV>
+struct Recv<MpiSpace, Ex, RecvV> {
+  static auto execute(Communicator<MpiSpace, Ex>& comm, const RecvV& rv, int src) -> Request<MpiSpace> {
+    return mpi::irecv(comm.exec(), rv, src, mpi::Impl::P2P_TAG, comm.comm());
+  }
+};
+#endif
+
+#if defined(KOKKOSCOMM_ENABLE_NCCL)
+template <KokkosView SendV>
+struct Send<Experimental::NcclSpace, Kokkos::Cuda, SendV> {
+  static auto execute(Communicator<Experimental::NcclSpace, Kokkos::Cuda>& comm, const SendV& sv, int dst)
+      -> Request<Experimental::NcclSpace> {
+    return nccl::send(comm.exec(), sv, dst, comm.comm());
+  }
+};
+template <KokkosView RecvV>
+struct Recv<Experimental::NcclSpace, Kokkos::Cuda, RecvV> {
+  static auto execute(Communicator<Experimental::NcclSpace, Kokkos::Cuda>& comm, const RecvV& rv, int src)
+      -> Request<Experimental::NcclSpace> {
+    return nccl::recv(comm.exec(), rv, src, comm.comm());
+  }
+};
+#endif
+
+}  // namespace Impl
+
+template <CommunicationSpace Co, KokkosExecutionSpace Ex, KokkosView SendV>
+auto send(Communicator<Co, Ex>& comm, const SendV& sv, int dst) -> Request<Co> {
+  return Impl::Send<Co, Ex, SendV>::execute(comm, sv, dst);
 }
 
-/// Receive w/ explicit handle
-template <
-    KokkosView RecvView,
-    KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
-    CommunicationSpace CommSpace   = DefaultCommunicationSpace>
-auto recv(Communicator<CommSpace, ExecSpace>& h, RecvView& rv, int peer) -> Request<CommSpace> {
-  return Impl::Recv<RecvView, ExecSpace, CommSpace>::execute(h, rv, peer);
+template <CommunicationSpace Co, KokkosExecutionSpace Ex, KokkosView RecvV>
+auto recv(Communicator<Co, Ex>& comm, const RecvV& rv, int src) -> Request<Co> {
+  return Impl::Recv<Co, Ex, RecvV>::execute(comm, rv, src);
 }
 
 }  // namespace KokkosComm
