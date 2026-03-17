@@ -10,16 +10,18 @@
 
 namespace KokkosComm {
 
-#if defined(KOKKOSCOMM_ENABLE_MPI)
-struct MpiSpace;
-using DefaultCommunicationSpace = MpiSpace;
-#endif
-
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
 namespace Experimental {
 struct NcclSpace;
 }
 using DefaultCommunicationSpace = Experimental::NcclSpace;
+#endif
+
+#if defined(KOKKOSCOMM_ENABLE_MPI)
+struct MpiSpace;
+#if !defined(KOKKOSCOMM_ENABLE_NCCL)
+using DefaultCommunicationSpace = MpiSpace;
+#endif
 #endif
 
 #if !defined(KOKKOSCOMM_ENABLE_MPI) && !defined(KOKKOSCOMM_ENABLE_NCCL)
