@@ -14,10 +14,10 @@
 
 namespace KokkosComm {
 
-template <KokkosExecutionSpace Ex>
-class Communicator<MpiSpace, Ex> {
+template <KokkosExecutionSpace Exec>
+class Communicator<MpiSpace, Exec> {
  public:
-  using execution_space     = Ex;
+  using execution_space     = Exec;
   using communication_space = MpiSpace;
   using communicator_type   = communication_space::communicator_type;
   using size_type           = communication_space::size_type;
