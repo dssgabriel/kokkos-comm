@@ -27,7 +27,9 @@ static_assert(false, "KokkosComm: at least one communication space must be defin
 #endif
 
 /// @brief Template class for communicator wrappers.
-template <CommunicationSpace Co, KokkosExecutionSpace Ex>
+template <
+    CommunicationSpace Comm   = DefaultCommunicationSpace,
+    KokkosExecutionSpace Exec = Kokkos::DefaultExecutionSpace>
 class Communicator;
 
 /// @brief Template class for request wrappers.
