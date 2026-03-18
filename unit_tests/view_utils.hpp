@@ -36,8 +36,7 @@ struct InitFunctor {
     int val   = 0;
     int ids[] = {int(idxs)...};
     ((val = ids[Is] + exts[Is] * val), ...);
-    [&]<size_t... Js>(std::index_sequence<Js...>) { v(ids[Js]...) = val; }
-    (std::index_sequence<Is...>{});
+    [&]<size_t... Js>(std::index_sequence<Js...>) { v(ids[Js]...) = val; }(std::index_sequence<Is...>{});
   }
 };
 
@@ -47,13 +46,15 @@ struct CountFunctor {
   View v;
   std::array<int, sizeof...(Is)> exts;
 
-  KOKKOS_FUNCTION void operator()(decltype(static_cast<int>(std::declval<View>().extent(Is)))... idxs, int& lsum)
-      const {
+  KOKKOS_FUNCTION void operator()(
+      decltype(static_cast<int>(std::declval<View>().extent(Is)))... idxs, int& lsum
+  ) const {
     int val   = 0;
     int ids[] = {int(idxs)...};
     ((val = ids[Is] + exts[Is] * val), ...);
-    [&]<size_t... Js>(std::index_sequence<Js...>) { lsum += v(ids[Js]...) != Scalar(val); }
-    (std::index_sequence<Is...>{});
+    [&]<size_t... Js>(std::index_sequence<Js...>) {
+      lsum += v(ids[Js]...) != Scalar(val);
+    }(std::index_sequence<Is...>{});
   }
 };
 
@@ -68,17 +69,16 @@ template <typename T, size_t R, typename... Extents>
 auto build_view(NonContig, const std::string& name, Extents... exts) {
   static_assert(sizeof...(exts) == R, "Number of extents must match Rank");
   Kokkos::View<Impl::Stars<T, R + 1>, Kokkos::LayoutRight> v(name, exts..., 2);
-  return [&]<size_t... Is>(std::index_sequence<Is...>) { return Kokkos::subview(v, (void(Is), Kokkos::ALL)..., 1); }
-  (std::make_index_sequence<R>{});
+  return [&]<size_t... Is>(std::index_sequence<Is...>) {
+    return Kokkos::subview(v, (void(Is), Kokkos::ALL)..., 1);
+  }(std::make_index_sequence<R>{});
 }
 
 template <typename Exec, typename View>
 auto init_view(const Exec& exec, const View& v) -> void {
   constexpr size_t R = View::rank;
   if constexpr (R == 1) {
-    Kokkos::parallel_for(
-        Kokkos::RangePolicy<Exec>(exec, 0, v.extent(0)), KOKKOS_LAMBDA(const int i) { v(i) = i; }
-    );
+    Kokkos::parallel_for(Kokkos::RangePolicy<Exec>(exec, 0, v.extent(0)), KOKKOS_LAMBDA(const int i) { v(i) = i; });
   } else {
     [&]<size_t... Is>(std::index_sequence<Is...>) {
       std::array<int, R> exts = {static_cast<int>(v.extent(Is))...};
@@ -86,8 +86,7 @@ auto init_view(const Exec& exec, const View& v) -> void {
           Kokkos::MDRangePolicy<Exec, Kokkos::Rank<R>>(exec, {(void(Is), 0)...}, {static_cast<int>(v.extent(Is))...}),
           Impl::InitFunctor<View, Is...>{v, exts}
       );
-    }
-    (std::make_index_sequence<R>{});
+    }(std::make_index_sequence<R>{});
   }
   exec.fence();
 }
@@ -98,9 +97,7 @@ auto count_errors(const View& v) -> int {
   int errs           = 0;
   using Scalar       = typename View::value_type;
   if constexpr (R == 1) {
-    Kokkos::parallel_reduce(
-        v.extent(0), KOKKOS_LAMBDA(const int i, int& lsum) { lsum += v(i) != Scalar(i); }, errs
-    );
+    Kokkos::parallel_reduce(v.extent(0), KOKKOS_LAMBDA(const int i, int& lsum) { lsum += v(i) != Scalar(i); }, errs);
   } else {
     [&]<size_t... Is>(std::index_sequence<Is...>) {
       std::array<int, R> exts = {static_cast<int>(v.extent(Is))...};
@@ -108,8 +105,7 @@ auto count_errors(const View& v) -> int {
           Kokkos::MDRangePolicy<Kokkos::Rank<R>>({(void(Is), 0)...}, {static_cast<int>(v.extent(Is))...}),
           Impl::CountFunctor<View, Is...>{v, exts}, errs
       );
-    }
-    (std::make_index_sequence<R>{});
+    }(std::make_index_sequence<R>{});
   }
   return errs;
 }
