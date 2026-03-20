@@ -15,7 +15,7 @@ template <typename Space, typename View>
 void send_recv(
     benchmark::State&, MPI_Comm comm, const Space& space, int nx, int ny, int rx, int ry, int rs, const View& v
 ) {
-  auto h = KokkosComm::Communicator<KokkosComm::MpiSpace, Space>::from_raw(comm, space).value();
+  auto h = KokkosComm::Communicator<KokkosComm::MpiSpace, Space>::from_raw(comm, space);
 
   // 2D index of nbrs in minus and plus direction (periodic)
   const int xm1 = (rx + rs - 1) % rs;

@@ -23,9 +23,8 @@ void osu_latency_Kokkos_Comm_sendrecv(
 
 void benchmark_osu_latency_KokkosComm_sendrecv(benchmark::State &state) {
   auto h = KokkosComm::Communicator<KokkosComm::MpiSpace, Kokkos::DefaultExecutionSpace>::from_raw(
-               MPI_COMM_WORLD, Kokkos::DefaultExecutionSpace()
-  )
-               .value();
+      MPI_COMM_WORLD, Kokkos::DefaultExecutionSpace()
+  );
   if (h.size() != 2) {
     state.SkipWithError("benchmark_osu_latency_KokkosComm needs exactly 2 ranks");
   }

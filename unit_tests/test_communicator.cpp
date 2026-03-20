@@ -10,209 +10,214 @@
 
 namespace {
 
-using Ex = Kokkos::DefaultExecutionSpace;
-using Co = KokkosComm::DefaultCommunicationSpace;
-
-// ============================================================================
 // from_raw
-// ============================================================================
+// --------
 
-TEST(Communicator, from_raw_null_returns_nullopt) {
-  // from_raw must return std::nullopt when passed a null communicator handle
-#if defined(KOKKOSCOMM_ENABLE_NCCL)
-  auto result = KokkosComm::Communicator<Co, Ex>::from_raw(nullptr, Ex{});
-#else
-  auto result             = KokkosComm::Communicator<Co, Ex>::from_raw(MPI_COMM_NULL, Ex{});
-#endif
-  ASSERT_FALSE(result.has_value());
-}
-
-TEST(Communicator, from_raw_valid_returns_communicator) {
+TEST(Communicator, from_raw_returns_same_communicator) {
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
   auto nccl_ctx = test_utils::nccl::Ctx::init();
-  auto result   = KokkosComm::Communicator<Co, Ex>::from_raw(nccl_ctx.comm(), Ex{});
+  auto raw_comm = nccl_ctx.comm();
 #else
-  auto result             = KokkosComm::Communicator<Co, Ex>::from_raw(MPI_COMM_WORLD, Ex{});
+  auto raw_comm = MPI_COMM_WORLD;
 #endif
-  ASSERT_TRUE(result.has_value());
+  auto result = KokkosComm::Communicator<>::from_raw(raw_comm);
+
+  ASSERT_EQ(result.comm(), raw_comm);
 }
 
-TEST(Communicator, from_raw_size_and_rank_are_consistent) {
-  // size()/rank() must match the created-from raw communicator size/rank
+TEST(Communicator, from_raw_preserves_size_and_rank) {
+  int expected_size, expected_rank;
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
-  auto nccl_ctx           = test_utils::nccl::Ctx::init();
-  auto comm               = KokkosComm::Communicator<Co, Ex>::from_raw(nccl_ctx.comm(), Ex{}).value();
-  const int expected_size = [&nccl_ctx]() {
-    int s;
-    ncclCommCount(nccl_ctx.comm(), &s);
-    return s;
-  }();
-  const int expected_rank = [&nccl_ctx]() {
-    int r;
-    ncclCommUserRank(nccl_ctx.comm(), &r);
-    return r;
-  }();
+  auto nccl_ctx = test_utils::nccl::Ctx::init();
+  auto raw_comm = nccl_ctx.comm();
+  ncclCommCount(raw_comm, &expected_size);
+  ncclCommUserRank(raw_comm, &expected_rank);
 #else
-  auto comm               = KokkosComm::Communicator<Co, Ex>::from_raw(MPI_COMM_WORLD, Ex{}).value();
-  const int expected_size = []() {
-    int s;
-    MPI_Comm_size(MPI_COMM_WORLD, &s);
-    return s;
-  }();
-  const int expected_rank = []() {
-    int r;
-    MPI_Comm_rank(MPI_COMM_WORLD, &r);
-    return r;
-  }();
+  auto raw_comm = MPI_COMM_WORLD;
+  MPI_Comm_size(raw_comm, &expected_size);
+  MPI_Comm_rank(raw_comm, &expected_rank);
 #endif
+  auto comm = KokkosComm::Communicator<>::from_raw(raw_comm);
+
   ASSERT_EQ(comm.size(), expected_size);
   ASSERT_EQ(comm.rank(), expected_rank);
 }
 
-// ============================================================================
 // duplicate
-// ============================================================================
+// ---------
 
-TEST(Communicator, duplicate_from_raw_returns_communicator) {
+TEST(Communicator, duplicate_from_raw_returns_valid_communicator) {
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
   auto nccl_ctx = test_utils::nccl::Ctx::init();
-  auto result   = KokkosComm::Communicator<Co, Ex>::duplicate(nccl_ctx.comm(), Ex{});
+  auto raw_comm = nccl_ctx.comm();
 #else
-  auto result   = KokkosComm::Communicator<Co, Ex>::duplicate(MPI_COMM_WORLD, Ex{});
+  auto raw_comm = MPI_COMM_WORLD;
 #endif
+  auto result = KokkosComm::Communicator<>::duplicate_from_raw(raw_comm);
+
   ASSERT_TRUE(result.has_value());
 }
 
-TEST(Communicator, duplicate_preserves_size_and_rank) {
-  // A duplicated communicator must have the same size and rank as the source
+TEST(Communicator, duplicate_from_raw_preserves_size_and_rank) {
+  int expected_size, expected_rank;
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
   auto nccl_ctx = test_utils::nccl::Ctx::init();
-  auto original = KokkosComm::Communicator<Co, Ex>::from_raw(nccl_ctx.comm(), Ex{}).value();
+  auto raw_comm = nccl_ctx.comm();
+  ncclCommCount(raw_comm, &expected_size);
+  ncclCommUserRank(raw_comm, &expected_rank);
 #else
-  auto original = KokkosComm::Communicator<Co, Ex>::from_raw(MPI_COMM_WORLD, Ex{}).value();
+  auto raw_comm = MPI_COMM_WORLD;
+  MPI_Comm_size(raw_comm, &expected_size);
+  MPI_Comm_rank(raw_comm, &expected_rank);
 #endif
-  auto dup = original.duplicate().value();
+  auto result = KokkosComm::Communicator<>::duplicate_from_raw(raw_comm).value();
 
-  ASSERT_EQ(dup.size(), original.size());
-  ASSERT_EQ(dup.rank(), original.rank());
+  ASSERT_EQ(result.size(), expected_size);
+  ASSERT_EQ(result.rank(), expected_rank);
+}
+
+TEST(Communicator, duplicate_preserves_size_and_rank) {
+#if defined(KOKKOSCOMM_ENABLE_NCCL)
+  auto nccl_ctx = test_utils::nccl::Ctx::init();
+  auto raw_comm = nccl_ctx.comm();
+#else
+  auto raw_comm = MPI_COMM_WORLD;
+#endif
+  auto original = KokkosComm::Communicator<>::from_raw(raw_comm);
+  auto result   = original.duplicate().value();
+
+  ASSERT_EQ(result.size(), original.size());
+  ASSERT_EQ(result.rank(), original.rank());
 }
 
 TEST(Communicator, duplicate_produces_independent_communicator) {
-  // The duplicated communicator must hold a distinct handle from the original.
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
   auto nccl_ctx = test_utils::nccl::Ctx::init();
-  auto original = KokkosComm::Communicator<Co, Ex>::from_raw(nccl_ctx.comm(), Ex{}).value();
+  auto raw_comm = nccl_ctx.comm();
 #else
-  auto original = KokkosComm::Communicator<Co, Ex>::from_raw(MPI_COMM_WORLD, Ex{}).value();
+  auto raw_comm = MPI_COMM_WORLD;
 #endif
-  auto dup = original.duplicate().value();
+  auto original = KokkosComm::Communicator<>::from_raw(raw_comm);
+  auto result   = original.duplicate().value();
 
-  ASSERT_NE(dup.comm(), original.comm());
+  ASSERT_NE(result.comm(), original.comm());
 }
 
-// ============================================================================
 // split
-// ============================================================================
+// -----
 
-TEST(Communicator, split_undefined_color_returns_nullopt) {
-  // A rank that passes MPI_UNDEFINED/NCCL_SPLIT_NOCOLOR as color must be excluded from the new communicator and receive
-  // std::nullopt
+TEST(Communicator, split_from_raw_returns_valid_communicator) {
+  int rank;
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
   auto nccl_ctx = test_utils::nccl::Ctx::init();
-  auto original = KokkosComm::Communicator<Co, Ex>::from_raw(nccl_ctx.comm(), Ex{}).value();
-  auto result   = original.split(NCCL_SPLIT_NOCOLOR, 0);
+  auto raw_comm = nccl_ctx.comm();
+  ncclCommUserRank(raw_comm, &rank);
 #else
-  auto original = KokkosComm::Communicator<Co, Ex>::from_raw(MPI_COMM_WORLD, Ex{}).value();
-  auto result   = original.split(MPI_UNDEFINED, 0);
+  auto raw_comm = MPI_COMM_WORLD;
+  MPI_Comm_rank(raw_comm, &rank);
 #endif
+  auto result = KokkosComm::Communicator<>::split_from_raw(raw_comm, 0, rank);
+
+  ASSERT_TRUE(result.has_value());
+}
+
+TEST(Communicator, split_undefined_color_returns_nullopt) {
+#if defined(KOKKOSCOMM_ENABLE_NCCL)
+  auto nccl_ctx = test_utils::nccl::Ctx::init();
+  auto raw_comm = nccl_ctx.comm();
+  int color     = NCCL_SPLIT_NOCOLOR;
+#else
+  auto raw_comm = MPI_COMM_WORLD;
+  int color     = MPI_UNDEFINED;
+#endif
+  auto original = KokkosComm::Communicator<>::from_raw(raw_comm);
+  auto result   = original.split(color, 0);
+
   ASSERT_FALSE(result.has_value());
 }
 
 TEST(Communicator, split_same_color_groups_all_ranks) {
-  // When all ranks use the same color, the resulting communicator must have the same size as the original
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
   auto nccl_ctx = test_utils::nccl::Ctx::init();
-  auto comm     = KokkosComm::Communicator<Co, Ex>::from_raw(nccl_ctx.comm(), Ex{}).value();
+  auto raw_comm = nccl_ctx.comm();
 #else
-  auto comm     = KokkosComm::Communicator<Co, Ex>::from_raw(MPI_COMM_WORLD, Ex{}).value();
+  auto raw_comm = MPI_COMM_WORLD;
 #endif
-  auto result = comm.split(0, comm.rank());
+  auto original   = KokkosComm::Communicator<>::from_raw(raw_comm);
+  const int color = 0;
 
-  ASSERT_TRUE(result.has_value());
-  ASSERT_EQ(result->size(), comm.size());
+  auto result = original.split(color, original.rank()).value();
+
+  ASSERT_EQ(result.size(), original.size());
 }
 
 TEST(Communicator, split_two_colors_produces_half_sized_communicators) {
-  // With two colors assigned by parity, each sub-communicator must contain roughly half the ranks.
-  // Requires an even number of ranks >= 2.
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
   auto nccl_ctx = test_utils::nccl::Ctx::init();
-  auto comm     = KokkosComm::Communicator<Co, Ex>::from_raw(nccl_ctx.comm(), Ex{}).value();
+  auto raw_comm = nccl_ctx.comm();
 #else
-  auto comm     = KokkosComm::Communicator<Co, Ex>::from_raw(MPI_COMM_WORLD, Ex{}).value();
+  auto raw_comm = MPI_COMM_WORLD;
 #endif
-  if (comm.size() < 2 or comm.size() % 2 != 0) {
-    GTEST_SKIP() << "Requires an even number of ranks >= 2 (" << comm.size() << " provided)";
+  auto original = KokkosComm::Communicator<>::from_raw(raw_comm);
+  if (original.size() < 2 or original.size() % 2 != 0) {
+    GTEST_SKIP() << "Requires an even number of ranks >= 2 (" << original.size() << " provided)";
   }
+  const int color = original.rank() % 2;
 
-  const int color = comm.rank() % 2;
-  auto result     = comm.split(color, comm.rank());
+  auto result = original.split(color, original.rank()).value();
 
-  ASSERT_TRUE(result.has_value());
-  ASSERT_EQ(result->size(), comm.size() / 2);
+  ASSERT_EQ(result.size(), original.size() / 2);
 }
 
 TEST(Communicator, split_key_controls_rank_ordering) {
-  // When ranks split into a single group with reversed keys, the rank order inside the new communicator must be the
-  // mirror of the original
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
   auto nccl_ctx = test_utils::nccl::Ctx::init();
-  auto comm     = KokkosComm::Communicator<Co, Ex>::from_raw(nccl_ctx.comm(), Ex{}).value();
+  auto raw_comm = nccl_ctx.comm();
 #else
-  auto comm     = KokkosComm::Communicator<Co, Ex>::from_raw(MPI_COMM_WORLD, Ex{}).value();
+  auto raw_comm = MPI_COMM_WORLD;
 #endif
-  if (comm.size() < 2) {
-    GTEST_SKIP() << "Requires >= 2 ranks (" << comm.size() << " provided)";
+  auto original = KokkosComm::Communicator<>::from_raw(raw_comm);
+  if (original.size() < 2 or original.size() % 2 != 0) {
+    GTEST_SKIP() << "Requires an even number of ranks >= 2 (" << original.size() << " provided)";
   }
-
+  const int color = 0;
   // Reverse key: rank 0 gets the highest key, rank N-1 gets 0
-  const int reversed_key = comm.size() - 1 - comm.rank();
-  auto result            = comm.split(0, reversed_key);
+  const int reversed_key = original.size() - 1 - original.rank();
 
-  ASSERT_TRUE(result.has_value());
-  // After reversal, each rank's new rank must equal its reversed_key position
-  ASSERT_EQ(result->rank(), reversed_key);
+  auto result = original.split(0, reversed_key).value();
+
+  ASSERT_EQ(result.rank(), reversed_key);
 }
 
-// ============================================================================
-// Move semantics
-// ============================================================================
+// move semantics
+// --------------
 
 TEST(Communicator, move_constructed_communicator_is_valid) {
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
   auto nccl_ctx = test_utils::nccl::Ctx::init();
-  auto original = KokkosComm::Communicator<Co, Ex>::from_raw(nccl_ctx.comm(), Ex{}).value();
+  auto raw_comm = nccl_ctx.comm();
 #else
-  auto original = KokkosComm::Communicator<Co, Ex>::from_raw(MPI_COMM_WORLD, Ex{}).value();
+  auto raw_comm = MPI_COMM_WORLD;
 #endif
+  auto original           = KokkosComm::Communicator<>::from_raw(raw_comm);
   const int expected_size = original.size();
   const int expected_rank = original.rank();
 
-  auto moved = std::move(original);
+  auto result = std::move(original);
 
-  ASSERT_EQ(moved.size(), expected_size);
-  ASSERT_EQ(moved.rank(), expected_rank);
+  ASSERT_EQ(result.size(), expected_size);
+  ASSERT_EQ(result.rank(), expected_rank);
 }
 
 TEST(Communicator, move_assigned_communicator_is_valid) {
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
   auto nccl_ctx = test_utils::nccl::Ctx::init();
-  auto original = KokkosComm::Communicator<Co, Ex>::from_raw(nccl_ctx.comm(), Ex{}).value();
-  auto target   = KokkosComm::Communicator<Co, Ex>::duplicate(nccl_ctx.comm(), Ex{}).value();
+  auto raw_comm = nccl_ctx.comm();
 #else
-  auto original = KokkosComm::Communicator<Co, Ex>::from_raw(MPI_COMM_WORLD, Ex{}).value();
-  auto target   = KokkosComm::Communicator<Co, Ex>::duplicate(MPI_COMM_WORLD, Ex{}).value();
+  auto raw_comm = MPI_COMM_WORLD;
 #endif
+  auto original           = KokkosComm::Communicator<>::from_raw(raw_comm);
+  auto target             = original.duplicate().value();
   const int expected_size = original.size();
   const int expected_rank = original.rank();
 

@@ -25,27 +25,21 @@ class Communicator<MpiSpace, Exec> {
 
   /// @brief Constructs a `Communicator` from a raw `MPI_Comm` handle and a Kokkos execution space instance.
   /// Defaults `exec` to `Kokkos::DefaultExecutionSpace`.
-  /// Passing `MPI_COMM_NULL` returns `nullopt`.
   ///
   /// The passed `comm` must be a valid handle and must not be an inter-communicator parent handle.
-  /// The returned communicator does not own the underlying handle, and the user may be responsible for destroying it.
-  /// Therefore, `MPI_COMM_WORLD` and `MPI_COMM_SELF` are valid communicator handles to pass.
-  [[nodiscard]] static auto from_raw(
-      communicator_type comm, const execution_space& exec = Kokkos::DefaultExecutionSpace{}
-  ) noexcept -> std::optional<Communicator<communication_space, execution_space>> {
-    if (comm == MPI_COMM_NULL) {
-      return std::nullopt;
-    }
-    return Communicator<communication_space, execution_space>(comm, exec, false);
+  /// The returned communicator does not own the underlying handle, and the user is responsible for destroying it.
+  [[nodiscard]] static auto from_raw(communicator_type comm, const execution_space& exec = execution_space{}) noexcept
+      -> Communicator<communication_space, execution_space> {
+    return Communicator(comm, exec, false);
   }
 
-  /// @brief Splits a communicator.
+  /// @brief Splits from a raw MPI communicator handle by color and key.
   ///
   /// Creates as many new communicators as distinct values of color are given, and orders processes according to the
   /// value of `key`. All processes with the same value of `color` join the same communicator.
   /// A process that passes `MPI_UNDEFINED` as `color` will not join a new communicator and `nullopt` is returned.
-  [[nodiscard]] static auto split(
-      const communicator_type comm, int color, int key, const execution_space& exec = Kokkos::DefaultExecutionSpace{}
+  [[nodiscard]] static auto split_from_raw(
+      const communicator_type comm, int color, int key, const execution_space& exec = execution_space{}
   ) noexcept -> std::optional<Communicator<communication_space, execution_space>> {
     communicator_type new_comm;
     MPI_Comm_split(comm, color, key, &new_comm);
@@ -55,15 +49,17 @@ class Communicator<MpiSpace, Exec> {
     }
     return Communicator<communication_space, execution_space>(new_comm, exec, true);
   }
+
+  /// @brief Splits an existing communicator by color and key.
   [[nodiscard]] auto split(int color, int key) -> std::optional<Communicator<communication_space, execution_space>> {
-    return Communicator::split(comm_, color, key, exec_);
+    return Communicator::split_from_raw(comm_, color, key, exec_);
   }
 
-  /// @brief Duplicates a communicator.
+  /// @brief Duplicates from a raw MPI communicator.
   ///
   /// If `MPI_Comm_dup` fails, returns `nullopt`.
-  [[nodiscard]] static auto duplicate(
-      const communicator_type comm, const execution_space& exec = Kokkos::DefaultExecutionSpace{}
+  [[nodiscard]] static auto duplicate_from_raw(
+      const communicator_type comm, const execution_space& exec = execution_space{}
   ) noexcept -> std::optional<Communicator<communication_space, execution_space>> {
     communicator_type new_comm;
     MPI_Comm_dup(comm, &new_comm);
@@ -73,8 +69,10 @@ class Communicator<MpiSpace, Exec> {
     }
     return Communicator<communication_space, execution_space>(new_comm, exec, true);
   }
+
+  /// @brief Duplicates an existing communicator.
   [[nodiscard]] auto duplicate() -> std::optional<Communicator<communication_space, execution_space>> {
-    return Communicator::duplicate(comm_, exec_);
+    return Communicator::duplicate_from_raw(comm_, exec_);
   }
 
   /// @brief Destructor.

@@ -10,7 +10,7 @@ Data Structures
 Communicators
 -------------
 
-.. cpp:class:: template <CommunicationSpace Co = DefaultCommunicationSpace, KokkosExecutionSpace Ex = Kokkos::DefaultExecutionSpace>\
+.. cpp:class:: template <CommunicationSpace Comm = DefaultCommunicationSpace, KokkosExecutionSpace Exec = Kokkos::DefaultExecutionSpace>\
                Communicator
 
     Template class for communicator wrappers of different communication space types.
@@ -24,11 +24,11 @@ Communicators
     :tparam Co: The communication space (transport backend) to use. Defaults to ``DefaultCommunicationSpace``.
     :tparam Ex: The Kokkos execution space to use. Defaults to ``Kokkos::DefaultExecutionSpace``.
 
-    .. cpp:type:: execution_space = Ex
-    .. cpp:type:: communication_space = Co
-    .. cpp:type:: communicator_type = Co::communicator_type
-    .. cpp:type:: size_type = Co::size_type
-    .. cpp:type:: rank_type = Co::rank_type
+    .. cpp:type:: execution_space = Exec
+    .. cpp:type:: communication_space = Comm
+    .. cpp:type:: communicator_type = Comm::communicator_type
+    .. cpp:type:: size_type = Comm::size_type
+    .. cpp:type:: rank_type = Comm::rank_type
 
 Common interfaces
 ^^^^^^^^^^^^^^^^^
@@ -63,7 +63,7 @@ Both specializations share the following interface:
 
     :returns: The rank that identifies the calling process within the communicator.
 
-.. cpp:function:: [[nodiscard]] auto split(int color, int key) noexcept -> std::optional<Communicator<Co, Ex>>
+.. cpp:function:: [[nodiscard]] auto split(int color, int key) noexcept -> std::optional<Communicator<Comm, Exec>>
 
     Splits a ``Communicator``.
 
@@ -72,9 +72,9 @@ Both specializations share the following interface:
 
     :param color: A value controlling in which split communicator the calling process should be in.
     :param key: A value ordering the calling process within the split communicator.
-    :returns: A communicator if the calling process is part of one of the split communicators, ``nullopt`` if the color is a special value excluding the process at this rank or on error.
+    :returns: A communicator if the calling process is part of one of the split communicators, ``std::nullopt`` if the color is a special value excluding the process at this rank or on error.
 
-.. cpp:function:: [[nodiscard]] auto duplicate() noexcept -> std::optional<Communicator<Co, Ex>>
+.. cpp:function:: [[nodiscard]] auto duplicate() noexcept -> std::optional<Communicator<Comm, Exec>>
 
     Duplicates a ``Communicator``.
 
@@ -83,31 +83,30 @@ Both specializations share the following interface:
 MPI specialization
 ^^^^^^^^^^^^^^^^^^
 
-.. cpp:class:: template <KokkosExecutionSpace Ex> Communicator<MpiSpace, Ex>
+.. cpp:class:: template <KokkosExecutionSpace Exec> Communicator<MpiSpace, Exec>
 
     Communicator specialization for the :cpp:class:`MpiSpace` communication space.
     Wraps an ``MPI_Comm`` handle.
 
-    .. cpp:type:: execution_space = Ex
+    .. cpp:type:: execution_space = Exec
     .. cpp:type:: communication_space = MpiSpace
     .. cpp:type:: communicator_type = MPI_Comm
     .. cpp:type:: size_type = int
     .. cpp:type:: rank_type = int
 
-    .. cpp:function:: [[nodiscard]] static auto from_raw(MPI_Comm comm, const Ex& exec = Kokkos::DefaultExecutionSpace{}) noexcept -> std::optional<Communicator<MpiSpace, Ex>>
+    .. cpp:function:: [[nodiscard]] static auto from_raw(MPI_Comm comm, const Exec& exec = Exec{}) noexcept -> Communicator<MpiSpace, Exec>
 
-        Constructs a ``Communicator`` from a raw ``MPI_Comm`` handle and a Kokkos execution space instance. Defaults ``exec`` to ``Kokkos::DefaultExecutionSpace``.
+        Constructs a ``Communicator`` from a raw ``MPI_Comm`` handle and a Kokkos execution space instance. Defaults ``exec`` to ``Exec``.
         The passed handle must be a valid handle and must not be an inter-communicator parent handle.
-        The returned communicator does not own the underlying handle, and the user may be responsible for destroying it.
-        Therefore, ``MPI_COMM_WORLD``, ``MPI_COMM_SELF`` and ``MPI_COMM_NULL`` are valid communicator handles to pass.
+        The returned communicator does not own the underlying handle, and the user is responsible for destroying it.
 
         :param comm: A valid communicator handle.
         :param exec: A Kokkos execution space instance. Defaults to ``Kokkos::DefaultExecutionSpace``.
         :returns: A communicator on success, ``std::nullopt`` if the passed handle was ``MPI_COMM_NULL``.
 
-    .. cpp:function:: [[nodiscard]] static auto split(const MPI_Comm comm, int color, int key, const Ex& exec = Kokkos::DefaultExecutionSpace{}) noexcept -> std::optional<Communicator<MpiSpace, Ex>>
+    .. cpp:function:: [[nodiscard]] static auto split_from_raw(const MPI_Comm comm, int color, int key, const Exec& exec = Exec{}) noexcept -> std::optional<Communicator<MpiSpace, Exec>>
 
-        Splits a communicator and associates it to a Kokkos execution space instance. Defaults ``exec`` to ``Kokkos::DefaultExecutionSpace``.
+        Splits from a raw MPI communicator and associates it to a Kokkos execution space instance. Defaults ``exec`` to ``Exec``.
 
         Creates as many new communicators as distinct values of ``color`` are given, and orders processes according to the value of ``key``. All processes with the same value of ``color`` join the same communicator.
         A process that passes ``MPI_UNDEFINED`` as ``color`` will not join a new communicator.
@@ -118,9 +117,9 @@ MPI specialization
         :param exec: A Kokkos execution space instance. Defaults to ``Kokkos::DefaultExecutionSpace``.
         :returns: A split communicator on success, ``std::nullopt`` if the passed color was ``MPI_UNDEFINED`` or on error.
 
-    .. cpp:function:: [[nodiscard]] static auto duplicate(const MPI_Comm comm, const Ex& exec = Kokkos::DefaultExecutionSpace{}) noexcept -> std::optional<Communicator<MpiSpace, Ex>>
+    .. cpp:function:: [[nodiscard]] static auto duplicate_from_raw(const MPI_Comm comm, const Exec& exec = Exec{}) noexcept -> std::optional<Communicator<MpiSpace, Exec>>
 
-        Duplicates a ``Communicator``.
+        Duplicates from a raw MPI communicator.
 
         :param comm: A valid communicator handle.
         :param exec: A Kokkos execution space instance. Defaults to ``Kokkos::DefaultExecutionSpace``.
@@ -149,18 +148,18 @@ NCCL specialization
     .. cpp:type:: size_type = int
     .. cpp:type:: rank_type = int
 
-    .. cpp:function:: [[nodiscard]] static auto from_raw(ncclComm_t comm, const Kokkos::Cuda& exec = Kokkos::Cuda{}) noexcept -> std::optional<Communicator<Experimental::NcclSpace, Kokkos::Cuda>>
+    .. cpp:function:: [[nodiscard]] static auto from_raw(ncclComm_t comm, const Kokkos::Cuda& exec = Kokkos::Cuda{}) noexcept -> Communicator<Experimental::NcclSpace, Kokkos::Cuda>
 
-        Constructs a `Communicator` from a raw `ncclComm_t` handle and a Kokkos CUDA execution space instance. Defaults ``exec`` to ``Kokkos::Cuda``.
+        Constructs a ``Communicator`` from a raw ``ncclComm_t`` handle and a Kokkos CUDA execution space instance. Defaults ``exec`` to ``Kokkos::Cuda``.
         The returned communicator does not own the underlying handle, and the user is responsible for destroying it.
 
         :param comm: A valid communicator handle.
         :param exec: A Kokkos CUDA execution space instance. Defaults to ``Kokkos::Cuda``.
         :returns: A communicator on success, ``std::nullopt`` if the passed handle was ``nullptr``.
 
-    .. cpp:function:: [[nodiscard]] static auto split(const ncclComm_t comm, int color, int key, const Kokkos::Cuda& exec = Kokkos::Cuda{}) noexcept -> std::optional<Communicator<Experimental::NcclSpace, Kokkos::Cuda>>
+    .. cpp:function:: [[nodiscard]] static auto split_from_raw(const ncclComm_t comm, int color, int key, const Kokkos::Cuda& exec = Kokkos::Cuda{}) noexcept -> std::optional<Communicator<Experimental::NcclSpace, Kokkos::Cuda>>
 
-        Splits a communicator and associates it to a Kokkos CUDA, tion space instanc and ``MPI_COMM_NULL``. Defaults ``exec`` to ``Kokkos::Cuda``.
+        Splits from a raw NCCL communicator and associates it to a Kokkos CUDA, tion space instanc and ``MPI_COMM_NULL``. Defaults ``exec`` to ``Kokkos::Cuda``.
 
         Creates as many new communicators as distinct values of ``color`` are given, and orders processes according to the value of ``key``. All processes with the same value of ``color`` join the same communicator.
         A process that passes ``NCCL_SPLIT_NOCOLOR`` as ``color`` will not join a new communicator.
@@ -171,9 +170,9 @@ NCCL specialization
         :param exec: A Kokkos CUDA execution space instance. Defaults to ``Kokkos::Cuda``.
         :returns: A split communicator on success, ``std::nullopt`` if the passed color was ``NCCL_SPLIT_NOCOLOR`` or on error.
 
-    .. cpp:function:: [[nodiscard]] static auto duplicate(const ncclComm_t comm, const Kokkos::Cuda& exec = Kokkos::Cuda{}) noexcept -> std::optional<Communicator<Experimental::NcclSpace, Kokkos::Cuda>>
+    .. cpp:function:: [[nodiscard]] static auto duplicate_from_raw(const ncclComm_t comm, const Kokkos::Cuda& exec = Kokkos::Cuda{}) noexcept -> std::optional<Communicator<Experimental::NcclSpace, Kokkos::Cuda>>
 
-        Duplicates a ``Communicator``.
+        Duplicates from a raw NCCL communicator.
 
         :param comm: A valid communicator handle.
         :param exec: A Kokkos CUDA execution space instance. Defaults to ``Kokkos::Cuda``.

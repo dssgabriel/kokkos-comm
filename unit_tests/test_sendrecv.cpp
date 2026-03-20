@@ -40,7 +40,7 @@ void test_1d(const View1D &v) {
   auto raw_comm = MPI_COMM_WORLD;
 #endif
   auto exec      = Ex();
-  auto comm      = KokkosComm::Communicator<Co, Ex>::duplicate(raw_comm, exec).value();
+  auto comm      = KokkosComm::Communicator<>::from_raw(raw_comm, exec);
   const int size = comm.size();
   const int rank = comm.rank();
   if (size < 2) {
@@ -77,7 +77,7 @@ void test_2d(const View2D &v) {
   auto raw_comm = MPI_COMM_WORLD;
 #endif
   auto exec      = Ex();
-  auto comm      = KokkosComm::Communicator<Co, Ex>::duplicate(raw_comm, exec).value();
+  auto comm      = KokkosComm::Communicator<>::from_raw(raw_comm, exec);
   const int size = comm.size();
   const int rank = comm.rank();
   if (size < 2) {

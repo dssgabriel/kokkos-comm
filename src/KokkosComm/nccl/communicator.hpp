@@ -29,19 +29,16 @@ class Communicator<Experimental::NcclSpace, Kokkos::Cuda> {
   ///
   /// The returned communicator does not own the underlying handle, and the user is responsible for destroying it.
   [[nodiscard]] static auto from_raw(communicator_type comm, const execution_space& exec = execution_space{}) noexcept
-      -> std::optional<Communicator<communication_space, execution_space>> {
-    if (comm == nullptr) {
-      return std::nullopt;
-    }
+      -> Communicator<communication_space, execution_space> {
     return Communicator<communication_space, execution_space>(comm, exec, false);
   }
 
-  /// @brief Splits a communicator by color.
+  /// @brief Splits from a raw NCCL communicator by color and key.
   ///
   /// Creates as many new communicators as distinct values of color are given, and orders processes according to the
   /// value of `key`. All processes with the same value of `color` join the same communicator.
   /// A process that passes `NCCL_SPLIT_NOCOLOR` as `color` will not join a new communicator and `nullopt` is returned.
-  [[nodiscard]] static auto split(
+  [[nodiscard]] static auto split_from_raw(
       const communicator_type comm, int color, int key, const execution_space& exec = execution_space{}
   ) noexcept -> std::optional<Communicator<communication_space, execution_space>> {
     communicator_type new_comm;
@@ -51,22 +48,26 @@ class Communicator<Experimental::NcclSpace, Kokkos::Cuda> {
     }
     return Communicator<communication_space, execution_space>(new_comm, exec, true);
   }
+
+  /// @brief Splits an existing communicator by color and key.
   [[nodiscard]] auto split(int color, int key) noexcept
       -> std::optional<Communicator<communication_space, execution_space>> {
-    return Communicator::split(comm_, color, key, exec_);
+    return Communicator::split_from_raw(comm_, color, key, exec_);
   }
 
-  /// @brief Duplicates a communicator.
-  [[nodiscard]] static auto duplicate(
-      const communicator_type comm, const execution_space& exec = Kokkos::DefaultExecutionSpace{}
+  /// @brief Duplicates from a raw NCCL communicator.
+  [[nodiscard]] static auto duplicate_from_raw(
+      const communicator_type comm, const execution_space& exec = execution_space{}
   ) noexcept -> std::optional<Communicator<communication_space, execution_space>> {
     communicator_type new_comm;
     int rank;
     ncclCommUserRank(comm, &rank);
-    return Communicator::split(comm, 0, rank, exec);
+    return Communicator::split_from_raw(comm, 0, rank, exec);
   }
+
+  /// @brief Duplicates an existing communicator.
   [[nodiscard]] auto duplicate() noexcept -> std::optional<Communicator<communication_space, execution_space>> {
-    return Communicator::split(comm_, 0, rank_, exec_);
+    return Communicator::split_from_raw(comm_, 0, rank_, exec_);
   }
 
   /// @brief Destructor.
