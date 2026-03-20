@@ -4,7 +4,7 @@
 // Create an execution space instance
 auto exec = Kokkos::DefaultExecutionSpace();
 // Create a communicator
-auto comm = KokkosComm::Communicator<>::duplicate(raw_comm_handle, exec);
+auto comm = KokkosComm::Communicator<>::duplicate_from_raw(raw_comm_handle, exec).value();
 
 // Create a Kokkos view
 Kokkos::View<double*> data("send_data", 100);

@@ -137,7 +137,7 @@ MPI specialization
 NCCL specialization
 ^^^^^^^^^^^^^^^^^^^
 
-.. cpp:class:: template <> Communicator<MpiSpace, Kokkos::Cuda>
+.. cpp:class:: template <> Communicator<Experimental::NcclSpace, Kokkos::Cuda>
 
     Communicator specialization for the :cpp:class:`Experimental::NcclSpace` communication space.
     Wraps an ``ncclComm_t`` handle.
