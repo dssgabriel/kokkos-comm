@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 // SPDX-FileCopyrightText: Copyright Contributors to the Kokkos project
 
+#include <type_traits>
+
 #include <gtest/gtest.h>
 #include <KokkosComm/KokkosComm.hpp>
 
@@ -41,6 +43,20 @@ TEST(Communicator, from_raw_preserves_size_and_rank) {
 
   ASSERT_EQ(comm.size(), expected_size);
   ASSERT_EQ(comm.rank(), expected_rank);
+}
+
+TEST(Communicator, exec_returns_execution_space_of_correct_type) {
+#if defined(KOKKOSCOMM_ENABLE_NCCL)
+  auto nccl_ctx = test_utils::nccl::Ctx::init();
+  auto raw_comm = nccl_ctx.comm();
+#else
+  auto raw_comm = MPI_COMM_WORLD;
+#endif
+  using Exec = Kokkos::DefaultExecutionSpace;
+  auto comm  = KokkosComm::Communicator<>::from_raw(raw_comm);
+
+  static_assert(std::is_same_v<decltype(comm.exec()), const Exec&>);
+  ASSERT_TRUE(&comm.exec() != nullptr);
 }
 
 // duplicate
@@ -101,6 +117,22 @@ TEST(Communicator, duplicate_produces_independent_communicator) {
   auto result   = original.duplicate().value();
 
   ASSERT_NE(result.comm(), original.comm());
+}
+
+TEST(Communicator, duplicate_chain_produces_independent_communicators) {
+#if defined(KOKKOSCOMM_ENABLE_NCCL)
+  auto nccl_ctx = test_utils::nccl::Ctx::init();
+  auto raw_comm = nccl_ctx.comm();
+#else
+  auto raw_comm = MPI_COMM_WORLD;
+#endif
+  auto comm1 = KokkosComm::Communicator<>::from_raw(raw_comm);
+  auto comm2 = comm1.duplicate().value();
+  auto comm3 = comm2.duplicate().value();
+
+  ASSERT_NE(comm1.comm(), comm2.comm());
+  ASSERT_NE(comm2.comm(), comm3.comm());
+  ASSERT_NE(comm1.comm(), comm3.comm());
 }
 
 // split
@@ -189,6 +221,27 @@ TEST(Communicator, split_key_controls_rank_ordering) {
   ASSERT_EQ(result.rank(), reversed_key);
 }
 
+TEST(Communicator, sequential_splits_produce_independent_communicators) {
+#if defined(KOKKOSCOMM_ENABLE_NCCL)
+  auto nccl_ctx = test_utils::nccl::Ctx::init();
+  auto raw_comm = nccl_ctx.comm();
+#else
+  auto raw_comm = MPI_COMM_WORLD;
+#endif
+  auto original = KokkosComm::Communicator<>::from_raw(raw_comm);
+  if (original.size() < 2) {
+    GTEST_SKIP() << "Requires at least 2 ranks";
+  }
+
+  const int color   = original.rank() % 2;
+  auto first_split  = original.split(color, original.rank()).value();
+  auto second_split = first_split.split(0, first_split.rank()).value();
+
+  ASSERT_NE(original.comm(), first_split.comm());
+  ASSERT_NE(first_split.comm(), second_split.comm());
+  ASSERT_EQ(second_split.size(), first_split.size());
+}
+
 // move semantics
 // --------------
 
@@ -225,6 +278,23 @@ TEST(Communicator, move_assigned_communicator_is_valid) {
 
   ASSERT_EQ(target.size(), expected_size);
   ASSERT_EQ(target.rank(), expected_rank);
+}
+
+TEST(Communicator, self_move_assignment_is_safe) {
+#if defined(KOKKOSCOMM_ENABLE_NCCL)
+  auto nccl_ctx = test_utils::nccl::Ctx::init();
+  auto raw_comm = nccl_ctx.comm();
+#else
+  auto raw_comm = MPI_COMM_WORLD;
+#endif
+  auto comm               = KokkosComm::Communicator<>::from_raw(raw_comm);
+  const int expected_size = comm.size();
+  const int expected_rank = comm.rank();
+
+  comm = std::move(comm);
+
+  ASSERT_EQ(comm.size(), expected_size);
+  ASSERT_EQ(comm.rank(), expected_rank);
 }
 
 }  // namespace
