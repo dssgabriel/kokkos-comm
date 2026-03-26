@@ -5,6 +5,7 @@
 
 #include <Kokkos_Core_fwd.hpp>
 
+#include "concepts.hpp"
 #include "fwd.hpp"
 #if defined(KOKKOSCOMM_ENABLE_MPI)
 #include "mpi/mpi_space.hpp"
@@ -23,22 +24,14 @@
 
 namespace KokkosComm {
 
-/// Send w/ explicit handle
-template <
-    KokkosView SendView,
-    KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
-    CommunicationSpace CommSpace   = DefaultCommunicationSpace>
-auto send(Communicator<CommSpace, ExecSpace>& h, SendView& sv, int peer) -> Request<CommSpace> {
-  return Impl::Send<SendView, ExecSpace, CommSpace>::execute(h, sv, peer);
+template <CommunicationSpace Comm, KokkosExecutionSpace Exec, KokkosView SendV>
+auto send(Communicator<Comm, Exec>& comm, const SendV& sv, int dst) -> Request<Comm> {
+  return Impl::Send<Comm, Exec, SendV>::execute(comm, sv, dst);
 }
 
-/// Receive w/ explicit handle
-template <
-    KokkosView RecvView,
-    KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
-    CommunicationSpace CommSpace   = DefaultCommunicationSpace>
-auto recv(Communicator<CommSpace, ExecSpace>& h, RecvView& rv, int peer) -> Request<CommSpace> {
-  return Impl::Recv<RecvView, ExecSpace, CommSpace>::execute(h, rv, peer);
+template <CommunicationSpace Comm, KokkosExecutionSpace Exec, KokkosView RecvV>
+auto recv(Communicator<Comm, Exec>& comm, const RecvV& rv, int src) -> Request<Comm> {
+  return Impl::Recv<Comm, Exec, RecvV>::execute(comm, rv, src);
 }
 
 }  // namespace KokkosComm
