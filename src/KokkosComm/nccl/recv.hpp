@@ -19,24 +19,26 @@
 namespace KokkosComm {
 namespace Experimental::nccl {
 
-template <KokkosExecutionSpace ExecSpace, KokkosView RecvView>
-auto recv(const ExecSpace& space, RecvView& rv, int peer, ncclComm_t comm) -> Request<NcclSpace> {
-  using T = typename RecvView::non_const_value_type;
+template <KokkosExecutionSpace Exec, KokkosView RecvV>
+auto recv(Communicator<NcclSpace, Exec>& comm, const RecvV& rv, int src) -> Request<NcclSpace> {
   Kokkos::Tools::pushRegion("KokkosComm::Impl::recv");
 
+  const auto exec = comm.exec();
   Request<NcclSpace> req;
   if (is_contiguous(rv)) {
-    KC_NCCL_CHECK(ncclRecv(data_handle(rv), span(rv), datatype<NcclSpace, T>(), peer, comm, space.cuda_stream()));
-  } else {
-    using Packer = typename Impl::PackTraits<RecvView>::packer_type;
-    auto pckd_rv = Packer::allocate_packed_for(space, "pckd_rv", rv);
-    KC_NCCL_CHECK(
-        ncclRecv(data_handle(pckd_rv.view_), pckd_rv.count_, pckd_rv.datatype_, peer, comm, space.cuda_stream())
+    KC_NCCL_CHECK(ncclRecv(data_handle(rv), span(rv), datatype_for<NcclSpace>(rv), src, comm.comm(), exec.cuda_stream())
     );
-    req.capture_stream_state(space.cuda_stream());
-    req.add_callback([space, rv, pckd_rv]() {
-      Packer::unpack_into(space, rv, pckd_rv.view_);
-      space.fence("fence `pckd_rv` unpacking after NCCL call");
+  } else {
+    using Packer = typename Impl::PackTraits<RecvV>::packer_type;
+    auto pckd_rv = Packer::allocate_packed_for(exec, "pckd_rv", rv);
+    // No need to fence since we enqueue the packed allocation on the same execution space
+    KC_NCCL_CHECK(
+        ncclRecv(data_handle(pckd_rv.view_), pckd_rv.count_, pckd_rv.datatype_, src, comm.comm(), exec.cuda_stream())
+    );
+    req.capture_stream_state(exec.cuda_stream());
+    req.add_callback([exec, rv, pckd_rv]() {
+      Packer::unpack_into(exec, rv, pckd_rv.view_);
+      exec.fence("fence unpacking after ncclRecv");
     });
   }
   req.extend_view_lifetime(rv);
