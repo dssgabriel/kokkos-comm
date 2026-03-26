@@ -19,13 +19,37 @@
 namespace KokkosComm::mpi {
 
 template <KokkosExecutionSpace Exec, KokkosView RecvV>
+auto irecv(Communicator<MpiSpace, Exec>& comm, const RecvV& rv, int src, int tag) -> Request<MpiSpace> {
+  Kokkos::Tools::pushRegion("KokkosComm::mpi::irecv");
 
-  KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(rv), "only contiguous views supported for low-level recv");
-
-  using ScalarType = typename RecvView::non_const_value_type;
-  MPI_Recv(KokkosComm::data_handle(rv), KokkosComm::span(rv), datatype<MpiSpace, ScalarType>(), src, tag, comm, status);
+  const auto exec = comm.exec();
+  Request<MpiSpace> req;
+  if (is_contiguous(rv)) {
+    exec.fence("fence before MPI_Irecv");
+    MPI_Irecv(data_handle(rv), span(rv), datatype_for<MpiSpace>(rv), src, tag, comm.comm(), req.request_ptr());
+    req.extend_view_lifetime(rv);
+  } else {
+    using Packer = typename mpi::Impl::PackTraits<RecvV>::packer_type;
+    auto pckd_rv = Packer::allocate_packed_for(exec, "pckd_rv", rv);
+    exec.fence("fence packed allocation before MPI_Irecv");
+    MPI_Irecv(data_handle(pckd_rv.view), pckd_rv.count, pckd_rv.datatype, src, tag, comm.comm(), req.request_ptr());
+    // Implicitly extends `pckd_rv.view` and `rv` lifetime due to lambda capture
+    req.add_callback([exec, rv, pckd_rv]() {
+      Packer::unpack_into(exec, rv, pckd_rv.view);
+      exec.fence("fence unpacking after MPI_Irecv");
+    });
+  }
 
   Kokkos::Tools::popRegion();
+  return req;
+}
+// Search & replace API overload
+template <KokkosExecutionSpace Exec, KokkosView RecvV>
+[[deprecated("Prefer `irecv(Communicator, RecvV, int, int)` overload")]] auto irecv(
+    const Exec& exec, const RecvV& rv, int src, int tag, MPI_Comm comm
+) -> Request<MpiSpace> {
+  auto communicator = Communicator<MpiSpace, Exec>::from_raw(comm, exec);
+  return irecv(communicator, rv, src, tag);
 }
 
 template <KokkosExecutionSpace Exec, KokkosView RecvV>
