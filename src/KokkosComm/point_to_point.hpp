@@ -48,6 +48,13 @@ struct Send<Experimental::NcclSpace, Kokkos::Cuda, SendV> {
     return Experimental::nccl::send(comm, sv, dst);
   }
 };
+template <KokkosView RecvV>
+struct Recv<Experimental::NcclSpace, Kokkos::Cuda, RecvV> {
+  static auto execute(Communicator<Experimental::NcclSpace, Kokkos::Cuda>& comm, const RecvV& rv, int src)
+      -> Request<Experimental::NcclSpace> {
+    return Experimental::nccl::recv(comm, rv, src);
+  }
+};
 #endif
 
 }  // namespace Impl
