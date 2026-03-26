@@ -12,7 +12,6 @@ target_sources(
         comm_mode.hpp
         # Point-to-point
         send.hpp
-        isend.hpp
         recv.hpp
         irecv.hpp
         channel.hpp
