@@ -40,6 +40,16 @@ struct Recv<MpiSpace, Exec, RecvV> {
 };
 #endif
 
+#if defined(KOKKOSCOMM_ENABLE_NCCL)
+template <KokkosView SendV>
+struct Send<Experimental::NcclSpace, Kokkos::Cuda, SendV> {
+  static auto execute(Communicator<Experimental::NcclSpace, Kokkos::Cuda>& comm, const SendV& sv, int dst)
+      -> Request<Experimental::NcclSpace> {
+    return Experimental::nccl::send(comm, sv, dst);
+  }
+};
+#endif
+
 }  // namespace Impl
 
 template <CommunicationSpace Comm, KokkosExecutionSpace Exec, KokkosView SendV>

@@ -16,8 +16,7 @@
 #include "impl/pack_traits.hpp"
 #include "impl/error_handling.hpp"
 
-namespace KokkosComm {
-namespace Experimental::nccl {
+namespace KokkosComm::Experimental::nccl {
 
 template <KokkosExecutionSpace Exec, KokkosView SendV>
 auto send(Communicator<NcclSpace, Exec>& comm, const SendV& sv, int dst) -> Request<NcclSpace> {
@@ -44,16 +43,4 @@ auto send(Communicator<NcclSpace, Exec>& comm, const SendV& sv, int dst) -> Requ
   return req;
 }
 
-}  // namespace Experimental::nccl
-namespace Impl {
-
-template <KokkosView SendView>
-struct Send<SendView, Kokkos::Cuda, Experimental::NcclSpace> {
-  static auto execute(Communicator<Experimental::NcclSpace, Kokkos::Cuda>& h, SendView sv, int peer)
-      -> Request<Experimental::NcclSpace> {
-    return Experimental::nccl::send(h.exec(), sv, peer, h.comm());
-  }
-};
-
-}  // namespace Impl
-}  // namespace KokkosComm
+}  // namespace KokkosComm::Experimental::nccl
