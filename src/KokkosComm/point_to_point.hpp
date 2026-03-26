@@ -11,8 +11,8 @@
 #include "mpi/mpi_space.hpp"
 #include "mpi/communicator.hpp"
 #include "mpi/request.hpp"
-#include "mpi/isend.hpp"
 #include "mpi/irecv.hpp"
+#include "mpi/send.hpp"
 #endif
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
 #include "nccl/nccl_space.hpp"
@@ -23,6 +23,18 @@
 #endif
 
 namespace KokkosComm {
+namespace Impl {
+
+#if defined(KOKKOSCOMM_ENABLE_MPI)
+template <KokkosExecutionSpace Exec, KokkosView SendV>
+struct Send<MpiSpace, Exec, SendV> {
+  static auto execute(Communicator<MpiSpace, Exec>& comm, const SendV& sv, int dst) -> Request<MpiSpace> {
+    return mpi::isend(comm, sv, dst, mpi::Impl::P2P_TAG);
+  }
+};
+#endif
+
+}  // namespace Impl
 
 template <CommunicationSpace Comm, KokkosExecutionSpace Exec, KokkosView SendV>
 auto send(Communicator<Comm, Exec>& comm, const SendV& sv, int dst) -> Request<Comm> {
