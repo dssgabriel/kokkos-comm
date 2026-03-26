@@ -4,7 +4,8 @@
 #include <type_traits>
 
 #include <gtest/gtest.h>
-
+#include <mpi.h>
+#include <Kokkos_Core.hpp>
 #include <KokkosComm/KokkosComm.hpp>
 
 namespace {
