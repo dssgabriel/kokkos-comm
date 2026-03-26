@@ -12,15 +12,13 @@
 #if defined(KOKKOSCOMM_ENABLE_MPI)
 #include "mpi/mpi_space.hpp"
 
-#include "mpi/channel.hpp"
-#include "mpi/comm_mode.hpp"
 #include "mpi/communicator.hpp"
 #include "mpi/request.hpp"
+#include "mpi/comm_mode.hpp"
 
-#include "mpi/irecv.hpp"
-#include "mpi/isend.hpp"
-#include "mpi/recv.hpp"
 #include "mpi/send.hpp"
+#include "mpi/recv.hpp"
+#include "mpi/channel.hpp"
 
 #include "mpi/broadcast.hpp"
 #include "mpi/allgather.hpp"
