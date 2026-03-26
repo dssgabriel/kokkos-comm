@@ -9,15 +9,16 @@
 #include <KokkosComm/concepts.hpp>
 #include <KokkosComm/traits.hpp>
 #include <KokkosComm/datatype.hpp>
+#include "mpi_space.hpp"
+#include "communicator.hpp"
+#include "request.hpp"
 
 #include "impl/pack_traits.hpp"
-#include "impl/error_handling.hpp"
+#include "impl/tags.hpp"
 
 namespace KokkosComm::mpi {
 
-template <KokkosView RecvView>
-void recv(const RecvView &rv, int src, int tag, MPI_Comm comm, MPI_Status *status) {
-  Kokkos::Tools::pushRegion("KokkosComm::mpi::recv");
+template <KokkosExecutionSpace Exec, KokkosView RecvV>
 
   KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(rv), "only contiguous views supported for low-level recv");
 
@@ -27,25 +28,43 @@ void recv(const RecvView &rv, int src, int tag, MPI_Comm comm, MPI_Status *statu
   Kokkos::Tools::popRegion();
 }
 
-template <KokkosExecutionSpace ExecSpace, KokkosView RecvView>
-void recv(const ExecSpace &space, RecvView &rv, int src, int tag, MPI_Comm comm) {
+template <KokkosExecutionSpace Exec, KokkosView RecvV>
+auto recv(Communicator<MpiSpace, Exec>& comm, const RecvV& rv, int src, int tag, MPI_Status* status) -> void {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::recv");
 
-  using Packer = typename Impl::PackTraits<RecvView>::packer_type;
-
-  if (!KokkosComm::is_contiguous(rv)) {
-    auto args = Packer::allocate_packed_for(space, "packed", rv);
-    space.fence("Fence after allocation before MPI_Recv");
-    MPI_Recv(KokkosComm::data_handle(args.view), args.count, args.datatype, src, tag, comm, MPI_STATUS_IGNORE);
-    Packer::unpack_into(space, rv, args.view);
+  const auto exec = comm.exec();
+  if (is_contiguous(rv)) {
+    exec.fence("fence before MPI_Recv");
+    MPI_Recv(data_handle(rv), span(rv), datatype_for<MpiSpace>(rv), src, tag, comm.comm(), status);
   } else {
-    using RecvScalar = typename RecvView::value_type;
-    space.fence("Fence before MPI_Recv");  // prevent work in `space` from writing to recv buffer
-    MPI_Recv(KokkosComm::data_handle(rv), KokkosComm::span(rv), datatype<MpiSpace, RecvScalar>(), src, tag, comm,
-             MPI_STATUS_IGNORE);
+    using Packer = typename Impl::PackTraits<RecvV>::packer_type;
+    auto pckd_rv = Packer::allocate_packed_for(exec, "pckd_rv", rv);
+    exec.fence("fence packed allocation before MPI_Recv");
+    MPI_Recv(data_handle(pckd_rv.view), pckd_rv.count, pckd_rv.datatype, src, tag, comm.comm(), status);
+    Packer::unpack_into(exec, rv, pckd_rv.view);
+    exec.fence("fence unpacking after MPI_Recv");
   }
 
   Kokkos::Tools::popRegion();
+}
+template <KokkosExecutionSpace Exec, KokkosView RecvV>
+auto recv(Communicator<MpiSpace, Exec>& comm, const RecvV& rv, int src, int tag) -> void {
+  recv(comm, rv, src, tag, MPI_STATUS_IGNORE);
+}
+// Search & replace API overloads
+template <KokkosExecutionSpace Exec, KokkosView RecvV>
+[[deprecated("Prefer `recv(Communicator, RecvV, int, int, MPI_Status)` overload")]] auto recv(
+    const Exec& exec, const RecvV& rv, int src, int tag, MPI_Comm comm, MPI_Status* status
+) -> void {
+  auto communicator = Communicator<MpiSpace, Exec>::from_raw(comm, exec);
+  recv(communicator, rv, src, tag, status);
+}
+template <KokkosExecutionSpace Exec, KokkosView RecvV>
+[[deprecated("Prefer `recv(Communicator, RecvV, int, int)` overload")]] auto recv(
+    const Exec& exec, const RecvV& rv, int src, int tag, MPI_Comm comm
+) -> void {
+  auto communicator = Communicator<MpiSpace, Exec>::from_raw(comm, exec);
+  recv(communicator, rv, src, tag, MPI_STATUS_IGNORE);
 }
 
 }  // namespace KokkosComm::mpi
