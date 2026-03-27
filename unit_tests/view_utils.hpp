@@ -27,16 +27,6 @@ struct AddPtrs<T, 0> {
 template <typename T, size_t N>
 using Stars = typename AddPtrs<T, N>::type;
 
-template <size_t Rank>
-auto all_then_one() {
-  return [&]<size_t... Is>(std::index_sequence<Is...>) { return std::make_tuple((void(Is), Kokkos::ALL)..., 1); }
-  (std::make_index_sequence<Rank>{});
-}
-template <typename ViewType, typename Tuple, size_t... Is>
-auto apply_subview(ViewType& v, Tuple&& t, std::index_sequence<Is...>) {
-  return Kokkos::subview(v, std::get<Is>(std::forward<Tuple>(t))...);
-}
-
 template <typename View, size_t... Is>
 struct InitFunctor {
   View v;
@@ -78,13 +68,13 @@ template <typename T, size_t R, typename... Extents>
 auto build_view(NonContig, const std::string& name, Extents... exts) {
   static_assert(sizeof...(exts) == R, "Number of extents must match Rank");
   Kokkos::View<Impl::Stars<T, R + 1>, Kokkos::LayoutRight> v(name, exts..., 2);
-  auto args = Impl::all_then_one<R>();
-  return Impl::apply_subview(v, args, std::make_index_sequence<R + 1>{});
+  return [&]<size_t... Is>(std::index_sequence<Is...>) { return Kokkos::subview(v, (void(Is), Kokkos::ALL)..., 1); }
+  (std::make_index_sequence<R>{});
 }
 
 template <typename Exec, typename View>
 auto init_view(const Exec& exec, const View& v) -> void {
-  constexpr size_t R = v.rank();
+  constexpr size_t R = View::rank;
   if constexpr (R == 1) {
     Kokkos::parallel_for(
         Kokkos::RangePolicy<Exec>(exec, 0, v.extent(0)), KOKKOS_LAMBDA(const int i) { v(i) = i; }
@@ -104,7 +94,7 @@ auto init_view(const Exec& exec, const View& v) -> void {
 
 template <typename View>
 auto count_errors(const View& v) -> int {
-  constexpr size_t R = v.rank();
+  constexpr size_t R = View::rank;
   int errs           = 0;
   using Scalar       = typename View::value_type;
   if constexpr (R == 1) {
