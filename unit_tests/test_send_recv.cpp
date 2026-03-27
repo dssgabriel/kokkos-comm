@@ -20,7 +20,7 @@ void test_core_send_recv(const View& v) {
   auto raw_comm = MPI_COMM_WORLD;
 #endif
   auto exec      = Kokkos::DefaultExecutionSpace{};
-  auto comm      = KokkosComm::Communicator<>::from_raw(raw_comm, exec));
+  auto comm      = KokkosComm::Communicator<>::from_raw(raw_comm, exec);
   const int size = comm.size();
   const int rank = comm.rank();
   if (size < 2) {
