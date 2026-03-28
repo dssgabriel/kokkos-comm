@@ -13,6 +13,7 @@ target_sources(
         # Point-to-point
         send.hpp
         recv.hpp
+        sendrecv.hpp
         channel.hpp
         # Collectives
         broadcast.hpp
