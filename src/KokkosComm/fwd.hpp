@@ -35,16 +35,19 @@ template <
 class Communicator;
 
 /// @brief Template class for request wrappers.
-template <CommunicationSpace CommSpace = DefaultCommunicationSpace>
+template <CommunicationSpace Comm = DefaultCommunicationSpace>
 class Request;
 
 namespace Impl {
 
-template <CommunicationSpace Comm, KokkosExecutionSpace Exec, KokkosView RecvView>
+template <CommunicationSpace Comm, KokkosExecutionSpace Exec, KokkosView SendV>
 struct Send;
 
-template <CommunicationSpace Comm, KokkosExecutionSpace Exec, KokkosView RecvView>
+template <CommunicationSpace Comm, KokkosExecutionSpace Exec, KokkosView RecvV>
 struct Recv;
+
+template <CommunicationSpace Comm, KokkosExecutionSpace Exec, KokkosView SendV, KokkosView RecvV>
+struct SendRecv;
 
 }  // namespace Impl
 
