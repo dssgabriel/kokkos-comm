@@ -47,6 +47,7 @@ include(kc-test)
 
 # --- Core API unit tests --- #
 kc_add_unit_test(test.core.send-recv CORE NUM_PES 2 FILES test_main.cpp test_send_recv.cpp)
+kc_add_unit_test(test.core.sendrecv CORE NUM_PES 2 FILES test_main.cpp test_sendrecv.cpp)
 kc_add_unit_test(test.core.broadcast CORE NUM_PES 2 FILES test_main.cpp test_broadcast.cpp)
 kc_add_unit_test(test.core.all-gather CORE NUM_PES 2 FILES test_main.cpp test_allgather.cpp)
 kc_add_unit_test(test.core.reduce CORE NUM_PES 2 FILES test_main.cpp test_reduce.cpp)
@@ -102,6 +103,13 @@ if(KokkosComm_ENABLE_MPI)
     MPI
     NUM_PES 2
     FILES test_main.cpp mpi/test_send_recv.cpp
+    LIBRARIES KokkosComm::KokkosComm
+  )
+  kc_add_unit_test(
+    test.mpi.sendrecv
+    MPI
+    NUM_PES 2
+    FILES test_main.cpp mpi/test_sendrecv.cpp
     LIBRARIES KokkosComm::KokkosComm
   )
   kc_add_unit_test(
@@ -179,6 +187,13 @@ if(KokkosComm_ENABLE_NCCL)
     NCCL
     NUM_PES 2
     FILES test_main.cpp nccl/test_send_recv.cpp
+    LIBRARIES KokkosComm::KokkosComm MPI::MPI_CXX
+  )
+  kc_add_unit_test(
+    test.nccl.sendrecv
+    NCCL
+    NUM_PES 2
+    FILES test_main.cpp nccl/test_sendrecv.cpp
     LIBRARIES KokkosComm::KokkosComm MPI::MPI_CXX
   )
   kc_add_unit_test(
