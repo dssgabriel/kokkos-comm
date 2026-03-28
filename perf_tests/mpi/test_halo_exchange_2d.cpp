@@ -34,15 +34,10 @@ void halo_exchange_2d(
 
   std::vector<KokkosComm::Request<>> reqs;
   // std::cerr << get_rank(rx, ry) << " -> " << get_rank(xp1, ry) << "\n";
-  reqs.push_back(KokkosComm::send(comm, xp1_s, get_rank(xp1, ry)));
-  reqs.push_back(KokkosComm::send(comm, xm1_s, get_rank(xm1, ry)));
-  reqs.push_back(KokkosComm::send(comm, yp1_s, get_rank(rx, yp1)));
-  reqs.push_back(KokkosComm::send(comm, ym1_s, get_rank(rx, ym1)));
-
-  reqs.push_back(KokkosComm::recv(comm, xm1_r, get_rank(xm1, ry)));
-  reqs.push_back(KokkosComm::recv(comm, xp1_r, get_rank(xp1, ry)));
-  reqs.push_back(KokkosComm::recv(comm, ym1_r, get_rank(rx, ym1)));
-  reqs.push_back(KokkosComm::recv(comm, yp1_r, get_rank(rx, yp1)));
+  reqs.push_back(KokkosComm::sendrecv(comm, xp1_s, xp1_r, get_rank(xp1, ry)));
+  reqs.push_back(KokkosComm::sendrecv(comm, xm1_s, xm1_r, get_rank(xm1, ry)));
+  reqs.push_back(KokkosComm::sendrecv(comm, yp1_s, yp1_r, get_rank(rx, yp1)));
+  reqs.push_back(KokkosComm::sendrecv(comm, ym1_s, ym1_r, get_rank(rx, ym1)));
 
   // wait for comm
   KokkosComm::wait_all(reqs);
