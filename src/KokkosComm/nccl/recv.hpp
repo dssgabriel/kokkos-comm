@@ -18,6 +18,13 @@
 
 namespace KokkosComm::Experimental::nccl {
 
+/// @brief Initiates a non-blocking receive operation.
+/// @tparam Exec A Kokkos execution space type.
+/// @tparam RecvV A Kokkos View type.
+/// @param comm The communicator handle associated with the operation.
+/// @param rv The View to receive into.
+/// @param src The source rank.
+/// @returns A Request object representing the non-blocking receive operation.
 template <KokkosExecutionSpace Exec, KokkosView RecvV>
 auto recv(Communicator<NcclSpace, Exec>& comm, const RecvV& rv, int src) -> Request<NcclSpace> {
   Kokkos::Tools::pushRegion("KokkosComm::Impl::recv");

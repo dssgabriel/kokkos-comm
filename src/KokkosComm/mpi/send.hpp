@@ -19,6 +19,15 @@
 
 namespace KokkosComm::mpi {
 
+/// @brief Initiates a non-blocking send operation.
+/// @tparam Exec A Kokkos execution space type.
+/// @tparam SendV A Kokkos View type.
+/// @tparam SendMode The communication mode type (CommModeStandard, CommModeReady, or CommModeSynchronous).
+/// @param comm The communicator handle associated with the operation.
+/// @param sv The View to send.
+/// @param dst The destination rank.
+/// @param tag The message tag.
+/// @returns A Request object representing the non-blocking send operation.
 template <KokkosExecutionSpace Exec, KokkosView SendV, CommunicationMode SendMode>
 auto isend(Communicator<MpiSpace, Exec>& comm, const SendV& sv, int dst, int tag, SendMode) -> Request<MpiSpace> {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::isend");
@@ -52,6 +61,14 @@ auto isend(Communicator<MpiSpace, Exec>& comm, const SendV& sv, int dst, int tag
   Kokkos::Tools::popRegion();
   return req;
 }
+/// @brief Initiates a non-blocking send operation using the default communication mode.
+/// @tparam Exec A Kokkos execution space type.
+/// @tparam SendV A Kokkos View type.
+/// @param comm The communicator handle associated with the operation.
+/// @param sv The View to send.
+/// @param dst The destination rank.
+/// @param tag The message tag.
+/// @returns A Request object representing the non-blocking send operation.
 template <KokkosExecutionSpace Exec, KokkosView SendV>
 auto isend(Communicator<MpiSpace, Exec>& comm, const SendV& sv, int dst, int tag) -> Request<MpiSpace> {
   return isend(comm, sv, dst, tag, DefaultCommMode{});
@@ -65,6 +82,14 @@ template <KokkosExecutionSpace Exec, KokkosView SendV>
   return isend(communicator, sv, dst, tag, DefaultCommMode{});
 }
 
+/// @brief Performs a blocking send operation.
+/// @tparam Exec A Kokkos execution space type.
+/// @tparam SendV A Kokkos View type.
+/// @tparam SendMode The communication mode type (CommModeStandard, CommModeReady, or CommModeSynchronous).
+/// @param comm The communicator handle associated with the operation.
+/// @param sv The View to send.
+/// @param dst The destination rank.
+/// @param tag The message tag.
 template <KokkosExecutionSpace Exec, KokkosView SendV, CommunicationMode SendMode>
 auto send(Communicator<MpiSpace, Exec>& comm, const SendV& sv, int dst, int tag, SendMode) -> void {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::send");
@@ -94,6 +119,13 @@ auto send(Communicator<MpiSpace, Exec>& comm, const SendV& sv, int dst, int tag,
 
   Kokkos::Tools::popRegion();
 }
+/// @brief Performs a blocking send operation using the default communication mode.
+/// @tparam Exec A Kokkos execution space type.
+/// @tparam SendV A Kokkos View type.
+/// @param comm The communicator handle associated with the operation.
+/// @param sv The View to send.
+/// @param dst The destination rank.
+/// @param tag The message tag.
 template <KokkosExecutionSpace Exec, KokkosView SendV>
 auto send(Communicator<MpiSpace, Exec>& comm, const SendV& sv, int dst, int tag) -> void {
   send(comm, sv, dst, tag, DefaultCommMode{});

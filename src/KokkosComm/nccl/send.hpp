@@ -18,6 +18,13 @@
 
 namespace KokkosComm::Experimental::nccl {
 
+/// @brief Initiates a non-blocking send operation.
+/// @tparam Exec A Kokkos execution space type.
+/// @tparam SendV A Kokkos View type.
+/// @param comm The communicator handle associated with the operation.
+/// @param sv The View to send.
+/// @param dst The destination rank.
+/// @returns A Request object representing the non-blocking send operation.
 template <KokkosExecutionSpace Exec, KokkosView SendV>
 auto send(Communicator<NcclSpace, Exec>& comm, const SendV& sv, int dst) -> Request<NcclSpace> {
   Kokkos::Tools::pushRegion("KokkosComm::nccl::send");

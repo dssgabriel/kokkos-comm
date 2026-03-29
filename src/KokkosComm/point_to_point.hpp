@@ -59,11 +59,27 @@ struct Recv<Experimental::NcclSpace, Kokkos::Cuda, RecvV> {
 
 }  // namespace Impl
 
+/// @brief Initiates a non-blocking send operation.
+/// @tparam Comm A Communication space type.
+/// @tparam Exec A Kokkos execution space type.
+/// @tparam SendV A Kokkos View type.
+/// @param comm The communicator handle associated with the operation.
+/// @param sv The View to send.
+/// @param dst The destination rank.
+/// @returns A Request object representing the non-blocking send operation.
 template <CommunicationSpace Comm, KokkosExecutionSpace Exec, KokkosView SendV>
 auto send(Communicator<Comm, Exec>& comm, const SendV& sv, int dst) -> Request<Comm> {
   return Impl::Send<Comm, Exec, SendV>::execute(comm, sv, dst);
 }
 
+/// @brief Initiates a non-blocking receive operation.
+/// @tparam Comm A Communication space type.
+/// @tparam Exec A Kokkos execution space type.
+/// @tparam RecvV A Kokkos View type.
+/// @param comm The communicator handle associated with the operation.
+/// @param rv The View to receive into.
+/// @param src The source rank.
+/// @returns A Request object representing the non-blocking receive operation.
 template <CommunicationSpace Comm, KokkosExecutionSpace Exec, KokkosView RecvV>
 auto recv(Communicator<Comm, Exec>& comm, const RecvV& rv, int src) -> Request<Comm> {
   return Impl::Recv<Comm, Exec, RecvV>::execute(comm, rv, src);

@@ -18,6 +18,14 @@
 
 namespace KokkosComm::mpi {
 
+/// @brief Initiates a non-blocking receive operation.
+/// @tparam Exec A Kokkos execution space type.
+/// @tparam RecvV A Kokkos View type.
+/// @param comm The communicator handle associated with the operation.
+/// @param rv The View to receive into.
+/// @param src The source rank.
+/// @param tag The message tag.
+/// @returns A Request object representing the non-blocking receive operation.
 template <KokkosExecutionSpace Exec, KokkosView RecvV>
 auto irecv(Communicator<MpiSpace, Exec>& comm, const RecvV& rv, int src, int tag) -> Request<MpiSpace> {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::irecv");
@@ -52,6 +60,14 @@ template <KokkosExecutionSpace Exec, KokkosView RecvV>
   return irecv(communicator, rv, src, tag);
 }
 
+/// @brief Performs a blocking receive operation.
+/// @tparam Exec A Kokkos execution space type.
+/// @tparam RecvV A Kokkos View type.
+/// @param comm The communicator handle associated with the operation.
+/// @param rv The View to receive into.
+/// @param src The source rank.
+/// @param tag The message tag.
+/// @param status The MPI status object, or MPI_STATUS_IGNORE.
 template <KokkosExecutionSpace Exec, KokkosView RecvV>
 auto recv(Communicator<MpiSpace, Exec>& comm, const RecvV& rv, int src, int tag, MPI_Status* status) -> void {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::recv");
@@ -71,6 +87,13 @@ auto recv(Communicator<MpiSpace, Exec>& comm, const RecvV& rv, int src, int tag,
 
   Kokkos::Tools::popRegion();
 }
+/// @brief Performs a blocking receive operation using MPI_STATUS_IGNORE.
+/// @tparam Exec A Kokkos execution space type.
+/// @tparam RecvV A Kokkos View type.
+/// @param comm The communicator handle associated with the operation.
+/// @param rv The View to receive into.
+/// @param src The source rank.
+/// @param tag The message tag.
 template <KokkosExecutionSpace Exec, KokkosView RecvV>
 auto recv(Communicator<MpiSpace, Exec>& comm, const RecvV& rv, int src, int tag) -> void {
   recv(comm, rv, src, tag, MPI_STATUS_IGNORE);

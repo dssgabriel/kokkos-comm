@@ -363,43 +363,33 @@ NCCL specialization
 
 
 Communication Primitives
-========================
+=======================
 
 Point-to-point
 --------------
 
+.. note::
+
+    **View lifetime:** Non-blocking operations require the View to remain valid until the request completes. The library automatically extends the View's lifetime until the operation finishes, ensuring data integrity.
+
+    **Contiguous vs non-contiguous Views:** Non-contiguous Views are automatically handled by the library.
+
 Send
 ^^^^
 
-.. warning:: This is not a blocking operation despite being named like ``MPI_Send``.
-
-.. cpp:function:: template <KokkosView SendView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace, CommunicationSpace CommSpace = DefaultCommunicationSpace> auto send(Communicator<CommSpace, ExecSpace> &h, SendView &sv, int dest) -> Request<CommSpace>
+.. cpp:function:: template <CommunicationSpace Comm, KokkosExecutionSpace Exec, KokkosView SendV> auto send(Communicator<Comm, Exec> &comm, const SendV &sv, int dst) -> Request<Comm>
 
     Initiates a non-blocking send operation.
 
-    :tparam SendView: The type of the Kokkos view to send.
-    :tparam ExecSpace: The execution space to use. Defaults to ``Kokkos::DefaultExecutionSpace``.
-    :tparam CommSpace: The communication backend to use. Defaults to ``DefaultCommunicationSpace``.
+    :tparam Comm: A Communication space type.
+    :tparam Exec: A Kokkos execution space type.
+    :tparam SendV: A Kokkos View type.
 
-    :param h: A handle to the execution space and transport mechanism.
-    :param sv: The Kokkos view to send.
-    :param dest: The destination rank.
+    :param comm: The communicator handle associated with the operation.
+    :param sv: The View to send.
+    :param dst: The destination rank.
 
-    :return: A request object of type ``Request<CommSpace>`` representing the non-blocking send operation.
-
-
-.. cpp:function:: template <KokkosView SendView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace, CommunicationSpace CommSpace = DefaultCommunicationSpace> auto send(SendView &sv, int dest) -> Request<CommSpace>
-
-    Initiates a non-blocking send operation using a default handle.
-
-    :tparam SendView: The type of the Kokkos view to send.
-    :tparam ExecSpace: The execution space to use. Defaults to ``Kokkos::DefaultExecutionSpace``.
-    :tparam CommSpace: The communication backend to use. Defaults to ``DefaultCommunicationSpace``.
-
-    :param sv: The Kokkos view to send.
-    :param dest: The destination rank.
-
-    :return: A request object of type ``Request<CommSpace>`` representing the non-blocking send operation.
+    :return: A Request object representing the non-blocking send operation.
 
 **Example usage:**
 
@@ -409,37 +399,19 @@ Send
 Receive
 ^^^^^^^
 
-.. warning:: This is not a blocking operation despite being named like ``MPI_Recv``.
-
-.. cpp:function:: template <KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace, CommunicationSpace CommSpace = DefaultCommunicationSpace> auto recv(Communicator<CommSpace, ExecSpace> &h, RecvView &sv, int dest) -> Request<CommSpace>
+.. cpp:function:: template <CommunicationSpace Comm, KokkosExecutionSpace Exec, KokkosView RecvV> auto recv(Communicator<Comm, Exec> &comm, const RecvV &rv, int src) -> Request<Comm>
 
     Initiates a non-blocking receive operation.
 
-    :tparam RecvView: The type of the Kokkos view for receiving data.
-    :tparam ExecSpace: The execution space where the operation will be performed. Defaults to ``Kokkos::DefaultExecutionSpace``.
-    :tparam CommSpace: The communication backend to use. Defaults to ``DefaultCommunicationSpace``.
+    :tparam Comm: A Communication space type.
+    :tparam Exec: A Kokkos execution space type.
+    :tparam RecvV: A Kokkos View type.
 
-    :param h: A handle to the execution space and transport mechanism.
-    :param rv: The Kokkos view where the received data will be stored.
-    :param src: The source rank from which to receive data.
+    :param comm: The communicator handle associated with the operation.
+    :param rv: The View to receive into.
+    :param src: The source rank.
 
-    :return: A request object of type ``Request<CommSpace>`` representing the non-blocking receive operation.
-
-    This function initiates a non-blocking receive operation using the specified execution space and transport mechanism. The data will be received into the provided view from the specified source rank and message tag. The function returns a request object that can be used to check the status of the receive operation or to wait for its completion.
-
-
-.. cpp:function:: template <KokkosView RecvView, KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace, CommunicationSpace CommSpace = DefaultCommunicationSpace> auto recv(RecvView &sv, int dest) -> Request<CommSpace>
-
-    Initiates a non-blocking receive operation using a default handle.
-
-    :tparam RecvView: The type of the Kokkos view for receiving data.
-    :tparam ExecSpace: The execution space where the operation will be performed. Defaults to `Kokkos::DefaultExecutionSpace`.
-    :tparam CommSpace: The communication backend to use. Defaults to ``DefaultCommunicationSpace``.
-
-    :param rv: The Kokkos view where the received data will be stored.
-    :param src: The source rank from which to receive data.
-
-    :return: A request object of type ``Request<CommSpace>`` representing the non-blocking receive operation.
+    :return: A Request object representing the non-blocking receive operation.
 
 **Example usage:**
 
