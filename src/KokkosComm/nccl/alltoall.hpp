@@ -10,7 +10,7 @@
 #include <KokkosComm/traits.hpp>
 #include <KokkosComm/datatype.hpp>
 #include "nccl_space.hpp"
-#include "handle.hpp"
+#include "communicator.hpp"
 #include "request.hpp"
 
 #include "impl/pack_traits.hpp"
@@ -58,9 +58,9 @@ namespace Impl {
 
 template <KokkosView SendView, KokkosView RecvView>
 struct AllToAll<SendView, RecvView, Kokkos::Cuda, NcclSpace> {
-  static auto execute(Handle<Kokkos::Cuda, NcclSpace>& h, const SendView sv, RecvView rv, int count)
+  static auto execute(Communicator<NcclSpace, Kokkos::Cuda>& h, const SendView sv, RecvView rv, int count)
       -> Request<NcclSpace> {
-    return nccl::alltoall(h.space(), sv, rv, count, h.comm());
+    return nccl::alltoall(h.exec(), sv, rv, count, h.comm());
   }
 };
 

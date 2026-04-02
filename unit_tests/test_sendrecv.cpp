@@ -11,6 +11,9 @@
 
 namespace {
 
+using Ex = Kokkos::DefaultExecutionSpace;
+using Co = KokkosComm::DefaultCommunicationSpace;
+
 template <typename T>
 class SendRecv : public testing::Test {
  public:
@@ -30,33 +33,34 @@ void test_1d(const View1D &v) {
   static_assert(View1D::rank == 1, "");
   using Scalar = typename View1D::non_const_value_type;
 
-  // FIXME: The NCCL backend does not have a way to construct a `KokkosComm::Handle` without providing a `ncclComm_t`
-  // object (default initialization). We use the NCCL test utils to create one and construct a Handle from it.
-  // This hack will be required as long as we don't define a way to create a "default" NCCL communicator in KokkosComm.
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
   auto nccl_ctx = test_utils::nccl::Ctx::init();
-  KokkosComm::Handle<Kokkos::Cuda, KokkosComm::Experimental::NcclSpace> h(Kokkos::Cuda(), nccl_ctx.comm());
+  auto raw_comm = nccl_ctx.comm();
 #else
-  KokkosComm::Handle h;
+  auto raw_comm = MPI_COMM_WORLD;
 #endif
-  int rank = h.rank();
-  int size = h.size();
+  auto exec      = Ex();
+  auto comm      = KokkosComm::Communicator<>::from_raw(raw_comm, exec);
+  const int size = comm.size();
+  const int rank = comm.rank();
   if (size < 2) {
     GTEST_SKIP() << "Requires >= 2 ranks (" << size << " provided)";
   }
-  int src = 0;
-  int dst = 1;
+  const int src = 0;
+  const int dst = 1;
 
   if (rank == src) {
     Kokkos::parallel_for(
-        v.extent(0), KOKKOS_LAMBDA(const int i) { v(i) = i; });
-    KokkosComm::wait(KokkosComm::send(h, v, dst));
+        v.extent(0), KOKKOS_LAMBDA(const int i) { v(i) = i; }
+    );
+    KokkosComm::send(comm, v, dst).wait();
   } else if (rank == dst) {
-    KokkosComm::wait(KokkosComm::recv(h, v, src));
+    KokkosComm::recv(comm, v, src).wait();
 
     int errs;
     Kokkos::parallel_reduce(
-        v.extent(0), KOKKOS_LAMBDA(const int i, int &lsum) { lsum += v(i) != Scalar(i); }, errs);
+        v.extent(0), KOKKOS_LAMBDA(const int i, int &lsum) { lsum += v(i) != Scalar(i); }, errs
+    );
     ASSERT_EQ(errs, 0);
   }
 }
@@ -68,32 +72,39 @@ void test_2d(const View2D &v) {
 
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
   auto nccl_ctx = test_utils::nccl::Ctx::init();
-  KokkosComm::Handle<Kokkos::Cuda, KokkosComm::Experimental::NcclSpace> h(Kokkos::Cuda(), nccl_ctx.comm());
+  auto raw_comm = nccl_ctx.comm();
 #else
-  KokkosComm::Handle h;
+  auto raw_comm = MPI_COMM_WORLD;
 #endif
-  int rank = h.rank();
-  int size = h.size();
+  auto exec      = Ex();
+  auto comm      = KokkosComm::Communicator<>::from_raw(raw_comm, exec);
+  const int size = comm.size();
+  const int rank = comm.rank();
   if (size < 2) {
     GTEST_SKIP() << "Requires >= 2 ranks (" << size << " provided)";
   }
-  int src = 0;
-  int dst = 1;
+  const int src = 0;
+  const int dst = 1;
 
   using Policy = Kokkos::MDRangePolicy<Kokkos::Rank<2>>;
-  Policy policy({0, 0}, {v.extent(0), v.extent(1)});
+  Policy policy(exec, {0, 0}, {v.extent(0), v.extent(1)});
 
   if (rank == src) {
     Kokkos::parallel_for(
-        policy, KOKKOS_LAMBDA(const int i, const int j) { v(i, j) = i * v.extent(0) + j; });
-    KokkosComm::wait(KokkosComm::send(h, v, dst));
+        policy, KOKKOS_LAMBDA(const int i, const int j) { v(i, j) = i * v.extent(0) + j; }
+    );
+    exec.fence();
+
+    KokkosComm::send(comm, v, dst).wait();
   } else if (rank == dst) {
-    KokkosComm::wait(KokkosComm::recv(h, v, src));
+    KokkosComm::recv(comm, v, src).wait();
 
     int errs;
     Kokkos::parallel_reduce(
         policy, KOKKOS_LAMBDA(const int i, const int j, int &lsum) { lsum += v(i, j) != Scalar(i * v.extent(0) + j); },
-        errs);
+        errs
+    );
+    exec.fence();
     ASSERT_EQ(errs, 0);
   }
 }
