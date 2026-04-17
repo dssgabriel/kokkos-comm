@@ -38,8 +38,11 @@ if(KokkosComm_ENABLE_MPI)
   list(APPEND KOKKOSCOMM_ENABLED_BACKENDS "MPI")
 endif()
 if(KokkosComm_ENABLE_NCCL)
-  # Require NCCL 2+
-  find_package(NCCL 2.0 REQUIRED)
+  if(NOT Kokkos_ENABLE_CUDA)
+    message(FATAL_ERROR "KokkosComm_ENABLE_NCCL requires Kokkos_ENABLE_CUDA")
+  endif()
+  # Require NCCL 2.20+
+  find_package(NCCL 2.20.0 REQUIRED)
   list(APPEND KOKKOSCOMM_ENABLED_BACKENDS "NCCL")
 endif()
 
