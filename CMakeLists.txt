@@ -29,19 +29,19 @@ message(STATUS "Kokkos Comm version: ${CMAKE_PROJECT_VERSION}")
 set(KOKKOSCOMM_ENABLED_BACKENDS "")
 
 # --- DEPENDENCIES --- #
-# Require Kokkos 4.7+
 find_package(Kokkos 4.7.0 REQUIRED)
+
 if(KokkosComm_ENABLE_MPI)
-  find_package(MPI REQUIRED)
+  find_package(MPI 3.0.0 REQUIRED)
   include(mpi-vendor)
   kokkoscomm_set_mpi_vendor_variables()
   list(APPEND KOKKOSCOMM_ENABLED_BACKENDS "MPI")
 endif()
+
 if(KokkosComm_ENABLE_NCCL)
   if(NOT Kokkos_ENABLE_CUDA)
     message(FATAL_ERROR "KokkosComm_ENABLE_NCCL requires Kokkos_ENABLE_CUDA")
   endif()
-  # Require NCCL 2.20+
   find_package(NCCL 2.20.0 REQUIRED)
   list(APPEND KOKKOSCOMM_ENABLED_BACKENDS "NCCL")
 endif()
