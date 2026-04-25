@@ -16,24 +16,32 @@
 #include "impl/pack_traits.hpp"
 #include "impl/error_handling.hpp"
 
-namespace KokkosComm {
-namespace Experimental::nccl {
+namespace KokkosComm::Experimental::nccl {
 
-template <KokkosExecutionSpace ExecSpace, KokkosView SendView>
-auto send(const ExecSpace& space, const SendView& sv, int peer, ncclComm_t comm) -> Request<NcclSpace> {
-  using T = typename SendView::non_const_value_type;
-  Kokkos::Tools::pushRegion("KokkosComm::Impl::send");
+/// @brief Initiates a non-blocking send operation.
+/// @tparam Exec A Kokkos execution space type.
+/// @tparam SendV A Kokkos View type.
+/// @param comm The communicator handle associated with the operation.
+/// @param sv The View to send.
+/// @param dst The destination rank.
+/// @returns A Request object representing the non-blocking send operation.
+template <KokkosExecutionSpace Exec, KokkosView SendV>
+auto send(Communicator<NcclSpace, Exec>& comm, const SendV& sv, int dst) -> Request<NcclSpace> {
+  Kokkos::Tools::pushRegion("KokkosComm::nccl::send");
 
+  const auto exec = comm.exec();
   Request<NcclSpace> req;
   if (is_contiguous(sv)) {
-    KC_NCCL_CHECK(ncclSend(data_handle(sv), span(sv), datatype<NcclSpace, T>(), peer, comm, space.cuda_stream()));
-  } else {
-    using Packer = typename Impl::PackTraits<SendView>::packer_type;
-    auto pckd_sv = Packer::pack(space, "pckd_sv", sv);
-    KC_NCCL_CHECK(
-        ncclSend(data_handle(pckd_sv.view_), pckd_sv.count_, pckd_sv.datatype_, peer, comm, space.cuda_stream())
+    KC_NCCL_CHECK(ncclSend(data_handle(sv), span(sv), datatype_for<NcclSpace>(sv), dst, comm.comm(), exec.cuda_stream())
     );
-    req.capture_stream_state(space.cuda_stream());
+  } else {
+    using Packer = typename Impl::PackTraits<SendV>::packer_type;
+    auto pckd_sv = Packer::pack(exec, "pckd_sv", sv);
+    // No need to fence since we enqueue the packing on the same execution space
+    KC_NCCL_CHECK(
+        ncclSend(data_handle(pckd_sv.view_), pckd_sv.count_, pckd_sv.datatype_, dst, comm.comm(), exec.cuda_stream())
+    );
+    req.capture_stream_state(exec.cuda_stream());
     req.extend_view_lifetime(pckd_sv.view_);
   }
   req.extend_view_lifetime(sv);
@@ -42,16 +50,4 @@ auto send(const ExecSpace& space, const SendView& sv, int peer, ncclComm_t comm)
   return req;
 }
 
-}  // namespace Experimental::nccl
-namespace Impl {
-
-template <KokkosView SendView>
-struct Send<SendView, Kokkos::Cuda, Experimental::NcclSpace> {
-  static auto execute(Communicator<Experimental::NcclSpace, Kokkos::Cuda>& h, SendView sv, int peer)
-      -> Request<Experimental::NcclSpace> {
-    return Experimental::nccl::send(h.exec(), sv, peer, h.comm());
-  }
-};
-
-}  // namespace Impl
-}  // namespace KokkosComm
+}  // namespace KokkosComm::Experimental::nccl
