@@ -174,6 +174,11 @@ endif()
 # --- NCCL backend unit tests --- #
 if(KokkosComm_ENABLE_NCCL)
   kc_add_unit_test(smoke.nccl.1pe-multi_gpu NCCL NUM_PES 1 FILES nccl/test_nccl.cpp)
+  if(KOKKOSCOMM_IMPL_MPI_IS_MPICH)
+    # Setting the CUDA_RUNTIME_LIBRARY property on this target to "Shared" doesn't work for reasons I don't understand.
+    target_compile_options(smoke.nccl.1pe-multi_gpu PUBLIC --cudart shared)
+    target_link_options(smoke.nccl.1pe-multi_gpu PUBLIC --cudart shared)
+  endif()
 
   kc_add_unit_test(
     test.nccl.send-recv

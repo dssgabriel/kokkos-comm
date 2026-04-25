@@ -41,12 +41,12 @@ auto recv(Communicator<NcclSpace, Exec>& comm, const RecvV& rv, int src) -> Requ
     KC_NCCL_CHECK(
         ncclRecv(data_handle(pckd_rv.view_), pckd_rv.count_, pckd_rv.datatype_, src, comm.comm(), exec.cuda_stream())
     );
-    req.capture_stream_state(exec.cuda_stream());
     req.add_callback([exec, rv, pckd_rv]() {
       Packer::unpack_into(exec, rv, pckd_rv.view_);
       exec.fence("fence unpacking after ncclRecv");
     });
   }
+  req.capture_stream_state(exec.cuda_stream());
   req.extend_view_lifetime(rv);
 
   Kokkos::Tools::popRegion();

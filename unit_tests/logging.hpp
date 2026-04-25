@@ -12,8 +12,8 @@
 #if defined(KOKKOSCOMM_ENABLE_NCCL)
 #include <nccl.h>
 #endif
-
 #include <fmt/core.h>
+#include <KokkosComm/config.hpp>
 
 namespace logging {
 
@@ -30,9 +30,10 @@ constexpr std::array level_txt{"FATAL"sv, "ERROR"sv, "WARNING"sv, "INFO"sv, "TRA
 
 }  // namespace logging
 
-#define KC_LOG(lvl, ...)                                                                                        \
-  fmt::println(                                                                                                 \
-      "[{}] {}:{}: {}", logging::level_txt[static_cast<int>(lvl)], __FILE__, __LINE__, fmt::format(__VA_ARGS__) \
+#define KC_LOG(lvl, ...)                                                                       \
+  fmt::println(                                                                                \
+      stderr, "[{}] {}:{}: {}", logging::level_txt[static_cast<int>(lvl)], __FILE__, __LINE__, \
+      fmt::format(__VA_ARGS__)                                                                 \
   )
 
 #define KC_FATAL(...) (KC_LOG(logging::Level::FATAL, __VA_ARGS__), std::exit(EXIT_FAILURE))
