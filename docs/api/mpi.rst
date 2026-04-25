@@ -47,97 +47,115 @@ Low-level MPI interfaces
 Point-to-point
 ==============
 
+The MPI backend works with any Kokkos execution space. All operations fence the associated execution space before performing the MPI call.
+
 .. cpp:namespace:: KokkosComm::mpi
 
-.. cpp:function:: template <KokkosView SendView> \
-                  auto send(const SendView &sv, int dest, int tag, MPI_Comm comm) -> void
+.. cpp:function:: template <KokkosExecutionSpace Exec, KokkosView SendV, CommunicationMode SendMode> \
+                  auto send(Communicator<MpiSpace, Exec> &comm, const SendV &sv, int dst, int tag, SendMode) -> void
 
-    Initiates a blocking send operation.
+    Performs a blocking send operation.
 
-    :tparam SendView: The type of the view to be sent.
+    :tparam Exec: A Kokkos execution space type.
+    :tparam SendV: A Kokkos View type.
+    :tparam SendMode: The communication mode type (CommModeStandard, CommModeReady, or CommModeSynchronous).
 
-    :param sv: The view to be sent.
-    :param dest: The destination rank.
+    :param comm: The communicator handle associated with the operation.
+    :param sv: The View to send.
+    :param dst: The destination rank.
     :param tag: The message tag.
-    :param comm: The MPI communicator.
 
 
-.. cpp:function:: template <CommMode SendMode = CommMode::Default, KokkosExecutionSpace ExecSpace, KokkosView SendView> \
-                  auto send(const ExecSpace &space, const SendView &sv, int dest, int tag, MPI_Comm comm) -> void
+.. cpp:function:: template <KokkosExecutionSpace Exec, KokkosView SendV> \
+                  auto send(Communicator<MpiSpace, Exec> &comm, const SendV &sv, int dst, int tag) -> void
 
-    Initiates a blocking send operation with a specified execution space and communication mode.
+    Performs a blocking send operation using the default communication mode.
 
-    :tparam SendMode: The communication mode (default is CommMode::Default).
-    :tparam ExecSpace: The execution space.
-    :tparam SendView: The type of the view to be sent.
+    :tparam Exec: A Kokkos execution space type.
+    :tparam SendV: A Kokkos View type.
 
-    :param space: The execution space.
-    :param sv: The view to be sent.
-    :param dest: The destination rank.
+    :param comm: The communicator handle associated with the operation.
+    :param sv: The View to send.
+    :param dst: The destination rank.
     :param tag: The message tag.
-    :param comm: The MPI communicator.
 
 
-.. cpp:function:: template <CommMode SendMode, KokkosExecutionSpace ExecSpace, KokkosView SendView> \
-                  auto isend(Communicator<MpiSpace, ExecSpace> &h, const SendView &sv, int dest, int tag) -> Request<MpiSpace>
+.. cpp:function:: template <KokkosExecutionSpace Exec, KokkosView SendV, CommunicationMode SendMode> \
+                  auto isend(Communicator<MpiSpace, Exec> &comm, const SendV &sv, int dst, int tag, SendMode) -> Request<MpiSpace>
 
     Initiates a non-blocking send operation.
 
-    :tparam SendMode: The communication mode.
-    :tparam ExecSpace: The execution space.
-    :tparam SendView: The type of the view to be sent.
+    :tparam Exec: A Kokkos execution space type.
+    :tparam SendV: A Kokkos View type.
+    :tparam SendMode: The communication mode type (CommModeStandard, CommModeReady, or CommModeSynchronous).
 
-    :param h: The handle for the execution space and MPI.
-    :param sv: The view to be sent.
-    :param dest: The destination rank.
+    :param comm: The communicator handle associated with the operation.
+    :param sv: The View to send.
+    :param dst: The destination rank.
     :param tag: The message tag.
 
-    :return: A request object for the non-blocking send operation.
+    :return: A Request object representing the non-blocking send operation.
 
 
-.. cpp:function:: template <KokkosView RecvView> \
-                  auto recv(const RecvView &rv, int src, int tag, MPI_Comm comm, MPI_Status *status) -> void
+.. cpp:function:: template <KokkosExecutionSpace Exec, KokkosView SendV> \
+                  auto isend(Communicator<MpiSpace, Exec> &comm, const SendV &sv, int dst, int tag) -> Request<MpiSpace>
 
-    Initiates a blocking receive operation.
+    Initiates a non-blocking send operation using the default communication mode.
 
-    :tparam RecvView: The type of the view to be received.
+    :tparam Exec: A Kokkos execution space type.
+    :tparam SendV: A Kokkos View type.
 
-    :param rv: The view to be received.
+    :param comm: The communicator handle associated with the operation.
+    :param sv: The View to send.
+    :param dst: The destination rank.
+    :param tag: The message tag.
+
+    :return: A Request object representing the non-blocking send operation.
+
+
+.. cpp:function:: template <KokkosExecutionSpace Exec, KokkosView RecvV> \
+                  auto recv(Communicator<MpiSpace, Exec> &comm, const RecvV &rv, int src, int tag, MPI_Status *status) -> void
+
+    Performs a blocking receive operation.
+
+    :tparam Exec: A Kokkos execution space type.
+    :tparam RecvV: A Kokkos View type.
+
+    :param comm: The communicator handle associated with the operation.
+    :param rv: The View to receive into.
     :param src: The source rank.
     :param tag: The message tag.
-    :param comm: The MPI communicator.
-    :param status: The MPI status object for the blocking receive operation.
+    :param status: The MPI status object, or MPI_STATUS_IGNORE.
 
 
-.. cpp:function:: template <KokkosExecutionSpace ExecSpace, KokkosView RecvView> \
-                  auto recv(const ExecSpace &space, RecvView &rv, int src, int tag, MPI_Comm comm) -> void
+.. cpp:function:: template <KokkosExecutionSpace Exec, KokkosView RecvV> \
+                  auto recv(Communicator<MpiSpace, Exec> &comm, const RecvV &rv, int src, int tag) -> void
 
-    Initiates a blocking receive operation with a specified execution space.
+    Performs a blocking receive operation using MPI_STATUS_IGNORE.
 
-    :tparam ExecSpace: The execution space.
-    :tparam RecvView: The type of the view to be received.
+    :tparam Exec: A Kokkos execution space type.
+    :tparam RecvV: A Kokkos View type.
 
-    :param space: The execution space.
-    :param rv: The view to be received.
+    :param comm: The communicator handle associated with the operation.
+    :param rv: The View to receive into.
     :param src: The source rank.
     :param tag: The message tag.
-    :param comm: The MPI communicator.
 
 
-.. cpp:function:: template <KokkosView RecvView> \
-                  auto irecv(const RecvView &rv, int src, int tag, MPI_Comm comm, MPI_Request &req) -> void
+.. cpp:function:: template <KokkosExecutionSpace Exec, KokkosView RecvV> \
+                  auto irecv(Communicator<MpiSpace, Exec> &comm, const RecvV &rv, int src, int tag) -> Request<MpiSpace>
 
     Initiates a non-blocking receive operation.
 
-    :tparam RecvView: The type of the view to be received.
+    :tparam Exec: A Kokkos execution space type.
+    :tparam RecvV: A Kokkos View type.
 
-    :param rv: The view to be received.
+    :param comm: The communicator handle associated with the operation.
+    :param rv: The View to receive into.
     :param src: The source rank.
     :param tag: The message tag.
-    :param comm: The MPI communicator.
-    :param req: The MPI request object for the non-blocking receive operation.
 
-    :throws std::runtime_error: If the view is not contiguous.
+    :return: A Request object representing the non-blocking receive operation.
 
 
 Collectives
