@@ -17,10 +17,9 @@
 #include "mpi/communicator.hpp"
 #include "mpi/request.hpp"
 
-#include "mpi/irecv.hpp"
-#include "mpi/isend.hpp"
-#include "mpi/recv.hpp"
 #include "mpi/send.hpp"
+#include "mpi/recv.hpp"
+#include "mpi/channel.hpp"
 
 #include "mpi/broadcast.hpp"
 #include "mpi/allgather.hpp"
@@ -38,8 +37,8 @@
 #include "nccl/communicator.hpp"
 #include "nccl/request.hpp"
 
-#include "nccl/recv.hpp"
 #include "nccl/send.hpp"
+#include "nccl/recv.hpp"
 
 #include "nccl/broadcast.hpp"
 #include "nccl/allgather.hpp"

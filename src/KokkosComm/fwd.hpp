@@ -40,17 +40,11 @@ class Request;
 
 namespace Impl {
 
-template <
-    KokkosView RecvView,
-    KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
-    CommunicationSpace CommSpace   = DefaultCommunicationSpace>
-struct Recv;
-
-template <
-    KokkosView SendView,
-    KokkosExecutionSpace ExecSpace = Kokkos::DefaultExecutionSpace,
-    CommunicationSpace CommSpace   = DefaultCommunicationSpace>
+template <CommunicationSpace CommSpace, KokkosExecutionSpace ExecSpace, KokkosView SendView>
 struct Send;
+
+template <CommunicationSpace CommSpace, KokkosExecutionSpace ExecSpace, KokkosView RecvV>
+struct Recv;
 
 }  // namespace Impl
 
