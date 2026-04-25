@@ -102,14 +102,14 @@ if(KokkosComm_ENABLE_MPI)
     test.mpi.send-recv
     MPI
     NUM_PES 2
-    FILES test_main.cpp mpi/test_sendrecv.cpp
+    FILES test_main.cpp mpi/test_send_recv.cpp
     LIBRARIES KokkosComm::KokkosComm
   )
   kc_add_unit_test(
-    test.mpi.isend-recv
+    test.mpi.isend-irecv
     MPI
     NUM_PES 2
-    FILES test_main.cpp mpi/test_isendrecv.cpp
+    FILES test_main.cpp mpi/test_isend_irecv.cpp
     LIBRARIES KokkosComm::KokkosComm
   )
   kc_add_unit_test(
@@ -176,10 +176,10 @@ if(KokkosComm_ENABLE_NCCL)
   kc_add_unit_test(smoke.nccl.1pe-multi_gpu NCCL NUM_PES 1 FILES nccl/test_nccl.cpp)
 
   kc_add_unit_test(
-    test.nccl.p2p
+    test.nccl.send-recv
     NCCL
     NUM_PES 2
-    FILES test_main.cpp nccl/test_point_to_point.cpp
+    FILES test_main.cpp nccl/test_send_recv.cpp
     LIBRARIES KokkosComm::KokkosComm MPI::MPI_CXX
   )
   kc_add_unit_test(
