@@ -9,52 +9,114 @@
 #include <KokkosComm/concepts.hpp>
 #include <KokkosComm/traits.hpp>
 #include <KokkosComm/datatype.hpp>
+#include "mpi_space.hpp"
+#include "communicator.hpp"
+#include "request.hpp"
 #include "comm_mode.hpp"
 
 #include "impl/pack_traits.hpp"
-#include "impl/error_handling.hpp"
+#include "impl/tags.hpp"
 
 namespace KokkosComm::mpi {
 
-template <KokkosExecutionSpace ExecSpace, KokkosView SendView, CommunicationMode SendMode>
-void send(const ExecSpace &space, const SendView &sv, int dest, int tag, MPI_Comm comm, SendMode) {
-  Kokkos::Tools::pushRegion("KokkosComm::mpi::send");
-  using T      = typename SendView::non_const_value_type;
-  using Packer = typename Impl::PackTraits<SendView>::packer_type;
+/// @brief Initiates a non-blocking send operation.
+/// @tparam Exec A Kokkos execution space type.
+/// @tparam SendV A Kokkos View type.
+/// @tparam SendMode The communication mode type (CommModeStandard, CommModeReady, or CommModeSynchronous). Defaults
+///         to DefaultCommMode.
+/// @param comm The communicator handle associated with the operation.
+/// @param sv The View to send.
+/// @param dst The destination rank.
+/// @param tag The message tag.
+/// @returns A Request object representing the non-blocking send operation.
+template <KokkosExecutionSpace Exec, KokkosView SendV, CommunicationMode SendMode = DefaultCommMode>
+auto isend(Communicator<MpiSpace, Exec>& comm, const SendV& sv, int dst, int tag, SendMode = SendMode{}) -> Request<MpiSpace> {
+  Kokkos::Tools::pushRegion("KokkosComm::mpi::isend");
 
-  auto mpi_send_fn = [dest, tag, comm](void *view, int cnt, MPI_Datatype dtype) {
+  auto mpi_isend_fn = [dst, tag](void* buf, int count, MPI_Datatype dtype, MPI_Request* req_ptr, MPI_Comm mpi_comm) {
     if constexpr (std::is_same_v<SendMode, CommModeStandard>) {
-      MPI_Send(view, cnt, dtype, dest, tag, comm);
+      MPI_Isend(buf, count, dtype, dst, tag, mpi_comm, req_ptr);
     } else if constexpr (std::is_same_v<SendMode, CommModeReady>) {
-      MPI_Rsend(view, cnt, dtype, dest, tag, comm);
+      MPI_Irsend(buf, count, dtype, dst, tag, mpi_comm, req_ptr);
     } else if constexpr (std::is_same_v<SendMode, CommModeSynchronous>) {
-      MPI_Ssend(view, cnt, dtype, dest, tag, comm);
+      MPI_Issend(buf, count, dtype, dst, tag, mpi_comm, req_ptr);
     } else {
-      static_assert(std::is_void_v<SendMode>, "KokkosComm::mpi::send: unexpected communication mode");
+      // unreachable
+      static_assert(std::is_void_v<SendMode>, "unexpected communication mode");
     }
   };
 
+  const auto exec = comm.exec();
+  Request<MpiSpace> req;
   if (is_contiguous(sv)) {
-    space.fence("fence before send");
-    mpi_send_fn(data_handle(sv), span(sv), datatype<MpiSpace, T>());
+    exec.fence("fence before MPI_Isend");
+    mpi_isend_fn(data_handle(sv), span(sv), datatype_for<MpiSpace>(sv), req.request_ptr(), comm.comm());
   } else {
-    auto args = Packer::pack(space, "pkd_sv", sv);
-    space.fence("fence before send");
-    mpi_send_fn(data_handle(args.view), args.count, args.datatype);
+    using Packer = typename Impl::PackTraits<SendV>::packer_type;
+    auto pckd_sv = Packer::pack(exec, "pckd_sv", sv);
+    exec.fence("fence packed allocation before MPI_Isend");
+    mpi_isend_fn(data_handle(pckd_sv.view), pckd_sv.count, pckd_sv.datatype, req.request_ptr(), comm.comm());
+    req.extend_view_lifetime(pckd_sv.view);
+  }
+  req.extend_view_lifetime(sv);
+
+  Kokkos::Tools::popRegion();
+  return req;
+}
+
+/// @brief Performs a blocking send operation.
+/// @tparam Exec A Kokkos execution space type.
+/// @tparam SendV A Kokkos View type.
+/// @tparam SendMode The communication mode type (CommModeStandard, CommModeReady, or CommModeSynchronous).
+/// @param comm The communicator handle associated with the operation.
+/// @param sv The View to send.
+/// @param dst The destination rank.
+/// @param tag The message tag.
+template <KokkosExecutionSpace Exec, KokkosView SendV, CommunicationMode SendMode = DefaultCommMode>
+auto send(Communicator<MpiSpace, Exec>& comm, const SendV& sv, int dst, int tag, SendMode = SendMode{}) -> void {
+  Kokkos::Tools::pushRegion("KokkosComm::mpi::send");
+
+  auto mpi_send_fn = [dst, tag](void* buf, int count, MPI_Datatype dtype, MPI_Comm mpi_comm) {
+    if constexpr (std::is_same_v<SendMode, CommModeStandard>) {
+      MPI_Send(buf, count, dtype, dst, tag, mpi_comm);
+    } else if constexpr (std::is_same_v<SendMode, CommModeReady>) {
+      MPI_Rsend(buf, count, dtype, dst, tag, mpi_comm);
+    } else if constexpr (std::is_same_v<SendMode, CommModeSynchronous>) {
+      MPI_Ssend(buf, count, dtype, dst, tag, mpi_comm);
+    } else {
+      // unreachable
+      static_assert(std::is_void_v<SendMode>, "unexpected communication mode");
+    }
+  };
+
+  const auto exec = comm.exec();
+  if (is_contiguous(sv)) {
+    exec.fence("fence before send");
+    mpi_send_fn(data_handle(sv), span(sv), datatype_for<MpiSpace>(sv), comm.comm());
+  } else {
+    using Packer = typename Impl::PackTraits<SendV>::packer_type;
+    auto pckd_sv = Packer::pack(exec, "pkd_sv", sv);
+    exec.fence("fence before send");
+    mpi_send_fn(data_handle(pckd_sv.view), pckd_sv.count, pckd_sv.datatype, comm.comm());
   }
 
   Kokkos::Tools::popRegion();
 }
 
-template <KokkosExecutionSpace ExecSpace, KokkosView SendView>
-void send(const ExecSpace &space, const SendView &sv, int dest, int tag, MPI_Comm comm) {
-  send(space, sv, dest, tag, comm, DefaultCommMode{});
+// Search & replace API overloads
+template <KokkosExecutionSpace Exec, KokkosView SendV>
+[[deprecated("Prefer `isend(Communicator, SendV, int, int)` overload")]] auto isend(
+    const Exec& exec, const SendV& sv, int dst, int tag, MPI_Comm comm
+) -> Request<MpiSpace> {
+  auto communicator = Communicator<MpiSpace, Exec>::from_raw(comm, exec);
+  return isend(communicator, sv, dst, tag, DefaultCommMode{});
 }
-
-/// NOTE: This overload has the side effect of fencing on the default execution space.
-template <KokkosView SendView>
-void send(const SendView &sv, int dest, int tag, MPI_Comm comm) {
-  send(Kokkos::DefaultExecutionSpace(), sv, dest, tag, comm, DefaultCommMode{});
+template <KokkosExecutionSpace Exec, KokkosView SendV>
+[[deprecated("Prefer `send(Communicator, SendV, int, int)` overload")]] auto send(
+    const Exec& exec, const SendV& sv, int dst, int tag, MPI_Comm comm
+) -> void {
+  auto communicator = Communicator<MpiSpace, Exec>::from_raw(comm, exec);
+  send(communicator, sv, dst, tag, DefaultCommMode{});
 }
 
 }  // namespace KokkosComm::mpi

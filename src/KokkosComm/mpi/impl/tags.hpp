@@ -3,8 +3,8 @@
 
 #pragma once
 
-namespace KokkosComm::Impl {
+namespace KokkosComm::mpi::Impl {
 
-constexpr int POINTTOPOINT_TAG = 17;
+constexpr int P2P_TAG = 17;
 
 }  // namespace KokkosComm::Impl

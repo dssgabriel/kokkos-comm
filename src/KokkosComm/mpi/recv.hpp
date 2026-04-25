@@ -9,45 +9,110 @@
 #include <KokkosComm/concepts.hpp>
 #include <KokkosComm/traits.hpp>
 #include <KokkosComm/datatype.hpp>
+#include "mpi_space.hpp"
+#include "communicator.hpp"
+#include "request.hpp"
 
 #include "impl/pack_traits.hpp"
-#include "impl/error_handling.hpp"
+#include "impl/tags.hpp"
 
 namespace KokkosComm::mpi {
 
-template <KokkosView RecvView>
-void recv(const RecvView &rv, int src, int tag, MPI_Comm comm, MPI_Status *status) {
+/// @brief Initiates a non-blocking receive operation.
+/// @tparam Exec A Kokkos execution space type.
+/// @tparam RecvV A Kokkos View type.
+/// @param comm The communicator handle associated with the operation.
+/// @param rv The View to receive into.
+/// @param src The source rank.
+/// @param tag The message tag.
+/// @returns A Request object representing the non-blocking receive operation.
+template <KokkosExecutionSpace Exec, KokkosView RecvV>
+auto irecv(Communicator<MpiSpace, Exec>& comm, const RecvV& rv, int src, int tag) -> Request<MpiSpace> {
+  Kokkos::Tools::pushRegion("KokkosComm::mpi::irecv");
+
+  const auto exec = comm.exec();
+  Request<MpiSpace> req;
+  if (is_contiguous(rv)) {
+    exec.fence("fence before MPI_Irecv");
+    MPI_Irecv(data_handle(rv), span(rv), datatype_for<MpiSpace>(rv), src, tag, comm.comm(), req.request_ptr());
+    req.extend_view_lifetime(rv);
+  } else {
+    using Packer = typename mpi::Impl::PackTraits<RecvV>::packer_type;
+    auto pckd_rv = Packer::allocate_packed_for(exec, "pckd_rv", rv);
+    exec.fence("fence packed allocation before MPI_Irecv");
+    MPI_Irecv(data_handle(pckd_rv.view), pckd_rv.count, pckd_rv.datatype, src, tag, comm.comm(), req.request_ptr());
+    // Implicitly extends `pckd_rv.view` and `rv` lifetime due to lambda capture
+    req.add_callback([exec, rv, pckd_rv]() {
+      Packer::unpack_into(exec, rv, pckd_rv.view);
+      exec.fence("fence unpacking after MPI_Irecv");
+    });
+  }
+
+  Kokkos::Tools::popRegion();
+  return req;
+}
+
+/// @brief Performs a blocking receive operation.
+/// @tparam Exec A Kokkos execution space type.
+/// @tparam RecvV A Kokkos View type.
+/// @param comm The communicator handle associated with the operation.
+/// @param rv The View to receive into.
+/// @param src The source rank.
+/// @param tag The message tag.
+/// @param status The MPI status object, or MPI_STATUS_IGNORE.
+template <KokkosExecutionSpace Exec, KokkosView RecvV>
+auto recv(Communicator<MpiSpace, Exec>& comm, const RecvV& rv, int src, int tag, MPI_Status* status) -> void {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::recv");
 
-  KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(rv), "only contiguous views supported for low-level recv");
-
-  using ScalarType = typename RecvView::non_const_value_type;
-  MPI_Recv(KokkosComm::data_handle(rv), KokkosComm::span(rv), datatype<MpiSpace, ScalarType>(), src, tag, comm, status);
+  const auto exec = comm.exec();
+  if (is_contiguous(rv)) {
+    exec.fence("fence before MPI_Recv");
+    MPI_Recv(data_handle(rv), span(rv), datatype_for<MpiSpace>(rv), src, tag, comm.comm(), status);
+  } else {
+    using Packer = typename Impl::PackTraits<RecvV>::packer_type;
+    auto pckd_rv = Packer::allocate_packed_for(exec, "pckd_rv", rv);
+    exec.fence("fence packed allocation before MPI_Recv");
+    MPI_Recv(data_handle(pckd_rv.view), pckd_rv.count, pckd_rv.datatype, src, tag, comm.comm(), status);
+    Packer::unpack_into(exec, rv, pckd_rv.view);
+    exec.fence("fence unpacking after MPI_Recv");
+  }
 
   Kokkos::Tools::popRegion();
 }
 
-template <KokkosExecutionSpace ExecSpace, KokkosView RecvView>
-void recv(const ExecSpace &space, RecvView &rv, int src, int tag, MPI_Comm comm) {
-  Kokkos::Tools::pushRegion("KokkosComm::mpi::recv");
+/// @brief Performs a blocking receive operation using MPI_STATUS_IGNORE.
+/// @tparam Exec A Kokkos execution space type.
+/// @tparam RecvV A Kokkos View type.
+/// @param comm The communicator handle associated with the operation.
+/// @param rv The View to receive into.
+/// @param src The source rank.
+/// @param tag The message tag.
+template <KokkosExecutionSpace Exec, KokkosView RecvV>
+auto recv(Communicator<MpiSpace, Exec>& comm, const RecvV& rv, int src, int tag) -> void {
+  recv(comm, rv, src, tag, MPI_STATUS_IGNORE);
+}
 
-  using Packer = typename Impl::PackTraits<RecvView>::packer_type;
-
-  if (!KokkosComm::is_contiguous(rv)) {
-    auto args = Packer::allocate_packed_for(space, "packed", rv);
-    space.fence("Fence after allocation before MPI_Recv");
-    MPI_Recv(KokkosComm::data_handle(args.view), args.count, args.datatype, src, tag, comm, MPI_STATUS_IGNORE);
-    Packer::unpack_into(space, rv, args.view);
-  } else {
-    using RecvScalar = typename RecvView::value_type;
-    space.fence("Fence before MPI_Recv");  // prevent work in `space` from writing to recv buffer
-    MPI_Recv(
-        KokkosComm::data_handle(rv), KokkosComm::span(rv), datatype<MpiSpace, RecvScalar>(), src, tag, comm,
-        MPI_STATUS_IGNORE
-    );
-  }
-
-  Kokkos::Tools::popRegion();
+// Search & replace API overloads
+template <KokkosExecutionSpace Exec, KokkosView RecvV>
+[[deprecated("Prefer `irecv(Communicator, RecvV, int, int)` overload")]] auto irecv(
+    const Exec& exec, const RecvV& rv, int src, int tag, MPI_Comm comm
+) -> Request<MpiSpace> {
+  auto communicator = Communicator<MpiSpace, Exec>::from_raw(comm, exec);
+  return irecv(communicator, rv, src, tag);
+}
+template <KokkosExecutionSpace Exec, KokkosView RecvV>
+[[deprecated("Prefer `recv(Communicator, RecvV, int, int, MPI_Status)` overload")]] auto recv(
+    const Exec& exec, const RecvV& rv, int src, int tag, MPI_Comm comm, MPI_Status* status
+) -> void {
+  auto communicator = Communicator<MpiSpace, Exec>::from_raw(comm, exec);
+  recv(communicator, rv, src, tag, status);
+}
+template <KokkosExecutionSpace Exec, KokkosView RecvV>
+[[deprecated("Prefer `recv(Communicator, RecvV, int, int)` overload")]] auto recv(
+    const Exec& exec, const RecvV& rv, int src, int tag, MPI_Comm comm
+) -> void {
+  auto communicator = Communicator<MpiSpace, Exec>::from_raw(comm, exec);
+  recv(communicator, rv, src, tag, MPI_STATUS_IGNORE);
 }
 
 }  // namespace KokkosComm::mpi
