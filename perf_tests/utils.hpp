@@ -21,5 +21,10 @@ auto do_iteration(benchmark::State& state, F&& func, Args&&... args) -> void {
   double elapsed_seconds = elapsed.count();
   MPI_Allreduce(&elapsed_seconds, &max_elapsed_second, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
   state.SetIterationTime(max_elapsed_second);
-  state.counters["latency"] = max_elapsed_second / 2.0;
+
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if (rank == 0) {
+    state.counters["rank0_ping_pong_latency"] = elapsed_seconds;
+  }
 }
