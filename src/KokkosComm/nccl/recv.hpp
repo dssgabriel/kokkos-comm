@@ -19,7 +19,7 @@
 namespace KokkosComm {
 namespace Experimental::nccl {
 
-template <KokkosExecutionSpace ExecSpace, KokkosView RecvView>
+template <KokkosExecutionSpace ExecSpace, MutKokkosView RecvView>
 auto recv(const ExecSpace& space, RecvView& rv, int peer, ncclComm_t comm) -> Request<NcclSpace> {
   using T = typename RecvView::non_const_value_type;
   Kokkos::Tools::pushRegion("KokkosComm::Impl::recv");
@@ -48,7 +48,7 @@ auto recv(const ExecSpace& space, RecvView& rv, int peer, ncclComm_t comm) -> Re
 }  // namespace Experimental::nccl
 namespace Impl {
 
-template <KokkosView RecvView>
+template <MutKokkosView RecvView>
 struct Recv<RecvView, Kokkos::Cuda, Experimental::NcclSpace> {
   static auto execute(Communicator<Experimental::NcclSpace, Kokkos::Cuda>& h, RecvView sv, int peer)
       -> Request<Experimental::NcclSpace> {

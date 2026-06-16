@@ -15,7 +15,7 @@
 
 namespace KokkosComm::mpi {
 
-template <KokkosView SendView, KokkosView RecvView>
+template <KokkosView SendView, MutKokkosView RecvView>
 void inclusive_scan(SendView const &sv, RecvView const &rv, MPI_Op op, MPI_Comm comm) {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::inclusive_scan");
 
@@ -43,7 +43,7 @@ void inclusive_scan(SendView const &sv, RecvView const &rv, MPI_Op op, MPI_Comm 
   Kokkos::Tools::popRegion();
 }
 
-template <KokkosView SendView, KokkosView RecvView>
+template <KokkosView SendView, MutKokkosView RecvView>
 void exclusive_scan(SendView const &sv, RecvView const &rv, MPI_Op op, MPI_Comm comm) {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::exclusive_scan");
 
@@ -90,7 +90,7 @@ void exclusive_scan(SendView const &sv, RecvView const &rv, MPI_Op op, MPI_Comm 
   Kokkos::Tools::popRegion();
 }
 
-template <KokkosExecutionSpace ExecSpace, KokkosView SendView, KokkosView RecvView>
+template <KokkosExecutionSpace ExecSpace, KokkosView SendView, MutKokkosView RecvView>
 void inclusive_scan(ExecSpace const &space, SendView const &sv, RecvView const &rv, MPI_Op op, MPI_Comm comm) {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::inclusive_scan");
 
@@ -103,7 +103,7 @@ void inclusive_scan(ExecSpace const &space, SendView const &sv, RecvView const &
   Kokkos::Tools::popRegion();
 }
 
-template <KokkosExecutionSpace ExecSpace, KokkosView SendView, KokkosView RecvView>
+template <KokkosExecutionSpace ExecSpace, KokkosView SendView, MutKokkosView RecvView>
 void exclusive_scan(ExecSpace const &space, SendView const &sv, RecvView const &rv, MPI_Op op, MPI_Comm comm) {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::exclusive_scan");
 
