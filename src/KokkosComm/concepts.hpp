@@ -24,6 +24,9 @@ template <typename T>
 concept KokkosView = Kokkos::is_view_v<T>;
 
 template <typename T>
+concept MutKokkosView = KokkosView<T> && std::is_same_v<typename T::value_type, typename T::non_const_value_type>;
+
+template <typename T>
 concept KokkosExecutionSpace = Kokkos::is_execution_space_v<T>;
 
 template <typename T>
