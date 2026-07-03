@@ -43,6 +43,8 @@ if(KokkosComm_ENABLE_NCCL)
     message(FATAL_ERROR "KokkosComm_ENABLE_NCCL requires Kokkos_ENABLE_CUDA")
   endif()
   find_package(NCCL 2.20.0 REQUIRED)
+  # Kokkos Comm uses CUDA runtime headers directly
+  find_package(CUDAToolkit REQUIRED)
   list(APPEND KOKKOSCOMM_ENABLED_BACKENDS "NCCL")
 endif()
 
@@ -122,6 +124,7 @@ if(KokkosComm_INSTALL_CMAKE_PACKAGE)
     FILES
       ${PROJECT_BINARY_DIR}/cmake/KokkosComm/KokkosCommConfig.cmake
       ${PROJECT_BINARY_DIR}/cmake/KokkosComm/KokkosCommVersion.cmake
+      ${PROJECT_SOURCE_DIR}/cmake/FindNCCL.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/KokkosComm
   )
   install(
