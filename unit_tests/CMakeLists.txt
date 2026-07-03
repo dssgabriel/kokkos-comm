@@ -66,13 +66,15 @@ if(KokkosComm_ENABLE_MPI)
 
   # KOKKOS_ENABLE_CUDA is not set?
   if(Kokkos_ENABLE_CUDA)
-    kc_add_unit_test(smoke.mpi.cuda-p2p MPI NUM_PES 2 FILES mpi/test_mpi_cuda_sendrecv.cpp)
+    enable_language(CUDA)
+    find_package(CUDAToolkit REQUIRED)
+
+    kc_add_unit_test(smoke.mpi.cuda-p2p MPI NUM_PES 2 FILES mpi/test_mpi_cuda_sendrecv.cu LIBRARIES CUDA::cudart)
+    target_compile_features(smoke.mpi.cuda-p2p PRIVATE cuda_std_17)
+
     # MPICH needs dynamic cudart (we think, pmodels/mpich#7304)
     if(KOKKOSCOMM_IMPL_MPI_IS_MPICH)
-      # Setting the CUDA_RUNTIME_LIBRARY property on this target to "Shared" doesn't work for
-      # reasons I don't understand.
-      target_compile_options(smoke.mpi.cuda-p2p PUBLIC --cudart shared)
-      target_link_options(smoke.mpi.cuda-p2p PUBLIC --cudart shared)
+      set_property(TARGET smoke.mpi.cuda-p2p PROPERTY CUDA_RUNTIME_LIBRARY Shared)
     endif()
   endif()
 
