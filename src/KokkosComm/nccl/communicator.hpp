@@ -5,7 +5,7 @@
 
 #include <optional>
 
-#include <cuda.h>
+#include <cuda_runtime.h>
 #include <nccl.h>
 #include <Kokkos_Core.hpp>
 
