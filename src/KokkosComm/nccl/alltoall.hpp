@@ -9,11 +9,10 @@
 #include <KokkosComm/concepts.hpp>
 #include <KokkosComm/traits.hpp>
 #include <KokkosComm/datatype.hpp>
+#include <KokkosComm/impl/view_preparation.hpp>
 #include "nccl_space.hpp"
 #include "communicator.hpp"
 #include "request.hpp"
-
-#include "impl/pack_traits.hpp"
 
 namespace KokkosComm::Experimental {
 namespace nccl {
@@ -29,25 +28,23 @@ auto alltoall(const ExecSpace& space, const SendView& sv, const RecvView& rv, in
   Kokkos::Tools::pushRegion("KokkosComm::Experimental::nccl::alltoall");
 
   Request<NcclSpace> req;
-  if (KC::is_contiguous(sv) and KC::is_contiguous(rv)) {
+  auto send_ready = KC::Impl::prepare<KC::Impl::ViewAccess::Read>(space, sv, req);
+  auto recv_ready = KC::Impl::prepare<KC::Impl::ViewAccess::Write>(space, rv, req);
 #if NCCL_VERSION_CODE >= NCCL_VERSION(2, 28, 0)
-    ncclAlltoAll(KC::data_handle(sv), KC::data_handle(rv), count, datatype<NcclSpace, ST>(), comm, space.cuda_stream());
+  ncclAlltoAll(send_ready.buf_ptr(), recv_ready.buf_ptr(), count, send_ready.datatype(), comm, space.cuda_stream());
 #else
-    int n_pes;
-    ncclCommCount(comm, &n_pes);
-    ncclGroupStart();
-    for (int r = 0; r < n_pes; ++r) {
-      ncclSend(KC::data_handle(sv) + r * count, count, datatype<NcclSpace, ST>(), r, comm, space.cuda_stream());
-      ncclRecv(KC::data_handle(rv) + r * count, count, datatype<NcclSpace, ST>(), r, comm, space.cuda_stream());
-    }
-    ncclGroupEnd();
-#endif
-    req.capture_stream_state(space.cuda_stream());
-  } else {
-    Kokkos::abort("KokkosComm::Experimental::nccl::alltoall: unimplemented for non-contiguous views");
+  int n_pes;
+  auto* send_ptr = static_cast<ST*>(send_ready.buf_ptr());
+  auto* recv_ptr = static_cast<RT*>(recv_ready.buf_ptr());
+  ncclCommCount(comm, &n_pes);
+  ncclGroupStart();
+  for (int r = 0; r < n_pes; ++r) {
+    ncclSend(send_ptr + r * count, count, send_ready.datatype(), r, comm, space.cuda_stream());
+    ncclRecv(recv_ptr + r * count, count, recv_ready.datatype(), r, comm, space.cuda_stream());
   }
-  req.extend_view_lifetime(sv);
-  req.extend_view_lifetime(rv);
+  ncclGroupEnd();
+#endif
+  req.capture_stream_state(space.cuda_stream());
 
   Kokkos::Tools::popRegion();
   return req;

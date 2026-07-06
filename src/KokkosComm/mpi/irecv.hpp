@@ -6,11 +6,11 @@
 #include <KokkosComm/concepts.hpp>
 #include <KokkosComm/traits.hpp>
 #include <KokkosComm/datatype.hpp>
+#include <KokkosComm/impl/view_preparation.hpp>
 #include "mpi_space.hpp"
 #include "communicator.hpp"
 #include "request.hpp"
 
-#include "impl/pack_traits.hpp"
 #include "impl/tags.hpp"
 #include "impl/error_handling.hpp"
 
@@ -21,28 +21,13 @@ namespace Impl {
 template <KokkosExecutionSpace ExecSpace, MutKokkosView RecvView>
 struct Recv<RecvView, ExecSpace, MpiSpace> {
   static Request<MpiSpace> execute(Communicator<MpiSpace, ExecSpace>& h, const RecvView& rv, int src) {
-    using Packer = typename mpi::Impl::PackTraits<RecvView>::packer_type;
-
     const ExecSpace& space = h.exec();
 
     Request<MpiSpace> req;
-    if (KokkosComm::is_contiguous(rv)) {
-      space.fence("fence before irecv");
-      MPI_Irecv(
-          KokkosComm::data_handle(rv), KokkosComm::span(rv), datatype<MpiSpace, typename RecvView::value_type>(), src,
-          POINTTOPOINT_TAG, h.comm(), req.request_ptr()
-      );
-      req.extend_view_lifetime(rv);
-    } else {
-      auto args = Packer::allocate_packed_for(space, "TODO", rv);
-      space.fence("fence before irecv");
-      MPI_Irecv(args.view.data(), args.count, args.datatype, src, POINTTOPOINT_TAG, h.comm(), req.request_ptr());
-      // implicitly extends args.view and rv lifetime due to lambda capture
-      req.add_callback([space, rv, args]() {
-        Packer::unpack_into(space, rv, args.view);
-        space.fence("fence `args` unpacking after MPI call");
-      });
-    }
+    auto ready = KokkosComm::Impl::prepare<KokkosComm::Impl::ViewAccess::Write>(space, rv, req);
+    // Ensure any view-preparation work on `space` is ordered before MPI writes the receive buffer.
+    space.fence("fence before irecv");
+    MPI_Irecv(ready.buf_ptr(), ready.count(), ready.datatype(), src, POINTTOPOINT_TAG, h.comm(), req.request_ptr());
     return req;
   }
 };

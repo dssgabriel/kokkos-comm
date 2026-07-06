@@ -11,7 +11,11 @@
 #include <KokkosComm/concepts.hpp>
 #include <KokkosComm/traits.hpp>
 #include <KokkosComm/datatype.hpp>
+#include <KokkosComm/impl/view_preparation.hpp>
 #include "mpi_space.hpp"
+#include "request.hpp"
+
+#include "impl/error_handling.hpp"
 
 namespace KokkosComm::mpi {
 
@@ -28,15 +32,9 @@ void inclusive_scan(SendView const &sv, RecvView const &rv, MPI_Op op, MPI_Comm 
   static_assert(KokkosComm::rank<SendView>() <= 1, "inclusive_scan for SendView::rank > 1 not supported");
   static_assert(KokkosComm::rank<RecvView>() <= 1, "inclusive_scan for RecvView::rank > 1 not supported");
 
-  if (!KokkosComm::is_contiguous(sv)) {
-    throw std::runtime_error{"low-level inclusive_scan requires contiguous send view"};
-  }
-  if (!KokkosComm::is_contiguous(rv)) {
-    throw std::runtime_error{"low-level inclusive_scan requires contiguous recv view"};
-  }
-  if (sv.size() != rv.size()) {
-    throw std::runtime_error{"inclusive_scan requires send and receive views to have the same size"};
-  }
+  fail_if(!KokkosComm::is_contiguous(sv), "low-level inclusive_scan requires contiguous send view");
+  fail_if(!KokkosComm::is_contiguous(rv), "low-level inclusive_scan requires contiguous recv view");
+  fail_if(sv.size() != rv.size(), "inclusive_scan requires send and receive views to have the same size");
   int const count = sv.size();
   MPI_Scan(KokkosComm::data_handle(sv), KokkosComm::data_handle(rv), count, datatype<MpiSpace, SendScalar>(), op, comm);
 
@@ -73,15 +71,9 @@ void exclusive_scan(SendView const &sv, RecvView const &rv, MPI_Op op, MPI_Comm 
   static_assert(KokkosComm::rank<SendView>() <= 1, "exclusive_scan for SendView::rank > 1 not supported");
   static_assert(KokkosComm::rank<RecvView>() <= 1, "exclusive_scan for RecvView::rank > 1 not supported");
 
-  if (!KokkosComm::is_contiguous(sv)) {
-    throw std::runtime_error{"low-level exclusive_scan requires contiguous send view"};
-  }
-  if (!KokkosComm::is_contiguous(rv)) {
-    throw std::runtime_error{"low-level exclusive_scan requires contiguous recv view"};
-  }
-  if (sv.size() != rv.size()) {
-    throw std::runtime_error{"exclusive_scan requires send and receive views to have the same size"};
-  }
+  fail_if(!KokkosComm::is_contiguous(sv), "low-level exclusive_scan requires contiguous send view");
+  fail_if(!KokkosComm::is_contiguous(rv), "low-level exclusive_scan requires contiguous recv view");
+  fail_if(sv.size() != rv.size(), "exclusive_scan requires send and receive views to have the same size");
   int const count = sv.size();
   MPI_Exscan(
       KokkosComm::data_handle(sv), KokkosComm::data_handle(rv), count, datatype<MpiSpace, SendScalar>(), op, comm
@@ -94,11 +86,17 @@ template <KokkosExecutionSpace ExecSpace, KokkosView SendView, MutKokkosView Rec
 void inclusive_scan(ExecSpace const &space, SendView const &sv, RecvView const &rv, MPI_Op op, MPI_Comm comm) {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::inclusive_scan");
 
-  if (!KokkosComm::is_contiguous(sv) || !KokkosComm::is_contiguous(rv)) {
-    throw std::runtime_error("inclusive_scan for non-contiguous views not implemented");
-  }
-  space.fence("fence before inclusive_scan");  // work in space may have been used to produce send view data
-  inclusive_scan(sv, rv, op, comm);
+  fail_if(sv.size() != rv.size(), "inclusive_scan requires send and receive views to have the same size");
+
+  Request<MpiSpace> req;
+  auto send_ready = KokkosComm::Impl::prepare<KokkosComm::Impl::ViewAccess::Read>(space, sv, req);
+  auto recv_ready = KokkosComm::Impl::prepare<KokkosComm::Impl::ViewAccess::Write>(space, rv, req);
+  // Ensure packing/staging copies enqueued on `space` complete before MPI reads the send buffer.
+  space.fence("fence before inclusive_scan");
+  MPI_Iscan(
+      send_ready.buf_ptr(), recv_ready.buf_ptr(), send_ready.count(), send_ready.datatype(), op, comm, req.request_ptr()
+  );
+  req.wait();
 
   Kokkos::Tools::popRegion();
 }
@@ -107,11 +105,17 @@ template <KokkosExecutionSpace ExecSpace, KokkosView SendView, MutKokkosView Rec
 void exclusive_scan(ExecSpace const &space, SendView const &sv, RecvView const &rv, MPI_Op op, MPI_Comm comm) {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::exclusive_scan");
 
-  if (!KokkosComm::is_contiguous(sv) || !KokkosComm::is_contiguous(rv)) {
-    throw std::runtime_error("exclusive_scan for non-contiguous views not implemented");
-  }
-  space.fence("fence before exclusive_scan");  // work in space may have been used to produce send view data
-  exclusive_scan(sv, rv, op, comm);
+  fail_if(sv.size() != rv.size(), "exclusive_scan requires send and receive views to have the same size");
+
+  Request<MpiSpace> req;
+  auto send_ready = KokkosComm::Impl::prepare<KokkosComm::Impl::ViewAccess::Read>(space, sv, req);
+  auto recv_ready = KokkosComm::Impl::prepare<KokkosComm::Impl::ViewAccess::Write>(space, rv, req);
+  // Ensure packing/staging copies enqueued on `space` complete before MPI reads the send buffer.
+  space.fence("fence before exclusive_scan");
+  MPI_Iexscan(
+      send_ready.buf_ptr(), recv_ready.buf_ptr(), send_ready.count(), send_ready.datatype(), op, comm, req.request_ptr()
+  );
+  req.wait();
 
   Kokkos::Tools::popRegion();
 }

@@ -9,8 +9,9 @@
 #include <KokkosComm/concepts.hpp>
 #include <KokkosComm/traits.hpp>
 #include <KokkosComm/datatype.hpp>
+#include <KokkosComm/impl/view_preparation.hpp>
 
-#include "impl/pack_traits.hpp"
+#include "request.hpp"
 #include "impl/error_handling.hpp"
 
 namespace KokkosComm::mpi {
@@ -31,21 +32,12 @@ template <KokkosExecutionSpace ExecSpace, MutKokkosView RecvView>
 void recv(const ExecSpace &space, RecvView &rv, int src, int tag, MPI_Comm comm) {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::recv");
 
-  using Packer = typename Impl::PackTraits<RecvView>::packer_type;
-
-  if (!KokkosComm::is_contiguous(rv)) {
-    auto args = Packer::allocate_packed_for(space, "packed", rv);
-    space.fence("Fence after allocation before MPI_Recv");
-    MPI_Recv(KokkosComm::data_handle(args.view), args.count, args.datatype, src, tag, comm, MPI_STATUS_IGNORE);
-    Packer::unpack_into(space, rv, args.view);
-  } else {
-    using RecvScalar = typename RecvView::value_type;
-    space.fence("Fence before MPI_Recv");  // prevent work in `space` from writing to recv buffer
-    MPI_Recv(
-        KokkosComm::data_handle(rv), KokkosComm::span(rv), datatype<MpiSpace, RecvScalar>(), src, tag, comm,
-        MPI_STATUS_IGNORE
-    );
-  }
+  Request<MpiSpace> req;
+  auto ready = KokkosComm::Impl::prepare<KokkosComm::Impl::ViewAccess::Write>(space, rv, req);
+  // Ensure any view-preparation work on `space` is ordered before MPI writes the receive buffer.
+  space.fence("fence before recv");
+  MPI_Irecv(ready.buf_ptr(), ready.count(), ready.datatype(), src, tag, comm, req.request_ptr());
+  req.wait();
 
   Kokkos::Tools::popRegion();
 }

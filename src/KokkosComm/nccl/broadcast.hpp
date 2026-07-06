@@ -9,11 +9,10 @@
 #include <KokkosComm/concepts.hpp>
 #include <KokkosComm/traits.hpp>
 #include <KokkosComm/datatype.hpp>
+#include <KokkosComm/impl/view_preparation.hpp>
 #include "nccl_space.hpp"
 #include "communicator.hpp"
 #include "request.hpp"
-
-#include "impl/pack_traits.hpp"
 
 namespace KokkosComm::Experimental {
 namespace nccl {
@@ -22,7 +21,6 @@ namespace KC = KokkosComm;
 
 template <MutKokkosView View>
 auto broadcast(const Kokkos::Cuda& space, View& v, int root, ncclComm_t comm) -> Request<NcclSpace> {
-  using T = typename View::non_const_value_type;
   static_assert(
       KC::rank<View>() <= 1,
       "KokkosComm::Experimental::nccl::broadcast: Views with rank higher than 1 are not supported"
@@ -30,13 +28,9 @@ auto broadcast(const Kokkos::Cuda& space, View& v, int root, ncclComm_t comm) ->
   Kokkos::Tools::pushRegion("KokkosComm::Experimental::nccl::broadcast");
 
   Request<NcclSpace> req;
-  if (KC::is_contiguous(v)) {
-    ncclBcast(KC::data_handle(v), KC::span(v), datatype<NcclSpace, T>(), root, comm, space.cuda_stream());
-    req.capture_stream_state(space.cuda_stream());
-  } else {
-    Kokkos::abort("KokkosComm::Experimental::nccl::broadcast: unimplemented for non-contiguous views");
-  }
-  req.extend_view_lifetime(v);
+  auto ready = KC::Impl::prepare<KC::Impl::ViewAccess::ReadWrite>(space, v, req);
+  ncclBcast(ready.buf_ptr(), ready.count(), ready.datatype(), root, comm, space.cuda_stream());
+  req.capture_stream_state(space.cuda_stream());
 
   Kokkos::Tools::popRegion();
   return req;

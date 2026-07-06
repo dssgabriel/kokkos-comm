@@ -7,6 +7,8 @@
 
 #include <mpi.h>
 
+#include <Kokkos_Core.hpp>
+
 #include <KokkosComm/concepts.hpp>
 
 namespace KokkosComm {
@@ -20,6 +22,8 @@ struct MpiSpace {
   using reduction_op_type   = MPI_Op;
   using size_type           = int;
   using rank_type           = int;
+  using execution_space     = Kokkos::DefaultHostExecutionSpace;
+  using memory_space        = typename execution_space::memory_space;
 };
 
 // KokkosComm::MpiSpace is a KokkosComm::CommunicationSpace

@@ -5,6 +5,7 @@
 
 #include <functional>
 #include <memory>
+#include <ranges>
 #include <span>
 #include <vector>
 
@@ -99,7 +100,7 @@ class Request<MpiSpace> {
 
   /// @brief Executes all the callbacks registered on the request.
   auto execute_all_callbacks() -> void {
-    for (auto& cb : callbacks_) {
+    for (auto& cb : callbacks_ | std::views::reverse) {
       cb();
     }
     callbacks_.clear();

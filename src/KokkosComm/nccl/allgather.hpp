@@ -9,11 +9,10 @@
 #include <KokkosComm/concepts.hpp>
 #include <KokkosComm/traits.hpp>
 #include <KokkosComm/datatype.hpp>
+#include <KokkosComm/impl/view_preparation.hpp>
 #include "nccl_space.hpp"
 #include "communicator.hpp"
 #include "request.hpp"
-
-#include "impl/pack_traits.hpp"
 
 namespace KokkosComm::Experimental {
 namespace nccl {
@@ -30,16 +29,12 @@ auto allgather(const ExecSpace& space, const SendView& sv, const RecvView& rv, n
   Kokkos::Tools::pushRegion("KokkosComm::Experimental::nccl::allgather");
 
   Request<NcclSpace> req;
-  if (KC::is_contiguous(sv) and KC::is_contiguous(rv)) {
-    ncclAllGather(
-        KC::data_handle(sv), KC::data_handle(rv), KC::span(sv), datatype<NcclSpace, ST>(), comm, space.cuda_stream()
-    );
-    req.capture_stream_state(space.cuda_stream());
-  } else {
-    Kokkos::abort("KokkosComm::Experimental::nccl::allgather: unimplemented for non-contiguous views");
-  }
-  req.extend_view_lifetime(sv);
-  req.extend_view_lifetime(rv);
+  auto send_ready = KC::Impl::prepare<KC::Impl::ViewAccess::Read>(space, sv, req);
+  auto recv_ready = KC::Impl::prepare<KC::Impl::ViewAccess::Write>(space, rv, req);
+  ncclAllGather(
+      send_ready.buf_ptr(), recv_ready.buf_ptr(), send_ready.count(), send_ready.datatype(), comm, space.cuda_stream()
+  );
+  req.capture_stream_state(space.cuda_stream());
 
   Kokkos::Tools::popRegion();
   return req;

@@ -9,6 +9,7 @@
 #include <KokkosComm/concepts.hpp>
 #include <KokkosComm/traits.hpp>
 #include <KokkosComm/datatype.hpp>
+#include <KokkosComm/impl/view_preparation.hpp>
 #include "mpi_space.hpp"
 #include "communicator.hpp"
 #include "request.hpp"
@@ -20,16 +21,13 @@ namespace mpi {
 
 template <KokkosExecutionSpace ExecSpace, MutKokkosView View>
 auto ibroadcast(const ExecSpace& space, View& v, int root, MPI_Comm comm) -> Request<MpiSpace> {
-  using T = typename View::non_const_value_type;
   Kokkos::Tools::pushRegion("KokkosComm::mpi::ibroadcast");
-  fail_if(!is_contiguous(v), "KokkosComm::mpi::ibroadcast: unimplemented for non-contiguous views");
-
-  // Sync: Work in space may have been used to produce view data.
-  space.fence("fence before non-blocking broadcast");
 
   Request<MpiSpace> req;
-  MPI_Ibcast(data_handle(v), span(v), datatype_for<MpiSpace>(v), root, comm, req.request_ptr());
-  req.extend_view_lifetime(v);
+  auto ready = KokkosComm::Impl::prepare<KokkosComm::Impl::ViewAccess::ReadWrite>(space, v, req);
+  // Ensure packing/staging copies enqueued on `space` complete before MPI reads or writes the buffer.
+  space.fence("fence before non-blocking broadcast");
+  MPI_Ibcast(ready.buf_ptr(), ready.count(), ready.datatype(), root, comm, req.request_ptr());
 
   Kokkos::Tools::popRegion();
   return req;
@@ -52,8 +50,7 @@ template <KokkosExecutionSpace ExecSpace, MutKokkosView View>
 void broadcast(ExecSpace const& space, View const& v, int root, MPI_Comm comm) {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::broadcast");
 
-  space.fence("fence before broadcast");  // work in space may have been used to produce view data
-  broadcast(v, root, comm);
+  ibroadcast(space, v, root, comm).wait();
 
   Kokkos::Tools::popRegion();
 }

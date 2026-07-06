@@ -8,12 +8,12 @@
 #include <KokkosComm/concepts.hpp>
 #include <KokkosComm/traits.hpp>
 #include <KokkosComm/datatype.hpp>
+#include <KokkosComm/impl/view_preparation.hpp>
 #include "mpi_space.hpp"
 #include "communicator.hpp"
 #include "request.hpp"
 #include "comm_mode.hpp"
 
-#include "impl/pack_traits.hpp"
 #include "impl/tags.hpp"
 #include "impl/error_handling.hpp"
 
@@ -36,22 +36,10 @@ Request<MpiSpace> isend_impl(Communicator<MpiSpace, ExecSpace>& h, const SendVie
   };
 
   Request<MpiSpace> req;
-  if (KokkosComm::is_contiguous(sv)) {
-    h.exec().fence("fence before isend");
-    mpi_isend_fn(
-        KokkosComm::data_handle(sv), KokkosComm::span(sv), datatype<MpiSpace, typename SendView::value_type>(), dest,
-        tag, h.comm(), req.request_ptr()
-    );
-    req.extend_view_lifetime(sv);
-  } else {
-    using Packer = typename mpi::Impl::PackTraits<SendView>::packer_type;
-
-    auto args = Packer::pack(h.exec(), "pkd_sv", sv);
-    h.exec().fence("fence before isend");
-    mpi_isend_fn(args.view.data(), args.count, args.datatype, dest, tag, h.comm(), req.request_ptr());
-    req.extend_view_lifetime(args.view);
-    req.extend_view_lifetime(sv);
-  }
+  auto ready = KokkosComm::Impl::prepare<KokkosComm::Impl::ViewAccess::Read>(h.exec(), sv, req);
+  // Ensure packing/staging copies enqueued on the communicator execution space complete before MPI reads the buffer.
+  h.exec().fence("fence before isend");
+  mpi_isend_fn(ready.buf_ptr(), ready.count(), ready.datatype(), dest, tag, h.comm(), req.request_ptr());
   return req;
 }
 

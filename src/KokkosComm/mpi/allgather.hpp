@@ -9,6 +9,7 @@
 #include <KokkosComm/concepts.hpp>
 #include <KokkosComm/traits.hpp>
 #include <KokkosComm/datatype.hpp>
+#include <KokkosComm/impl/view_preparation.hpp>
 #include "mpi_space.hpp"
 #include "communicator.hpp"
 #include "request.hpp"
@@ -25,21 +26,17 @@ auto iallgather(const ExecSpace& space, const SView sv, RView rv, MPI_Comm comm)
   static_assert(std::is_same_v<ST, RT>, "KokkosComm::mpi::iallgather: View value types must be identical");
   Kokkos::Tools::pushRegion("KokkosComm::mpi::iallgather");
 
-  fail_if(
-      !is_contiguous(sv) || !is_contiguous(rv), "KokkosComm::mpi::iallgather: unimplemented for non-contiguous views"
-  );
-
-  // Sync: Work in space may have been used to produce view data.
-  space.fence("fence before non-blocking all-gather");
-
   Request<MpiSpace> req;
+  auto send_ready = KokkosComm::Impl::prepare<KokkosComm::Impl::ViewAccess::Read>(space, sv, req);
+  auto recv_ready = KokkosComm::Impl::prepare<KokkosComm::Impl::ViewAccess::Write>(space, rv, req);
+
+  // Ensure packing/staging copies enqueued on `space` complete before MPI reads the send buffer.
+  space.fence("fence before non-blocking all-gather");
   // All ranks send/recv same count
   MPI_Iallgather(
-      data_handle(sv), span(sv), datatype_for<MpiSpace>(sv), data_handle(rv), span(sv), datatype_for<MpiSpace>(rv),
-      comm, req.request_ptr()
+      send_ready.buf_ptr(), send_ready.count(), send_ready.datatype(), recv_ready.buf_ptr(), send_ready.count(),
+      recv_ready.datatype(), comm, req.request_ptr()
   );
-  req.extend_view_lifetime(sv);
-  req.extend_view_lifetime(rv);
 
   Kokkos::Tools::popRegion();
   return req;
@@ -69,15 +66,15 @@ template <KokkosExecutionSpace ExecSpace, MutKokkosView RecvView>
 void allgather(const ExecSpace& space, const RecvView& rv, const size_t recvCount, MPI_Comm comm) {
   Kokkos::Tools::pushRegion("KokkosComm::Mpi::allgather");
 
-  using RecvScalar = typename RecvView::value_type;
-
-  KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(rv), "low-level allgather requires contiguous recv view");
-
-  space.fence("fence before allgather");  // work in space may have been used to produce send view data
-  MPI_Allgather(
-      MPI_IN_PLACE, 0 /*ignored*/, MPI_DATATYPE_NULL /*ignored*/, KokkosComm::data_handle(rv), recvCount,
-      datatype<MpiSpace, RecvScalar>(), comm
+  Request<MpiSpace> req;
+  auto ready = KokkosComm::Impl::prepare<KokkosComm::Impl::ViewAccess::ReadWrite>(space, rv, req);
+  // Ensure packing/staging copies enqueued on `space` complete before MPI reads or writes the buffer.
+  space.fence("fence before allgather");
+  MPI_Iallgather(
+      MPI_IN_PLACE, 0 /*ignored*/, MPI_DATATYPE_NULL /*ignored*/, ready.buf_ptr(), recvCount, ready.datatype(), comm,
+      req.request_ptr()
   );
+  req.wait();
 
   Kokkos::Tools::popRegion();
 }
@@ -86,13 +83,7 @@ template <KokkosExecutionSpace ExecSpace, KokkosView SendView, MutKokkosView Rec
 void allgather(const ExecSpace& space, const SendView& sv, const RecvView& rv, MPI_Comm comm) {
   Kokkos::Tools::pushRegion("KokkosComm::Mpi::allgather");
 
-  KokkosComm::mpi::fail_if(
-      !KokkosComm::is_contiguous(sv) || !KokkosComm::is_contiguous(rv),
-      "allgather for non-contiguous views not implemented"
-  );
-
-  space.fence("fence before allgather");  // work in space may have been used to produce send view data
-  allgather(sv, rv, comm);
+  iallgather(space, sv, rv, comm).wait();
 
   Kokkos::Tools::popRegion();
 }

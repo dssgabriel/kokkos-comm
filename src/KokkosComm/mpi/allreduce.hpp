@@ -12,6 +12,7 @@
 #include <KokkosComm/traits.hpp>
 #include <KokkosComm/datatype.hpp>
 #include <KokkosComm/reduction_op.hpp>
+#include <KokkosComm/impl/view_preparation.hpp>
 #include "mpi_space.hpp"
 #include "communicator.hpp"
 #include "request.hpp"
@@ -42,18 +43,18 @@ auto iallreduce(const ExecSpace& space, const SView sv, RView rv, MPI_Op op, MPI
   static_assert(std::is_same_v<ST, RT>, "KokkosComm::mpi::iallreduce: View value types must be identical");
   Kokkos::Tools::pushRegion("KokkosComm::mpi::iallreduce");
 
-  fail_if(
-      !is_contiguous(sv) || !is_contiguous(rv), "KokkosComm::mpi::iallreduce: unimplemented for non-contiguous views"
-  );
-
-  // Sync: Work in space may have been used to produce view data.
-  space.fence("fence before non-blocking all-gather");
+  fail_if(sv.size() != rv.size(), "allreduce requires send and receive views to have the same size");
 
   Request<MpiSpace> req;
+  auto send_ready = KokkosComm::Impl::prepare<KokkosComm::Impl::ViewAccess::Read>(space, sv, req);
+  auto recv_ready = KokkosComm::Impl::prepare<KokkosComm::Impl::ViewAccess::Write>(space, rv, req);
+
+  // Ensure packing/staging copies enqueued on `space` complete before MPI reads the send buffer.
+  space.fence("fence before non-blocking all-reduce");
   // All ranks send/recv same count
-  MPI_Iallreduce(data_handle(sv), data_handle(rv), span(sv), datatype<MpiSpace, ST>(), op, comm, req.request_ptr());
-  req.extend_view_lifetime(sv);
-  req.extend_view_lifetime(rv);
+  MPI_Iallreduce(
+      send_ready.buf_ptr(), recv_ready.buf_ptr(), send_ready.count(), send_ready.datatype(), op, comm, req.request_ptr()
+  );
 
   Kokkos::Tools::popRegion();
   return req;
@@ -100,13 +101,7 @@ template <KokkosExecutionSpace ExecSpace, KokkosView SendView, MutKokkosView Rec
 void allreduce(ExecSpace const& space, SendView const& sv, RecvView const& rv, MPI_Op op, MPI_Comm comm) {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::allreduce");
 
-  KokkosComm::mpi::fail_if(
-      !KokkosComm::is_contiguous(sv) || !KokkosComm::is_contiguous(rv),
-      "allreduce for non-contiguous views not implemented"
-  );
-
-  space.fence("fence before allreduce");  // work in space may have been used to produce send view data
-  allreduce(sv, rv, op, comm);
+  iallreduce(space, sv, rv, op, comm).wait();
 
   Kokkos::Tools::popRegion();
 }
@@ -115,10 +110,12 @@ template <KokkosExecutionSpace ExecSpace, MutKokkosView View>
 void allreduce(ExecSpace const& space, View const& v, MPI_Op op, MPI_Comm comm) {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::allreduce");
 
-  KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(v), "allreduce for non-contiguous views not implemented");
-
-  space.fence("fence before allreduce");  // work in space may have been used to produce send view data
-  allreduce(v, op, comm);
+  Request<MpiSpace> req;
+  auto ready = KokkosComm::Impl::prepare<KokkosComm::Impl::ViewAccess::ReadWrite>(space, v, req);
+  // Ensure packing/staging copies enqueued on `space` complete before MPI reads or writes the buffer.
+  space.fence("fence before allreduce");
+  MPI_Iallreduce(MPI_IN_PLACE, ready.buf_ptr(), ready.count(), ready.datatype(), op, comm, req.request_ptr());
+  req.wait();
 
   Kokkos::Tools::popRegion();
 }

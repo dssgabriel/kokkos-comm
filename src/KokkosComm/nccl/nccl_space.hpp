@@ -22,6 +22,8 @@ struct NcclSpace {
   using reduction_op_type   = ncclRedOp_t;
   using size_type           = int;
   using rank_type           = int;
+  using execution_space     = Kokkos::Cuda;
+  using memory_space        = typename execution_space::memory_space;
 };
 
 }  // namespace Experimental

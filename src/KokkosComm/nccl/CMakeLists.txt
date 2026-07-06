@@ -21,7 +21,7 @@ target_sources(
     # Implementation detail NCCL headers
     FILE_SET HEADERS
       BASE_DIRS ${PROJECT_SOURCE_DIR}/src
-      FILES impl/pack_traits.hpp impl/packer.hpp impl/error_handling.hpp
+      FILES impl/error_handling.hpp
 )
 
 target_link_libraries(KokkosComm INTERFACE NCCL::NCCL)

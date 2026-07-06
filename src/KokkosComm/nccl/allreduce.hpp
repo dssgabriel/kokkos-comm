@@ -10,11 +10,10 @@
 #include <KokkosComm/traits.hpp>
 #include <KokkosComm/datatype.hpp>
 #include <KokkosComm/reduction_op.hpp>
+#include <KokkosComm/impl/view_preparation.hpp>
 #include "nccl_space.hpp"
 #include "communicator.hpp"
 #include "request.hpp"
-
-#include "impl/pack_traits.hpp"
 
 namespace KokkosComm::Experimental {
 namespace nccl {
@@ -32,16 +31,13 @@ auto allreduce(const ExecSpace& space, const SendView& sv, const RecvView& rv, n
   Kokkos::Tools::pushRegion("KokkosComm::Experimental::nccl::allreduce");
 
   Request<NcclSpace> req;
-  if (KC::is_contiguous(sv) and KC::is_contiguous(rv)) {
-    ncclAllReduce(
-        KC::data_handle(sv), KC::data_handle(rv), KC::span(sv), datatype<NcclSpace, ST>(), op, comm, space.cuda_stream()
-    );
-    req.capture_stream_state(space.cuda_stream());
-  } else {
-    Kokkos::abort("KokkosComm::Experimental::nccl::allreduce: unimplemented for non-contiguous Views");
-  }
-  req.extend_view_lifetime(sv);
-  req.extend_view_lifetime(rv);
+  auto send_ready = KC::Impl::prepare<KC::Impl::ViewAccess::Read>(space, sv, req);
+  auto recv_ready = KC::Impl::prepare<KC::Impl::ViewAccess::Write>(space, rv, req);
+  ncclAllReduce(
+      send_ready.buf_ptr(), recv_ready.buf_ptr(), send_ready.count(), send_ready.datatype(), op, comm,
+      space.cuda_stream()
+  );
+  req.capture_stream_state(space.cuda_stream());
 
   Kokkos::Tools::popRegion();
   return req;

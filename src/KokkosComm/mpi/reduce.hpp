@@ -12,12 +12,12 @@
 #include <KokkosComm/traits.hpp>
 #include <KokkosComm/datatype.hpp>
 #include <KokkosComm/reduction_op.hpp>
+#include <KokkosComm/impl/view_preparation.hpp>
 #include "mpi_space.hpp"
 #include "communicator.hpp"
 #include "request.hpp"
 
 #include "impl/error_handling.hpp"
-#include "impl/pack_traits.hpp"
 
 namespace KokkosComm {
 namespace mpi {
@@ -39,10 +39,8 @@ auto ireduce(const ExecSpace& space, const SView& sv, RView& rv, MPI_Op op, int 
       "KokkosComm::mpi::ireduce: Unsupported with Open MPI + Kokkos CUDA/HIP backend"
   );
 #endif
-  using ST   = typename SView::non_const_value_type;
-  using RT   = typename RView::non_const_value_type;
-  using SPkr = typename Impl::PackTraits<SView>::packer_type;
-  using RPkr = typename Impl::PackTraits<RView>::packer_type;
+  using ST = typename SView::non_const_value_type;
+  using RT = typename RView::non_const_value_type;
   static_assert(std::is_same_v<ST, RT>, "KokkosComm::mpi::ireduce: View value types must be identical");
   static_assert(
       rank<SView>() <= 1 and rank<RView>() <= 1,
@@ -51,55 +49,30 @@ auto ireduce(const ExecSpace& space, const SView& sv, RView& rv, MPI_Op op, int 
   Kokkos::Tools::pushRegion("KokkosComm::mpi::ireduce");
 
   const int rank = [=]() {
-    int _r;
-    MPI_Comm_rank(comm, &_r);
-    return _r;
+    int r;
+    MPI_Comm_rank(comm, &r);
+    return r;
   }();
 
   Request<MpiSpace> req;
-  if (is_contiguous(sv)) {
-    if (rank == root and not is_contiguous(rv)) {
-      auto pkd_rv = RPkr::allocate_packed_for(space, "KC::mpi::ireduce c_sv pkd_rv", rv);
-      space.fence("fence `pkd_rv` packing before MPI call");
-      MPI_Ireduce(
-          data_handle(sv), data_handle(pkd_rv.view), span(sv), datatype<MpiSpace, ST>(), op, root, comm,
-          req.request_ptr()
-      );
-      // Implicitly extend `pkd_rv` lifetime because of lambda capture
-      req.add_callback([space, rv, pkd_rv]() {
-        RPkr::unpack_into(space, rv, pkd_rv.view);
-        space.fence("fence `pkd_rv` unpacking after MPI call");
-      });
-    } else {
-      space.fence("fence before MPI call");
-      MPI_Ireduce(
-          data_handle(sv), data_handle(rv), span(sv), datatype<MpiSpace, ST>(), op, root, comm, req.request_ptr()
-      );
-    }
+  auto send_ready = KokkosComm::Impl::prepare<KokkosComm::Impl::ViewAccess::Read>(space, sv, req);
+  if (rank == root) {
+    auto recv_ready = KokkosComm::Impl::prepare<KokkosComm::Impl::ViewAccess::Write>(space, rv, req);
+
+    // Ensure packing/staging copies enqueued on `space` complete before MPI reads the send buffer.
+    space.fence("fence before MPI call");
+    MPI_Ireduce(
+        send_ready.buf_ptr(), recv_ready.buf_ptr(), send_ready.count(), send_ready.datatype(), op, root, comm,
+        req.request_ptr()
+    );
   } else {
-    auto pkd_sv = SPkr::pack(space, "pkd_sv", sv);
-    space.fence("fence `pkd_sv` packing before MPI call");
-    if (rank == root and not is_contiguous(rv)) {
-      auto pkd_rv = RPkr::allocate_packed_for(space, "KC::mpi::ireduce nc_sv pkd_rv", rv);
-      space.fence("fence `pkd_rv` packing before MPI call");
-      MPI_Ireduce(
-          data_handle(pkd_sv.view), data_handle(pkd_rv.view), pkd_sv.count, pkd_sv.datatype, op, root, comm,
-          req.request_ptr()
-      );
-      // Implicitly extend `pkd_rv` lifetime because of lambda capture
-      req.add_callback([space, rv, pkd_rv]() {
-        RPkr::unpack_into(space, rv, pkd_rv.view);
-        space.fence("fence `pkd_rv` unpacking after MPI call");
-      });
-    } else {
-      MPI_Ireduce(
-          data_handle(pkd_sv.view), data_handle(rv), pkd_sv.count, pkd_sv.datatype, op, root, comm, req.request_ptr()
-      );
-    }
-    req.extend_view_lifetime(pkd_sv.view);
+    // Ensure packing/staging copies enqueued on `space` complete before MPI reads the send buffer.
+    space.fence("fence before MPI call");
+    MPI_Ireduce(
+        send_ready.buf_ptr(), data_handle(rv), send_ready.count(), send_ready.datatype(), op, root, comm,
+        req.request_ptr()
+    );
   }
-  req.extend_view_lifetime(sv);
-  req.extend_view_lifetime(rv);
 
   Kokkos::Tools::popRegion();
   return req;
@@ -127,50 +100,7 @@ template <KokkosExecutionSpace ExecSpace, KokkosView SendView, MutKokkosView Rec
 void reduce(const ExecSpace& space, const SendView& sv, RecvView& rv, MPI_Op op, int root, MPI_Comm comm) {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::reduce");
 
-  const int rank = [=]() -> int {
-    int _r;
-    MPI_Comm_rank(comm, &_r);
-    return _r;
-  }();
-
-  using SendPacker = typename Impl::PackTraits<SendView>::packer_type;
-  using RecvPacker = typename Impl::PackTraits<RecvView>::packer_type;
-
-  if (!KokkosComm::is_contiguous(sv)) {
-    auto sendArgs = SendPacker::pack(space, "pkd_sv", sv);
-    if ((root == rank) && !KokkosComm::is_contiguous(rv)) {
-      auto recvArgs = RecvPacker::allocate_packed_for(space, "reduce recv", rv);
-      space.fence("fence allocation before MPI call");
-      MPI_Reduce(
-          KokkosComm::data_handle(sendArgs.view), KokkosComm::data_handle(recvArgs.view), sendArgs.count,
-          sendArgs.datatype, op, root, comm
-      );
-      RecvPacker::unpack_into(space, rv, recvArgs.view);
-    } else {
-      space.fence("fence packing before MPI call");
-      MPI_Reduce(
-          KokkosComm::data_handle(sendArgs.view), KokkosComm::data_handle(rv), sendArgs.count, sendArgs.datatype, op,
-          root, comm
-      );
-    }
-  } else {
-    using SendScalar = typename SendView::value_type;
-    if ((root == rank) && !KokkosComm::is_contiguous(rv)) {
-      auto recvArgs = RecvPacker::allocate_packed_for(space, "reduce recv", rv);
-      space.fence("fence allocation before MPI call");
-      MPI_Reduce(
-          KokkosComm::data_handle(sv), KokkosComm::data_handle(recvArgs.view), KokkosComm::span(sv),
-          datatype<MpiSpace, SendScalar>(), op, root, comm
-      );
-      RecvPacker::unpack_into(space, rv, recvArgs.view);
-    } else {
-      space.fence("fence space before MPI call");
-      MPI_Reduce(
-          KokkosComm::data_handle(sv), KokkosComm::data_handle(rv), KokkosComm::span(sv),
-          datatype<MpiSpace, SendScalar>(), op, root, comm
-      );
-    }
-  }
+  ireduce(space, sv, rv, op, root, comm).wait();
 
   Kokkos::Tools::popRegion();
 }

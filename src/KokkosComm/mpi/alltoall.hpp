@@ -9,6 +9,7 @@
 #include <KokkosComm/concepts.hpp>
 #include <KokkosComm/traits.hpp>
 #include <KokkosComm/datatype.hpp>
+#include <KokkosComm/impl/view_preparation.hpp>
 #include "mpi_space.hpp"
 #include "communicator.hpp"
 #include "request.hpp"
@@ -25,21 +26,17 @@ auto ialltoall(const ExecSpace& space, const SView sv, RView rv, int count, MPI_
   static_assert(std::is_same_v<ST, RT>, "KokkosComm::mpi::ialltoall: View value types must be identical");
   Kokkos::Tools::pushRegion("KokkosComm::mpi::ialltoall");
 
-  fail_if(
-      !is_contiguous(sv) || !is_contiguous(rv), "KokkosComm::mpi::ialltoall: unimplemented for non-contiguous views"
-  );
-
-  // Sync: Work in space may have been used to produce view data.
-  space.fence("fence before non-blocking all-gather");
-
   Request<MpiSpace> req;
+  auto send_ready = KokkosComm::Impl::prepare<KokkosComm::Impl::ViewAccess::Read>(space, sv, req);
+  auto recv_ready = KokkosComm::Impl::prepare<KokkosComm::Impl::ViewAccess::Write>(space, rv, req);
+
+  // Ensure packing/staging copies enqueued on `space` complete before MPI reads the send buffer.
+  space.fence("fence before non-blocking all-to-all");
   // All ranks send/recv same count
   MPI_Ialltoall(
-      data_handle(sv), count, datatype<MpiSpace, ST>(), data_handle(rv), count, datatype<MpiSpace, RT>(), comm,
+      send_ready.buf_ptr(), count, send_ready.datatype(), recv_ready.buf_ptr(), count, recv_ready.datatype(), comm,
       req.request_ptr()
   );
-  req.extend_view_lifetime(sv);
-  req.extend_view_lifetime(rv);
 
   Kokkos::Tools::popRegion();
   return req;
@@ -55,17 +52,6 @@ void alltoall(
     MPI_Comm comm
 ) {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::alltoall");
-
-  using SendScalar = typename SendView::value_type;
-  using RecvScalar = typename RecvView::value_type;
-
-  // Make sure views are ready
-  space.fence("KokkosComm::mpi::alltoall");
-
-  KokkosComm::mpi::fail_if(
-      !KokkosComm::is_contiguous(sv) || !KokkosComm::is_contiguous(rv),
-      "alltoall for non-contiguous views not implemented"
-  );
 
   int size;
   MPI_Comm_size(comm, &size);
@@ -83,10 +69,16 @@ void alltoall(
     KokkosComm::mpi::fail_if(true, ss.str().data());
   }
 
-  MPI_Alltoall(
-      KokkosComm::data_handle(sv), sendCount, datatype<MpiSpace, SendScalar>(), KokkosComm::data_handle(rv), recvCount,
-      datatype<MpiSpace, RecvScalar>(), comm
+  Request<MpiSpace> req;
+  auto send_ready = KokkosComm::Impl::prepare<KokkosComm::Impl::ViewAccess::Read>(space, sv, req);
+  auto recv_ready = KokkosComm::Impl::prepare<KokkosComm::Impl::ViewAccess::Write>(space, rv, req);
+  // Ensure packing/staging copies enqueued on `space` complete before MPI reads the send buffer.
+  space.fence("fence before alltoall");
+  MPI_Ialltoall(
+      send_ready.buf_ptr(), sendCount, send_ready.datatype(), recv_ready.buf_ptr(), recvCount, recv_ready.datatype(),
+      comm, req.request_ptr()
   );
+  req.wait();
 
   Kokkos::Tools::popRegion();
 }
@@ -95,13 +87,6 @@ void alltoall(
 template <KokkosExecutionSpace ExecSpace, MutKokkosView RecvView>
 void alltoall(const ExecSpace& space, const RecvView& rv, const size_t recvCount, MPI_Comm comm) {
   Kokkos::Tools::pushRegion("KokkosComm::mpi::alltoall");
-
-  using RecvScalar = typename RecvView::value_type;
-
-  // Make sure views are ready
-  space.fence("KokkosComm::mpi::alltoall");
-
-  KokkosComm::mpi::fail_if(!KokkosComm::is_contiguous(rv), "alltoall for non-contiguous views not implemented");
 
   int size;
   MPI_Comm_size(comm, &size);
@@ -113,10 +98,15 @@ void alltoall(const ExecSpace& space, const RecvView& rv, const size_t recvCount
     KokkosComm::mpi::fail_if(true, ss.str().data());
   }
 
-  MPI_Alltoall(
-      MPI_IN_PLACE, 0 /*ignored*/, MPI_BYTE /*ignored*/, KokkosComm::data_handle(rv), recvCount,
-      datatype<MpiSpace, RecvScalar>(), comm
+  Request<MpiSpace> req;
+  auto ready = KokkosComm::Impl::prepare<KokkosComm::Impl::ViewAccess::ReadWrite>(space, rv, req);
+  // Ensure packing/staging copies enqueued on `space` complete before MPI reads or writes the buffer.
+  space.fence("fence before alltoall");
+  MPI_Ialltoall(
+      MPI_IN_PLACE, 0 /*ignored*/, MPI_BYTE /*ignored*/, ready.buf_ptr(), recvCount, ready.datatype(), comm,
+      req.request_ptr()
   );
+  req.wait();
 
   Kokkos::Tools::popRegion();
 }
