@@ -3,7 +3,10 @@
 
 #pragma once
 
+#include <concepts>
+#include <optional>
 #include <type_traits>
+#include <utility>
 
 #include <Kokkos_Core.hpp>
 
@@ -13,10 +16,14 @@ namespace Impl {
 /// Fallback: most types are not a KokkosComm communication space
 template <typename T>
 struct is_communication_space : public std::false_type {};
+template <typename T>
+inline constexpr bool is_communication_space_v = is_communication_space<T>::value;
 
 /// Fallback: most types are not a KokkosComm reduction operator
 template <typename T>
 struct is_reduction_operator : public std::false_type {};
+template <typename T>
+inline constexpr bool is_reduction_operator_v = is_reduction_operator<T>::value;
 
 }  // namespace Impl
 
@@ -34,8 +41,10 @@ concept KokkosMemorySpace = Kokkos::is_memory_space_v<T>;
 
 template <typename T>
 concept CommunicationSpace = requires {
-  KokkosComm::Impl::is_communication_space<T>::value;
+  Impl::is_communication_space_v<T>;
   typename T::communication_space;
+  typename T::execution_space;
+  typename T::memory_space;
   typename T::communicator_type;
   typename T::request_type;
   typename T::datatype_type;
@@ -45,6 +54,21 @@ concept CommunicationSpace = requires {
 };
 
 template <typename T>
-concept ReductionOperator = KokkosComm::Impl::is_reduction_operator<T>::value;
+concept ReductionOperator = Impl::is_reduction_operator_v<T>;
+
+template <typename Strategy, typename Comm, typename Exec, typename View>
+concept PackingStrategy = CommunicationSpace<Comm> and KokkosExecutionSpace<Exec> and KokkosView<View> and requires(
+    const Exec& exec,
+    const View& active,
+    std::optional<typename Strategy::packed_view_type>& packed,
+    typename Comm::size_type& count,
+    typename Comm::datatype_type& datatype
+) {
+  requires KokkosView<typename Strategy::packed_view_type>;
+
+  { Strategy::setup_for(exec, active, packed, count, datatype) } -> std::same_as<void>;
+  { Strategy::pack(exec, *packed, active) } -> std::same_as<void>;
+  { Strategy::unpack(exec, active, *packed) } -> std::same_as<void>;
+};
 
 }  // namespace KokkosComm

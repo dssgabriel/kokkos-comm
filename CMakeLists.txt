@@ -18,11 +18,25 @@ option(KokkosComm_INSTALL_CMAKE_PACKAGE "Create and install a CMake config-file 
 
 option(KokkosComm_ENABLE_MPI "Build Kokkos Comm with MPI backend" ON)
 option(KokkosComm_ENABLE_NCCL "Build Kokkos Comm with NCCL backend" OFF)
+option(KokkosComm_ENABLE_MPI_GPU_AWARE "Assume the provided MPI installation is GPU-aware" OFF)
+option(
+  KokkosComm_ENABLE_NCCL_DEVICE_STAGING
+  "Allow NCCL to stage Views inaccessible from the device"
+  OFF
+)
+option(
+  KokkosComm_ENABLE_MPI_DERIVED_DATATYPE_PACKING
+  "Use MPI derived datatypes as the default MPI packing strategy"
+  OFF
+)
 option(KokkosComm_ABORT_ON_ERROR "Runtime error checks trigger a global abort" OFF)
 
 # Resolve options that must be PP-defined
 set(KOKKOSCOMM_ENABLE_MPI ${KokkosComm_ENABLE_MPI})
 set(KOKKOSCOMM_ENABLE_NCCL ${KokkosComm_ENABLE_NCCL})
+set(KOKKOSCOMM_ENABLE_MPI_GPU_AWARE ${KokkosComm_ENABLE_MPI_GPU_AWARE})
+set(KOKKOSCOMM_ENABLE_NCCL_DEVICE_STAGING ${KokkosComm_ENABLE_NCCL_DEVICE_STAGING})
+set(KOKKOSCOMM_ENABLE_MPI_DERIVED_DATATYPE_PACKING ${KokkosComm_ENABLE_MPI_DERIVED_DATATYPE_PACKING})
 set(KOKKOSCOMM_ABORT_ON_ERROR ${KokkosComm_ABORT_ON_ERROR})
 
 message(STATUS "Kokkos Comm version: ${CMAKE_PROJECT_VERSION}")
@@ -36,6 +50,8 @@ if(KokkosComm_ENABLE_MPI)
   include(mpi-vendor)
   kokkoscomm_set_mpi_vendor_variables()
   list(APPEND KOKKOSCOMM_ENABLED_BACKENDS "MPI")
+elseif(KokkosComm_ENABLE_MPI_GPU_AWARE)
+  message(FATAL_ERROR "KokkosComm_ENABLE_MPI_GPU_AWARE requires KokkosComm_ENABLE_MPI")
 endif()
 
 if(KokkosComm_ENABLE_NCCL)
@@ -44,6 +60,8 @@ if(KokkosComm_ENABLE_NCCL)
   endif()
   find_package(NCCL 2.20.0 REQUIRED)
   list(APPEND KOKKOSCOMM_ENABLED_BACKENDS "NCCL")
+elseif(KokkosComm_ENABLE_NCCL_DEVICE_STAGING)
+  message(FATAL_ERROR "KokkosComm_ENABLE_NCCL_DEVICE_STAGING requires KokkosComm_ENABLE_NCCL")
 endif()
 
 if(NOT KOKKOSCOMM_ENABLED_BACKENDS)

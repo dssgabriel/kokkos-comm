@@ -15,7 +15,15 @@ target_sources(
         datatype.hpp
         reduction_op.hpp
     # Implementation detail headers
-    FILE_SET HEADERS BASE_DIRS ${PROJECT_SOURCE_DIR}/src FILES impl/contiguous.hpp
+    FILE_SET HEADERS
+      BASE_DIRS ${PROJECT_SOURCE_DIR}/src
+      FILES
+        impl/contiguous.hpp
+        impl/packing.hpp
+        impl/packing_strategy/deep_copy.hpp
+        impl/staging.hpp
+        impl/view_preparation.hpp
+        impl/view_preparation_types.hpp
     # Configuration header
     FILE_SET HEADERS BASE_DIRS ${CMAKE_BINARY_DIR}/src FILES ${CMAKE_BINARY_DIR}/src/KokkosComm/config.hpp
 )
