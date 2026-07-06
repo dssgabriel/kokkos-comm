@@ -38,7 +38,7 @@ void send_recv(
   auto ym1_s = Kokkos::subview(v, make_pair(1, nx + 1), 1, Kokkos::ALL);
   auto ym1_r = Kokkos::subview(v, make_pair(1, nx + 1), 0, Kokkos::ALL);
 
-  std::vector<KokkosComm::Request<>> reqs;
+  std::vector<KokkosComm::Request<KokkosComm::MpiSpace>> reqs;
   // std::cerr << get_rank(rx, ry) << " -> " << get_rank(xp1, ry) << "\n";
   reqs.push_back(KokkosComm::send(h, xp1_s, get_rank(xp1, ry)));
   reqs.push_back(KokkosComm::send(h, xm1_s, get_rank(xm1, ry)));

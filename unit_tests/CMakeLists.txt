@@ -30,6 +30,8 @@ set(INSTALL_GTEST OFF)
 FetchContent_MakeAvailable(googletest)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   target_compile_options(gtest PUBLIC -w)
+  target_compile_options(gtest PRIVATE -U_GLIBCXX_ASSERTIONS)
+  target_compile_options(gmock PRIVATE -U_GLIBCXX_ASSERTIONS)
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   target_compile_options(gtest PUBLIC /w)
 endif()
@@ -66,7 +68,7 @@ if(KokkosComm_ENABLE_MPI)
 
   # KOKKOS_ENABLE_CUDA is not set?
   if(Kokkos_ENABLE_CUDA)
-    kc_add_unit_test(smoke.mpi.cuda-p2p MPI NUM_PES 2 FILES mpi/test_mpi_cuda_sendrecv.cpp)
+    kc_add_unit_test(smoke.mpi.cuda-p2p MPI NUM_PES 2 FILES mpi/test_mpi_cuda_sendrecv.cpp LIBRARIES Kokkos::kokkos)
     # MPICH needs dynamic cudart (we think, pmodels/mpich#7304)
     if(KOKKOSCOMM_IMPL_MPI_IS_MPICH)
       # Setting the CUDA_RUNTIME_LIBRARY property on this target to "Shared" doesn't work for
