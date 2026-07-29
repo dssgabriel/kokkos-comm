@@ -220,13 +220,15 @@ Both specializations share the following interface:
 
     Copy assignment operator is deleted because a ``Request`` can only be moved.
 
-.. cpp:function:: Request(Request&&) = default
+.. cpp:function:: Request(Request&&) noexcept
 
-    Move constructor is defaulted.
+    Move-constructs a request, transferring ownership of the underlying request and its callbacks.
+    The source request is inactive upon return.
 
-.. cpp:function:: auto operator=(Request&&) -> Request& = default
+.. cpp:function:: auto operator=(Request&&) noexcept -> Request&
 
-    Move assignment operator is defaulted.
+    Move-assigns a request, transferring ownership of the underlying request and its callbacks.
+    The source request is inactive upon return.
 
 .. cpp:function:: template <KokkosView V>\
                   auto extend_view_lifetime(const V& view) -> void
