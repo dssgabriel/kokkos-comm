@@ -6,6 +6,7 @@
 #include <functional>
 #include <memory>
 #include <span>
+#include <utility>
 #include <vector>
 
 #include <mpi.h>
@@ -37,9 +38,16 @@ class Request<MpiSpace> {
   /// @brief Copy assignment operator is deleted because a `Request` can only be moved.
   auto operator=(const Request&) -> Request& = delete;
   /// @brief Move constructor.
-  Request(Request&&) = default;
+  Request(Request&& other) noexcept
+      : request_(std::exchange(other.request_, MPI_REQUEST_NULL)), callbacks_(std::move(other.callbacks_)) {}
   /// @brief Move assignment operator.
-  auto operator=(Request&&) -> Request& = default;
+  auto operator=(Request&& other) noexcept -> Request& {
+    if (this != &other) {
+      request_   = std::exchange(other.request_, MPI_REQUEST_NULL);
+      callbacks_ = std::move(other.callbacks_);
+    }
+    return *this;
+  }
 
   /// @return A reference to the underlying `MPI_Request` object.
   [[nodiscard]] constexpr auto request() noexcept -> request_type& { return request_; }
