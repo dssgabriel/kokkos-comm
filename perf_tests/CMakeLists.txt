@@ -43,6 +43,9 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 include(kc-test)
 
 kc_add_perf_test(bench.core.latency CORE NUM_PES 2 FILES bench_main.cpp bench_latency.cpp)
+kc_add_perf_test(bench.core.allreduce_bw CORE NUM_PES 2 FILES bench_main.cpp bench_allreduce_bw.cpp)
+kc_add_perf_test(bench.core.allgather_bw CORE NUM_PES 2 FILES bench_main.cpp bench_allgather_bw.cpp)
+kc_add_perf_test(bench.core.alltoall_bw CORE NUM_PES 2 FILES bench_main.cpp bench_alltoall_bw.cpp)
 
 if(KokkosComm_ENABLE_MPI)
   kc_add_perf_test(bench.mpi.p2p MPI NUM_PES 2 FILES bench_main.cpp mpi/test_sendrecv.cpp LIBRARIES KokkosComm::KokkosComm)
