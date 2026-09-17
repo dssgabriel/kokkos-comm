@@ -31,7 +31,7 @@ function(kc_add_perf_test name)
   # gersemi: hints { FILES: command_line, OPTIONS: command_line, INCLUDES: command_line, LIBRARIES: command_line }
   set(options CORE MPI NCCL)
   set(oneValueArgs NUM_PES)
-  set(multiValueArgs FILES OPTIONS INCLUDES LIBRARIES)
+  set(multiValueArgs FILES OPTIONS INCLUDES LIBRARIES ARGUMENTS)
   cmake_parse_arguments(PT "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
   add_executable(${name})
@@ -52,5 +52,5 @@ function(kc_add_perf_test name)
     target_link_libraries(${name} PRIVATE NCCL::NCCL CUDA::cudart)
   endif()
 
-  add_test(NAME ${name} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${PT_NUM_PES} ./${name})
+  add_test(NAME ${name} COMMAND ${MPIEXEC_EXECUTABLE} ${MPIEXEC_NUMPROC_FLAG} ${PT_NUM_PES} ./${name} ${PT_ARGUMENTS})
 endfunction()
