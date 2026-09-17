@@ -38,12 +38,10 @@ auto reduce_contig_1d() -> void {
   }
 
   // Prepare send buffer
-  Kokkos::parallel_for(
-      Kokkos::RangePolicy(exec, 0, sv.extent(0)), KOKKOS_LAMBDA(const int i) { sv(i) = rank + i; }
-  );
+  Kokkos::parallel_for(Kokkos::RangePolicy(exec, 0, sv.extent(0)), KOKKOS_LAMBDA(const int i) { sv(i) = rank + i; });
 
   // Using the same execution space for both operations lets us not need an explicit `fence`
-  KokkosComm::Experimental::nccl::reduce(exec, sv, rv, ncclSum, root, rank, comm).wait();
+  KokkosComm::Experimental::nccl::reduce(exec, sv, rv, ncclSum, root, comm).wait();
 
   if (rank == root) {
     int errs;

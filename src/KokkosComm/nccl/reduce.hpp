@@ -22,9 +22,8 @@ namespace KokkosComm::Experimental {
 namespace nccl {
 
 template <KokkosExecutionSpace ExecSpace, KokkosView SendView, MutKokkosView RecvView>
-auto reduce(
-    const ExecSpace& space, const SendView& sv, RecvView& rv, ncclRedOp_t op, int root, int rank, ncclComm_t comm
-) -> Request<NcclSpace> {
+auto reduce(const ExecSpace& exec, const SendView& sv, RecvView& rv, ncclRedOp_t op, int root, ncclComm_t comm)
+    -> Request<NcclSpace> {
   using ST         = typename SendView::non_const_value_type;
   using RT         = typename RecvView::non_const_value_type;
   using SendPacker = typename Impl::PackTraits<SendView>::packer_type;
@@ -32,49 +31,47 @@ auto reduce(
   static_assert(std::is_same_v<ST, RT>, "KokkosComm::Experimental::nccl::reduce: View value types must be identical");
   Kokkos::Tools::pushRegion("KokkosComm::Experimental::nccl::reduce");
 
+  const int rank = [=]() {
+    int _r;
+    ncclCommUserRank(comm, &_r);
+    return _r;
+  }();
+
   Request<NcclSpace> req;
-  if (is_contiguous(sv)) {
-    if (rank != root and is_contiguous(rv)) {
-      ncclReduce(
-          data_handle(sv), data_handle(rv), span(sv), datatype<NcclSpace, ST>(), op, root, comm, space.cuda_stream()
-      );
-      req.capture_stream_state(space.cuda_stream());
-    } else {
-      auto pckd_rv = RecvPacker::allocate_packed_for(space, "pckd_rv", rv);
-      ncclReduce(
-          data_handle(sv), data_handle(pckd_rv.view_), span(sv), datatype<NcclSpace, ST>(), op, root, comm,
-          space.cuda_stream()
-      );
-      req.capture_stream_state(space.cuda_stream());
-      req.add_callback([space, rv, pckd_rv]() {
-        RecvPacker::unpack_into(space, rv, pckd_rv.view_);
-        space.fence("fence `pckd_rv` unpacking after NCCL call");
-      });
-    }
-  } else {
-    auto pckd_sv = SendPacker::pack(space, "pckd_sv", sv);
-    if (rank != root and is_contiguous(rv)) {
-      ncclReduce(
-          data_handle(pckd_sv.view_), data_handle(rv), pckd_sv.count_, pckd_sv.datatype_, op, root, comm,
-          space.cuda_stream()
-      );
-      req.capture_stream_state(space.cuda_stream());
-    } else {
-      auto pckd_rv = RecvPacker::allocate_packed_for(space, "pckd_rv", rv);
-      ncclReduce(
-          data_handle(pckd_sv.view_), data_handle(pckd_rv.view_), pckd_sv.count_, pckd_sv.datatype_, op, root, comm,
-          space.cuda_stream()
-      );
-      req.capture_stream_state(space.cuda_stream());
-      req.add_callback([space, rv, pckd_rv]() {
-        RecvPacker::unpack_into(space, rv, pckd_rv.view_);
-        space.fence("fence `pckd_rv` unpacking after NCCL call");
-      });
-    }
-    req.extend_view_lifetime(pckd_sv.view_);
-  }
   req.extend_view_lifetime(sv);
   req.extend_view_lifetime(rv);
+
+  constexpr auto dtype = datatype<NcclSpace, ST>();
+  if (is_contiguous(sv)) {
+    const auto count = span(sv);
+    if (rank == root and not is_contiguous(rv)) {
+      auto pckd_rv = RecvPacker::allocate_packed_for(exec, "pckd_rv", rv);
+      ncclReduce(data_handle(sv), data_handle(pckd_rv.view_), count, dtype, op, root, comm, exec.cuda_stream());
+      req.add_callback([exec, rv, pckd_rv]() {
+        RecvPacker::unpack_into(exec, rv, pckd_rv.view_);
+        exec.fence("fence `pckd_rv` unpacking after NCCL reduce");
+      });
+    } else {
+      ncclReduce(data_handle(sv), data_handle(rv), count, dtype, op, root, comm, exec.cuda_stream());
+    }
+  } else {
+    auto pckd_sv = SendPacker::pack(exec, "pckd_sv", sv);
+    req.extend_view_lifetime(pckd_sv.view_);
+    const auto count = pckd_sv.count_;
+    if (rank == root and not is_contiguous(rv)) {
+      auto pckd_rv = RecvPacker::allocate_packed_for(exec, "pckd_rv", rv);
+      ncclReduce(
+          data_handle(pckd_sv.view_), data_handle(pckd_rv.view_), count, dtype, op, root, comm, exec.cuda_stream()
+      );
+      req.add_callback([exec, rv, pckd_rv]() {
+        RecvPacker::unpack_into(exec, rv, pckd_rv.view_);
+        exec.fence("fence `pckd_rv` unpacking after NCCL reduce");
+      });
+    } else {
+      ncclReduce(data_handle(pckd_sv.view_), data_handle(rv), count, dtype, op, root, comm, exec.cuda_stream());
+    }
+  }
+  req.capture_stream_state(exec.cuda_stream());
 
   Kokkos::Tools::popRegion();
   return req;
@@ -85,9 +82,9 @@ namespace Impl {
 
 template <KokkosView SendView, MutKokkosView RecvView, ReductionOperator RedOp>
 struct Reduce<SendView, RecvView, RedOp, Kokkos::Cuda, NcclSpace> {
-  static auto execute(Communicator<NcclSpace, Kokkos::Cuda>& h, const SendView sv, RecvView rv, int root)
+  static auto execute(Communicator<NcclSpace, Kokkos::Cuda>& comm, const SendView sv, RecvView rv, int root)
       -> Request<NcclSpace> {
-    return nccl::reduce(h.exec(), sv, rv, reduction_op<NcclSpace, RedOp>(), root, h.rank(), h.comm());
+    return nccl::reduce(comm.exec(), sv, rv, reduction_op<NcclSpace, RedOp>(), root, comm.comm());
   }
 };
 
